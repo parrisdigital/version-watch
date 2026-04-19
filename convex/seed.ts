@@ -35,6 +35,171 @@ function getCandidateScore(confidence: "high" | "medium" | "low") {
   return 16;
 }
 
+async function syncVendorRegistryRecords(ctx: any) {
+  let vendorCount = 0;
+  let sourceCount = 0;
+
+  const vendorIds = new Map<string, any>();
+  const sourceIds = new Map<string, any>();
+
+  for (const [index, vendor] of vendorRegistry.entries()) {
+    const existingVendor = await ctx.db
+      .query("vendors")
+      .withIndex("by_slug", (q: any) => q.eq("slug", vendor.slug))
+      .unique();
+
+    const vendorPayload = {
+      slug: vendor.slug,
+      name: vendor.name,
+      description: vendor.description,
+      homepageUrl: vendor.sources[0]?.url ?? "",
+      isActive: true,
+      sortOrder: index + 1,
+      updatedAt: Date.now(),
+    };
+
+    const vendorId =
+      existingVendor?._id ??
+      (await ctx.db.insert("vendors", {
+        ...vendorPayload,
+        createdAt: Date.now(),
+      }));
+
+    if (existingVendor) {
+      await ctx.db.patch(existingVendor._id, vendorPayload);
+    } else {
+      vendorCount += 1;
+    }
+
+    vendorIds.set(vendor.slug, vendorId);
+
+    const allowedSourceUrls = new Set(vendor.sources.map((source) => source.url));
+
+    for (const source of vendor.sources) {
+      const existingSource = await ctx.db
+        .query("sources")
+        .withIndex("by_vendor_and_url", (q: any) => q.eq("vendorId", vendorId).eq("url", source.url))
+        .unique();
+
+      const sourcePayload = {
+        vendorId,
+        name: source.name,
+        sourceType: source.type,
+        url: source.url,
+        isPrimary: source.url === vendor.sources[0]?.url,
+        pollIntervalMinutes: getPollIntervalMinutes(source.type),
+        parserKey: `${vendor.slug}:${source.type}`,
+        isActive: true,
+        consecutiveFailures: 0,
+        updatedAt: Date.now(),
+      };
+
+      const sourceId =
+        existingSource?._id ??
+        (await ctx.db.insert("sources", {
+          ...sourcePayload,
+          createdAt: Date.now(),
+        }));
+
+      if (existingSource) {
+        await ctx.db.patch(existingSource._id, sourcePayload);
+      } else {
+        sourceCount += 1;
+      }
+
+      sourceIds.set(`${vendor.slug}:${source.url}`, sourceId);
+    }
+
+    const existingSources = await ctx.db
+      .query("sources")
+      .withIndex("by_vendor", (q: any) => q.eq("vendorId", vendorId))
+      .collect();
+
+    for (const source of existingSources) {
+      if (!allowedSourceUrls.has(source.url) && source.isActive) {
+        await ctx.db.patch(source._id, {
+          isActive: false,
+          updatedAt: Date.now(),
+        });
+      }
+    }
+  }
+
+  return {
+    vendorCount,
+    sourceCount,
+    vendorIds,
+    sourceIds,
+  };
+}
+
+export const syncRegistry = mutation({
+  args: {},
+  returns: v.object({
+    vendors: v.number(),
+    sources: v.number(),
+  }),
+  handler: async (ctx) => {
+    const result = await syncVendorRegistryRecords(ctx);
+
+    return {
+      vendors: result.vendorCount,
+      sources: result.sourceCount,
+    };
+  },
+});
+
+export const clearContent = mutation({
+  args: {},
+  returns: v.object({
+    eventLinks: v.number(),
+    changeEvents: v.number(),
+    rawCandidates: v.number(),
+    reviewActions: v.number(),
+    ingestionRuns: v.number(),
+  }),
+  handler: async (ctx) => {
+    let eventLinks = 0;
+    let changeEvents = 0;
+    let rawCandidates = 0;
+    let reviewActions = 0;
+    let ingestionRuns = 0;
+
+    for (const row of await ctx.db.query("eventLinks").collect()) {
+      await ctx.db.delete(row._id);
+      eventLinks += 1;
+    }
+
+    for (const row of await ctx.db.query("changeEvents").collect()) {
+      await ctx.db.delete(row._id);
+      changeEvents += 1;
+    }
+
+    for (const row of await ctx.db.query("reviewActions").collect()) {
+      await ctx.db.delete(row._id);
+      reviewActions += 1;
+    }
+
+    for (const row of await ctx.db.query("rawCandidates").collect()) {
+      await ctx.db.delete(row._id);
+      rawCandidates += 1;
+    }
+
+    for (const row of await ctx.db.query("ingestionRuns").collect()) {
+      await ctx.db.delete(row._id);
+      ingestionRuns += 1;
+    }
+
+    return {
+      eventLinks,
+      changeEvents,
+      rawCandidates,
+      reviewActions,
+      ingestionRuns,
+    };
+  },
+});
+
 export const seedDemoData = mutation({
   args: {},
   returns: v.object({
@@ -44,80 +209,11 @@ export const seedDemoData = mutation({
     changeEvents: v.number(),
   }),
   handler: async (ctx) => {
-    let vendorCount = 0;
-    let sourceCount = 0;
     let rawCandidateCount = 0;
     let changeEventCount = 0;
-
-    const vendorIds = new Map<string, any>();
-    const sourceIds = new Map<string, any>();
-
-    for (const [index, vendor] of vendorRegistry.entries()) {
-      const existingVendor = await ctx.db
-        .query("vendors")
-        .withIndex("by_slug", (q) => q.eq("slug", vendor.slug))
-        .unique();
-
-      const vendorPayload = {
-        slug: vendor.slug,
-        name: vendor.name,
-        description: vendor.description,
-        homepageUrl: vendor.sources[0]?.url ?? "",
-        isActive: true,
-        sortOrder: index + 1,
-        updatedAt: Date.now(),
-      };
-
-      const vendorId =
-        existingVendor?._id ??
-        (await ctx.db.insert("vendors", {
-          ...vendorPayload,
-          createdAt: Date.now(),
-        }));
-
-      if (existingVendor) {
-        await ctx.db.patch(existingVendor._id, vendorPayload);
-      } else {
-        vendorCount += 1;
-      }
-
-      vendorIds.set(vendor.slug, vendorId);
-
-      for (const source of vendor.sources) {
-        const existingSource = await ctx.db
-          .query("sources")
-          .withIndex("by_vendor_and_url", (q) => q.eq("vendorId", vendorId).eq("url", source.url))
-          .unique();
-
-        const sourcePayload = {
-          vendorId,
-          name: source.name,
-          sourceType: source.type,
-          url: source.url,
-          isPrimary: source.url === vendor.sources[0]?.url,
-          pollIntervalMinutes: getPollIntervalMinutes(source.type),
-          parserKey: `${vendor.slug}:${source.type}`,
-          isActive: true,
-          consecutiveFailures: 0,
-          updatedAt: Date.now(),
-        };
-
-        const sourceId =
-          existingSource?._id ??
-          (await ctx.db.insert("sources", {
-            ...sourcePayload,
-            createdAt: Date.now(),
-          }));
-
-        if (existingSource) {
-          await ctx.db.patch(existingSource._id, sourcePayload);
-        } else {
-          sourceCount += 1;
-        }
-
-        sourceIds.set(`${vendor.slug}:${source.url}`, sourceId);
-      }
-    }
+    const registrySync = await syncVendorRegistryRecords(ctx);
+    const vendorIds = registrySync.vendorIds;
+    const sourceIds = registrySync.sourceIds;
 
     for (const healthEntry of mockSourceHealth) {
       const vendor = vendorRegistry.find((item) => item.name === healthEntry.vendorName);
@@ -284,8 +380,8 @@ export const seedDemoData = mutation({
     }
 
     return {
-      vendors: vendorCount,
-      sources: sourceCount,
+      vendors: registrySync.vendorCount,
+      sources: registrySync.sourceCount,
       rawCandidates: rawCandidateCount,
       changeEvents: changeEventCount,
     };

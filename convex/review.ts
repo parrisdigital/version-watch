@@ -1,6 +1,8 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
+import { publishRawCandidate } from "./lib/publish";
+
 export const listPending = query({
   args: {},
   returns: v.array(v.any()),
@@ -43,7 +45,17 @@ export const approve = mutation({
   args: { rawCandidateId: v.id("rawCandidates"), performedBy: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const rawCandidate = await ctx.db.get(args.rawCandidateId);
+
+    if (!rawCandidate) {
+      return null;
+    }
+
     await ctx.db.patch(args.rawCandidateId, { status: "published" });
+    await publishRawCandidate(ctx, {
+      ...rawCandidate,
+      status: "published",
+    });
     await ctx.db.insert("reviewActions", {
       rawCandidateId: args.rawCandidateId,
       action: "approve",

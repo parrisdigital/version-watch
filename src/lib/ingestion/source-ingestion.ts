@@ -1,0 +1,697 @@
+import { load } from "cheerio";
+
+import { getImportanceBand, scoreEvent } from "@/lib/classification/score";
+import type { MockEvent, SourceType } from "@/lib/mock-data";
+
+export type ParseConfidence = "high" | "medium" | "low";
+
+export type ParsedSourceEntry = {
+  title: string;
+  url: string;
+  excerpt: string;
+  publishedAt: number;
+  githubUrl?: string;
+  parseConfidence?: ParseConfidence;
+};
+
+export type NormalizedParsedEntry = {
+  slug: string;
+  title: string;
+  summary: string;
+  whatChanged: string;
+  whyItMatters: string;
+  whoShouldCare: string[];
+  affectedStack: string[];
+  categories: string[];
+  importanceScore: number;
+  importanceBand: MockEvent["importanceBand"];
+  parseConfidence: ParseConfidence;
+  githubUrl?: string;
+};
+
+type HtmlParseInput = {
+  parserKey: string;
+  sourceUrl: string;
+  html: string;
+};
+
+type NormalizeInput = {
+  vendorSlug: string;
+  vendorName: string;
+  sourceName: string;
+  sourceType: SourceType;
+  entry: ParsedSourceEntry;
+};
+
+type MonthYearContext = {
+  month?: number;
+  year: number;
+};
+
+const MONTH_INDEX: Record<string, number> = {
+  january: 0,
+  jan: 0,
+  february: 1,
+  feb: 1,
+  march: 2,
+  mar: 2,
+  april: 3,
+  apr: 3,
+  may: 4,
+  june: 5,
+  jun: 5,
+  july: 6,
+  jul: 6,
+  august: 7,
+  aug: 7,
+  september: 8,
+  sept: 8,
+  sep: 8,
+  october: 9,
+  oct: 9,
+  november: 10,
+  nov: 10,
+  december: 11,
+  dec: 11,
+};
+
+const NOISE_TITLES = new Set([
+  "changelog",
+  "share this article",
+  "copy page",
+  "highlights",
+  "pricing",
+  "get started",
+  "contributors",
+  "contributor",
+  "compatibility note",
+  "upgrade",
+  "impact",
+  "changes",
+  "what’s new",
+  "what's new",
+  "learn more",
+]);
+
+const VENDOR_STACKS: Record<string, string[]> = {
+  openai: ["llms", "agents", "developer-workflow"],
+  anthropic: ["llms", "agents"],
+  gemini: ["llms", "search", "agents"],
+  vercel: ["hosting", "deployments", "frontend-infra"],
+  stripe: ["payments", "subscriptions"],
+  github: ["developer-workflow", "ci-cd"],
+  cloudflare: ["edge-compute", "hosting", "networking"],
+  cursor: ["developer-workflow", "llms"],
+  supabase: ["database", "backend", "auth"],
+  firebase: ["backend", "mobile-platform"],
+  "apple-developer": ["mobile-platform"],
+  "android-developers": ["mobile-platform"],
+  firecrawl: ["agents", "scraping", "search"],
+  exa: ["search", "llms", "agents"],
+  clerk: ["auth", "developer-workflow"],
+  resend: ["email", "backend"],
+  linear: ["developer-workflow", "product"],
+  docker: ["containers", "developer-workflow", "infra"],
+};
+
+function cleanText(value: string | null | undefined) {
+  return (value ?? "")
+    .replace(/\s+/g, " ")
+    .replace(/\u00a0/g, " ")
+    .trim();
+}
+
+function truncateSentence(value: string, maxLength = 220) {
+  const text = cleanText(value);
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength - 1).trimEnd()}…`;
+}
+
+function toAbsoluteUrl(href: string | null | undefined, sourceUrl: string) {
+  if (!href) {
+    return sourceUrl;
+  }
+
+  try {
+    return new URL(href, sourceUrl).toString();
+  } catch {
+    return sourceUrl;
+  }
+}
+
+function isDateLike(text: string) {
+  const value = cleanText(text).toLowerCase();
+
+  return (
+    /^\d{4}-\d{2}-\d{2}(?:\.[a-z0-9-]+)?$/i.test(value) ||
+    /^\d{4}\s*年\s*\d{1,2}\s*月\s*\d{1,2}\s*日$/i.test(value) ||
+    /^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}(?:, \d{4})?$/i.test(value) ||
+    /^(january|february|march|april|may|june|july|august|september|october|november|december),? \d{4}$/i.test(value) ||
+    /^date:\s*(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}, \d{4}$/i.test(value)
+  );
+}
+
+function parseMonthYearContext(text: string) {
+  const value = cleanText(text).toLowerCase().replace(/^date:\s*/, "");
+  const match = value.match(
+    /^(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec),?\s+(\d{4})$/,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  return {
+    month: MONTH_INDEX[match[1]!] ?? undefined,
+    year: Number(match[2]),
+  } satisfies MonthYearContext;
+}
+
+function parseDateText(text: string, context: MonthYearContext | null) {
+  const value = cleanText(text).replace(/^date:\s*/i, "");
+
+  if (!value) {
+    return null;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}(?:\.[a-z0-9-]+)?$/i.test(value)) {
+    const isoDate = value.slice(0, 10);
+    const parsed = Date.parse(`${isoDate}T00:00:00.000Z`);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  const eastAsiaMatch = value.match(/^(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日$/i);
+  if (eastAsiaMatch) {
+    return Date.UTC(Number(eastAsiaMatch[1]), Number(eastAsiaMatch[2]) - 1, Number(eastAsiaMatch[3]));
+  }
+
+  const withExplicitYear = Date.parse(value);
+  if (!Number.isNaN(withExplicitYear) && /\d{4}/.test(value)) {
+    return Date.UTC(
+      new Date(withExplicitYear).getUTCFullYear(),
+      new Date(withExplicitYear).getUTCMonth(),
+      new Date(withExplicitYear).getUTCDate(),
+    );
+  }
+
+  const shortMatch = value.match(
+    /^(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+(\d{1,2})$/i,
+  );
+
+  if (shortMatch && context?.year) {
+    return Date.UTC(context.year, MONTH_INDEX[shortMatch[1]!.toLowerCase()] ?? 0, Number(shortMatch[2]));
+  }
+
+  return null;
+}
+
+function isMeaningfulTitle(text: string) {
+  const value = cleanText(text);
+
+  if (!value || value.length < 12) {
+    return false;
+  }
+
+  if (NOISE_TITLES.has(value.toLowerCase())) {
+    return false;
+  }
+
+  if (/stay organized with collections|save and categorize content/i.test(value)) {
+    return false;
+  }
+
+  if (isDateLike(value)) {
+    return false;
+  }
+
+  if (/^(feature|update|preview|general availability|breaking changes)$/i.test(value)) {
+    return false;
+  }
+
+  if (/^(v\d+\/|[a-z0-9_.-]+\.[a-z0-9_.-]+$)/i.test(value)) {
+    return false;
+  }
+
+  return true;
+}
+
+function collectExcerpt($: ReturnType<typeof load>, headingElement: any) {
+  const excerptParts: string[] = [];
+
+  for (const sibling of $(headingElement).nextAll().toArray()) {
+    const tagName = sibling.tagName?.toLowerCase?.() ?? "";
+
+    if (/^h[1-6]$/.test(tagName)) {
+      break;
+    }
+
+    const text = cleanText($(sibling).text());
+    if (!text || isDateLike(text)) {
+      continue;
+    }
+
+    if (/^(category|published|contributors|contributor)$/i.test(text)) {
+      continue;
+    }
+
+    if (text.length >= 24) {
+      excerptParts.push(text);
+    }
+
+    if (excerptParts.join(" ").length >= 260) {
+      break;
+    }
+  }
+
+  return truncateSentence(excerptParts.join(" "));
+}
+
+function findDateBeforeElement($: ReturnType<typeof load>, element: any) {
+  let context: MonthYearContext | null = null;
+
+  for (const previous of $(element).prevAll().toArray().slice(0, 8)) {
+    const text = cleanText($(previous).text());
+    if (!text) {
+      continue;
+    }
+
+    const monthYear = parseMonthYearContext(text);
+    if (monthYear) {
+      context = monthYear;
+      continue;
+    }
+
+    const parsed = parseDateText(text, context);
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
+function findGithubLink($: ReturnType<typeof load>, element: any, sourceUrl: string) {
+  const link = $(element)
+    .nextAll()
+    .find('a[href*="github.com"]')
+    .first()
+    .attr("href");
+
+  if (link) {
+    return toAbsoluteUrl(link, sourceUrl);
+  }
+
+  return undefined;
+}
+
+function dedupeEntries(entries: ParsedSourceEntry[]) {
+  const seen = new Set<string>();
+
+  return entries.filter((entry) => {
+    const key = `${entry.url}::${entry.title}`;
+    if (seen.has(key)) {
+      return false;
+    }
+
+    seen.add(key);
+    return true;
+  });
+}
+
+function parseDatedHeadingEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const heading of root.find("h1, h2, h3, h4").toArray()) {
+    const title = cleanText($(heading).text());
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const publishedAt = findDateBeforeElement($, heading);
+    if (!publishedAt) {
+      continue;
+    }
+
+    const excerpt = collectExcerpt($, heading) || title;
+    const url = toAbsoluteUrl($(heading).find("a").first().attr("href"), sourceUrl);
+    const githubUrl = findGithubLink($, heading, sourceUrl);
+
+    entries.push({
+      title,
+      url,
+      excerpt,
+      publishedAt,
+      githubUrl,
+      parseConfidence: url !== sourceUrl ? "high" : "medium",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseLinkedEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const link of root.find('a[href*="/changelog/"]').toArray()) {
+    const href = $(link).attr("href");
+    const title = cleanText($(link).text());
+
+    if (!href || !isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const parent = $(link).closest("li, article, section, div");
+    const excerpt = truncateSentence(cleanText(parent.text()).replace(title, "").trim()) || title;
+    const publishedAt =
+      findDateBeforeElement($, parent.get(0) ?? link) ??
+      findDateBeforeElement($, link) ??
+      Date.now();
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(href, sourceUrl),
+      excerpt,
+      publishedAt,
+      parseConfidence: "medium",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseSingleDocumentEntry(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const heading = root.find("h1, h2").filter((_index, element) => {
+    return isMeaningfulTitle(cleanText($(element).text()));
+  }).first();
+
+  if (!heading.length) {
+    return [] satisfies ParsedSourceEntry[];
+  }
+
+  let context: MonthYearContext | null = null;
+  let publishedAt: number | null = null;
+
+  for (const element of root.find("p, li, h3, h4, time").toArray()) {
+    const text = cleanText($(element).text());
+    if (!text) {
+      continue;
+    }
+
+    const monthYear = parseMonthYearContext(text);
+    if (monthYear) {
+      context = monthYear;
+    }
+
+    if (!publishedAt) {
+      publishedAt = parseDateText(text, context);
+    }
+
+    if (publishedAt) {
+      break;
+    }
+  }
+
+  const excerpt =
+    truncateSentence(cleanText(heading.nextAll("p").first().text())) ||
+    truncateSentence(cleanText(root.find("p").first().text())) ||
+    cleanText(heading.text());
+
+  return [
+    {
+      title: cleanText(heading.text()),
+      url: sourceUrl,
+      excerpt,
+      publishedAt: publishedAt ?? Date.now(),
+      parseConfidence: publishedAt ? "medium" : "low",
+    },
+  ] satisfies ParsedSourceEntry[];
+}
+
+function parseOpenAITimeline(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const lines = root
+    .find("h1, h2, h3, h4, p, li")
+    .toArray()
+    .map((element) => cleanText($(element).text()))
+    .filter(Boolean);
+
+  const entries: ParsedSourceEntry[] = [];
+  let context: MonthYearContext | null = null;
+  let activeDate: number | null = null;
+
+  for (const line of lines) {
+    const monthYear = parseMonthYearContext(line);
+    if (monthYear) {
+      context = monthYear;
+      continue;
+    }
+
+    const parsedDate = parseDateText(line, context);
+    if (parsedDate) {
+      activeDate = parsedDate;
+      continue;
+    }
+
+    if (!activeDate) {
+      continue;
+    }
+
+    if (!isMeaningfulTitle(line)) {
+      continue;
+    }
+
+    entries.push({
+      title: line,
+      url: sourceUrl,
+      excerpt: truncateSentence(line),
+      publishedAt: activeDate,
+      parseConfidence: "medium",
+    });
+
+    activeDate = null;
+  }
+
+  return dedupeEntries(entries);
+}
+
+export function discoverFeedUrl(html: string, sourceUrl: string) {
+  const $ = load(html);
+  const selectors = [
+    'link[type*="rss"]',
+    'link[type*="atom"]',
+    'a[href*="rss"]',
+    'a[href*="atom"]',
+    'a:contains("RSS")',
+  ];
+
+  for (const selector of selectors) {
+    const href = $(selector).first().attr("href");
+    if (href) {
+      return toAbsoluteUrl(href, sourceUrl);
+    }
+  }
+
+  return null;
+}
+
+export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput) {
+  const linkedEntries = parserKey.startsWith("stripe:")
+    ? parseLinkedEntries(sourceUrl, html)
+    : [];
+  if (linkedEntries.length > 0) {
+    return linkedEntries.slice(0, 12);
+  }
+
+  if (parserKey === "openai:docs_page" || parserKey === "gemini:docs_page") {
+    const entries = parseOpenAITimeline(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  const headingEntries = parseDatedHeadingEntries(sourceUrl, html);
+  if (headingEntries.length > 0) {
+    return headingEntries.slice(0, 12);
+  }
+
+  return parseSingleDocumentEntry(sourceUrl, html).slice(0, 12);
+}
+
+function classifyCategories(text: string, sourceType: SourceType) {
+  const value = text.toLowerCase();
+  const categories = new Set<string>();
+
+  if (/breaking|deprecat|retir|remove|sunset|migration|behavior|computation|default/i.test(value)) {
+    categories.add("breaking");
+  }
+  if (/security|vulnerability|cve|fraud|attack|breach/i.test(value)) {
+    categories.add("security");
+  }
+  if (/price|pricing|billing|invoice|credit|cost|usage-based/i.test(value)) {
+    categories.add("pricing");
+  }
+  if (/model|gpt|claude|gemini|reasoning|llm|codex/i.test(value)) {
+    categories.add("model");
+  }
+  if (/sdk|library|typescript|python|java|swift|android|node/i.test(value)) {
+    categories.add("sdk");
+  }
+  if (/api|endpoint|parameter|request|response|schema|tool/i.test(value)) {
+    categories.add("api");
+  }
+  if (/deploy|runtime|worker|infra|hosting|preview|build|runner|edge|container/i.test(value)) {
+    categories.add("infra");
+  }
+  if (categories.size === 0) {
+    categories.add(sourceType === "docs_page" ? "docs" : "api");
+  }
+
+  if (sourceType !== "blog" && sourceType !== "rss") {
+    categories.add("api");
+  }
+
+  return [...categories].slice(0, 3);
+}
+
+function classifyAffectedStack(vendorSlug: string, text: string) {
+  const stacks = new Set<string>(VENDOR_STACKS[vendorSlug] ?? []);
+  const value = text.toLowerCase();
+
+  if (/payment|invoice|subscription|checkout|billing/i.test(value)) {
+    stacks.add("payments");
+    stacks.add("subscriptions");
+  }
+  if (/auth|organization|oauth|api key|directory sync|login/i.test(value)) {
+    stacks.add("auth");
+  }
+  if (/search|crawl|scrape|monitor/i.test(value)) {
+    stacks.add("search");
+    stacks.add("scraping");
+  }
+  if (/deploy|preview|runtime|worker|edge|hosting|container/i.test(value)) {
+    stacks.add("hosting");
+    stacks.add("deployments");
+  }
+  if (/model|gpt|claude|gemini|reasoning|agent|tool/i.test(value)) {
+    stacks.add("llms");
+    stacks.add("agents");
+  }
+  if (/ios|android|xcode|swift|mobile/i.test(value)) {
+    stacks.add("mobile-platform");
+  }
+  if (/ci|github actions|runner|build/i.test(value)) {
+    stacks.add("ci-cd");
+  }
+
+  return [...stacks].slice(0, 4);
+}
+
+function classifyAudience(categories: string[], affectedStack: string[]) {
+  const audience = new Set<string>();
+  const stackText = affectedStack.join(" ");
+
+  if (/frontend|hosting|deployments/.test(stackText)) {
+    audience.add("frontend");
+  }
+  if (/payments|subscriptions|auth|database|backend|developer-workflow|ci-cd/.test(stackText)) {
+    audience.add("backend");
+  }
+  if (/mobile-platform/.test(stackText)) {
+    audience.add("mobile");
+  }
+  if (/hosting|deployments|edge-compute|containers|networking/.test(stackText)) {
+    audience.add("infra");
+  }
+  if (/llms|agents|search|scraping/.test(stackText)) {
+    audience.add("ai");
+  }
+  if (categories.includes("pricing") || categories.includes("breaking")) {
+    audience.add("product");
+  }
+
+  if (audience.size === 0) {
+    audience.add("backend");
+  }
+
+  return [...audience];
+}
+
+function buildWhyItMatters(
+  vendorName: string,
+  sourceName: string,
+  affectedStack: string[],
+  categories: string[],
+) {
+  const teams = affectedStack.slice(0, 2).join(" and ") || "application";
+  const urgency = categories.includes("breaking") || categories.includes("security")
+    ? "before the next deploy"
+    : "during the next release review";
+
+  return `${vendorName} updated ${sourceName.toLowerCase()} semantics for ${teams}. Review the official entry ${urgency}.`;
+}
+
+function slugify(value: string) {
+  return cleanText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+}
+
+export function normalizeParsedEntry({
+  vendorSlug,
+  vendorName,
+  sourceName,
+  sourceType,
+  entry,
+}: NormalizeInput): NormalizedParsedEntry {
+  const categories = classifyCategories(entry.title, sourceType);
+  const combinedText = `${entry.title} ${entry.excerpt}`.trim();
+  const affectedStack = classifyAffectedStack(vendorSlug, combinedText);
+  const whoShouldCare = classifyAudience(categories, affectedStack);
+  const summary = truncateSentence(entry.excerpt || entry.title, 240) || entry.title;
+
+  const score = scoreEvent({
+    id: `${vendorSlug}:${entry.url}`,
+    slug: slugify(`${vendorSlug}-${entry.title}`),
+    vendorSlug,
+    vendorName,
+    title: entry.title,
+    summary,
+    whatChanged: summary,
+    whyItMatters: "",
+    whoShouldCare,
+    affectedStack,
+    categories,
+    publishedAt: new Date(entry.publishedAt).toISOString(),
+    sourceUrl: entry.url,
+    sourceType,
+    importanceBand: "low",
+    githubUrl: entry.githubUrl,
+  });
+
+  return {
+    slug: slugify(`${vendorSlug}-${new Date(entry.publishedAt).toISOString().slice(0, 10)}-${entry.title}`),
+    title: entry.title,
+    summary,
+    whatChanged: summary,
+    whyItMatters: buildWhyItMatters(vendorName, sourceName, affectedStack, categories),
+    whoShouldCare,
+    affectedStack,
+    categories,
+    importanceScore: score,
+    importanceBand: getImportanceBand(score),
+    parseConfidence: entry.parseConfidence ?? (entry.url !== "" ? "high" : "medium"),
+    githubUrl: entry.githubUrl,
+  };
+}

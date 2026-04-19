@@ -66,8 +66,8 @@ export const vendors: VendorRecord[] = [
     name: "OpenAI",
     description: "Model, API, and Codex updates for application teams.",
     sources: [
-      { name: "API Changelog", url: "https://platform.openai.com/docs/changelog", type: "docs_page" },
-      { name: "Codex Changelog", url: "https://help.openai.com/en/articles/11428266-codex-changelog/", type: "changelog_page" },
+      { name: "API Changelog", url: "https://developers.openai.com/api/docs/changelog", type: "docs_page" },
+      { name: "Codex Changelog", url: "https://developers.openai.com/codex/changelog", type: "changelog_page" },
     ],
   },
   {
@@ -195,7 +195,7 @@ const eventSeeds: Array<Omit<MockEvent, "vendorName">> = [
     affectedStack: ["llms", "agents", "developer-workflow"],
     categories: ["deprecation", "api"],
     publishedAt: "2026-04-18T16:15:00.000Z",
-    sourceUrl: "https://platform.openai.com/docs/changelog",
+    sourceUrl: "https://developers.openai.com/api/docs/changelog",
     githubUrl: "https://github.com/openai/openai-node",
     sourceType: "docs_page",
     importanceBand: "critical",
@@ -212,7 +212,7 @@ const eventSeeds: Array<Omit<MockEvent, "vendorName">> = [
     affectedStack: ["llms", "agents", "developer-workflow"],
     categories: ["model", "api"],
     publishedAt: "2026-04-18T12:00:00.000Z",
-    sourceUrl: "https://help.openai.com/en/articles/11428266-codex-changelog/",
+    sourceUrl: "https://developers.openai.com/codex/changelog",
     sourceType: "changelog_page",
     importanceBand: "high",
   },

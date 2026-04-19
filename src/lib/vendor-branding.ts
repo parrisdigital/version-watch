@@ -8,8 +8,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   openai: {
     logoUrl:
       "https://images.ctfassets.net/kftzwdyauwt9/3hUGLn3ypllZ0oa01qOYVq/28e8188e6f11b84c3e876569d492734f/Blossom_Light.svg?q=90&w=3840",
-    surfaceClassName: "border-white/20 bg-white",
-    imageClassName: "h-5 w-5",
+    imageClassName: "h-5 w-5 brightness-0 invert",
   },
   anthropic: { logoUrl: "https://cdn.simpleicons.org/anthropic/F4F4F5?viewbox=auto" },
   gemini: { logoUrl: "https://cdn.simpleicons.org/googlegemini/F4F4F5?viewbox=auto" },

@@ -1,0 +1,66 @@
+function cleanText(value: string) {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/\u00a0/g, " ")
+    .trim();
+}
+
+function slugify(value: string) {
+  return cleanText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 96);
+}
+
+export function buildCandidateSlug(vendorSlug: string, publishedAt: number, title: string) {
+  const datePrefix = new Date(publishedAt).toISOString().slice(0, 10);
+  return slugify(`${vendorSlug}-${datePrefix}-${title}`);
+}
+
+export async function publishRawCandidate(ctx: any, rawCandidate: any) {
+  const vendor = await ctx.db.get(rawCandidate.vendorId);
+  const source = await ctx.db.get(rawCandidate.sourceId);
+
+  if (!vendor || !source) {
+    return null;
+  }
+
+  const slug = buildCandidateSlug(vendor.slug, rawCandidate.rawPublishedAt, rawCandidate.rawTitle);
+  const existingEvent = await ctx.db
+    .query("changeEvents")
+    .withIndex("by_slug", (q: any) => q.eq("slug", slug))
+    .unique();
+
+  const eventPayload = {
+    vendorId: rawCandidate.vendorId,
+    sourceId: rawCandidate.sourceId,
+    rawCandidateId: rawCandidate._id,
+    slug,
+    title: rawCandidate.rawTitle,
+    summary: rawCandidate.proposedSummary,
+    whatChanged: rawCandidate.proposedWhatChanged,
+    whyItMatters: rawCandidate.proposedWhyItMatters,
+    whoShouldCare: rawCandidate.proposedWhoShouldCare,
+    affectedStack: rawCandidate.proposedAffectedStack,
+    categories: rawCandidate.proposedCategories,
+    importanceScore: rawCandidate.importanceScore,
+    importanceBand: rawCandidate.importanceBand,
+    publishedAt: rawCandidate.rawPublishedAt,
+    discoveredAt: rawCandidate.discoveredAt,
+    sourceUrl: rawCandidate.sourceUrl,
+    githubUrl: rawCandidate.githubUrl,
+    visibility: "public" as const,
+    updatedAt: Date.now(),
+  };
+
+  if (existingEvent) {
+    await ctx.db.patch(existingEvent._id, eventPayload);
+    return existingEvent._id;
+  }
+
+  return await ctx.db.insert("changeEvents", {
+    ...eventPayload,
+    createdAt: Date.now(),
+  });
+}

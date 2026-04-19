@@ -12,6 +12,8 @@ import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
+import type * as ingestState from "../ingestState.js";
+import type * as lib_publish from "../lib/publish.js";
 import type * as ops from "../ops.js";
 import type * as review from "../review.js";
 import type * as seed from "../seed.js";
@@ -28,6 +30,8 @@ declare const fullApi: ApiFromModules<{
   events: typeof events;
   http: typeof http;
   ingest: typeof ingest;
+  ingestState: typeof ingestState;
+  "lib/publish": typeof lib_publish;
   ops: typeof ops;
   review: typeof review;
   seed: typeof seed;
