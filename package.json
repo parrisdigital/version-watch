@@ -1,0 +1,39 @@
+{
+  "name": "version-watch",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@convex-dev/eslint-plugin": "^1.0.0",
+    "@gsap/react": "^2.1.2",
+    "@tailwindcss/postcss": "^4.1.11",
+    "cheerio": "^1.1.0",
+    "clsx": "^2.1.1",
+    "convex": "^1.24.8",
+    "date-fns": "^4.1.0",
+    "gsap": "^3.12.7",
+    "next": "^16.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "rss-parser": "^3.13.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "@types/node": "^24.2.1",
+    "@types/react": "^19.1.9",
+    "@types/react-dom": "^19.1.7",
+    "eslint": "^9.34.0",
+    "eslint-config-next": "^16.0.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}
