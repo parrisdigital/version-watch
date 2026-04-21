@@ -36,6 +36,84 @@ function shouldPollSource(source: any, now: number, force: boolean) {
   return now - lastAttemptAt >= source.pollIntervalMinutes * 60 * 1000;
 }
 
+const AUTO_PUBLISH_VENDOR_SLUGS = new Set(["vercel", "clerk", "linear", "supabase", "resend"]);
+
+const MANUAL_REVIEW_VENDOR_SLUGS = new Set([
+  "anthropic",
+  "apple-developer",
+  "android-developers",
+  "cloudflare",
+  "cursor",
+  "docker",
+  "exa",
+  "firebase",
+  "firecrawl",
+  "gemini",
+  "github",
+  "stripe",
+]);
+
+const NOISE_TITLE_PATTERNS = [
+  /^release notes$/i,
+  /^changelog$/i,
+  /^what can we help you with\??$/i,
+  /^what'?s changing$/i,
+  /^learn what'?s changing/i,
+  /^overview$/i,
+];
+
+function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string) {
+  try {
+    const candidateHost = new URL(candidateUrl).hostname.replace(/^www\./, "");
+    const sourceHost = new URL(sourceUrl).hostname.replace(/^www\./, "");
+
+    return candidateHost === sourceHost || candidateHost.endsWith(`.${sourceHost}`);
+  } catch {
+    return false;
+  }
+}
+
+function hasMeaningfulTitle(title: string) {
+  const normalized = title.replace(/\s+/g, " ").trim();
+
+  if (normalized.length < 12 || normalized.length > 180) {
+    return false;
+  }
+
+  return !NOISE_TITLE_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+function isReasonablePublishDate(publishedAt: number, now: number) {
+  const earliestAllowed = Date.UTC(2025, 0, 1);
+  const latestAllowed = now + 36 * 60 * 60 * 1000;
+
+  return publishedAt >= earliestAllowed && publishedAt <= latestAllowed;
+}
+
+function shouldAutoPublishCandidate(item: any, vendor: any, source: any, now: number) {
+  if (!vendor || !source) {
+    return false;
+  }
+
+  if (MANUAL_REVIEW_VENDOR_SLUGS.has(vendor.slug)) {
+    return false;
+  }
+
+  if (!AUTO_PUBLISH_VENDOR_SLUGS.has(vendor.slug)) {
+    return false;
+  }
+
+  if (item.parseConfidence !== "high") {
+    return false;
+  }
+
+  if (!hasMeaningfulTitle(item.title) || !isReasonablePublishDate(item.publishedAt, now)) {
+    return false;
+  }
+
+  return isOfficialSourceUrl(item.sourceUrl, source.url);
+}
+
 export const listDueSources = internalQuery({
   args: { force: v.boolean() },
   returns: v.array(v.any()),
@@ -88,6 +166,9 @@ export const persistSourceEntries = internalMutation({
     failed: v.boolean(),
   }),
   handler: async (ctx, args) => {
+    const now = Date.now();
+    const vendor = await ctx.db.get(args.vendorId);
+    const source = await ctx.db.get(args.sourceId);
     let itemsCreated = 0;
     let itemsDeduped = 0;
     let published = 0;
@@ -99,7 +180,9 @@ export const persistSourceEntries = internalMutation({
         .withIndex("by_dedupe_key", (q) => q.eq("dedupeKey", dedupeKey))
         .unique();
 
-      const status = existingCandidate?.status ?? ("pending_review" as const);
+      const status =
+        existingCandidate?.status ??
+        (shouldAutoPublishCandidate(item, vendor, source, now) ? ("published" as const) : ("pending_review" as const));
       const rawPayload = {
         vendorId: args.vendorId,
         sourceId: args.sourceId,
@@ -109,7 +192,7 @@ export const persistSourceEntries = internalMutation({
         rawTitle: item.title,
         rawBody: item.summary,
         rawPublishedAt: item.publishedAt,
-        discoveredAt: Date.now(),
+        discoveredAt: now,
         checksum: dedupeKey,
         parseConfidence: item.parseConfidence,
         normalizationVersion: "v2",
@@ -151,16 +234,16 @@ export const persistSourceEntries = internalMutation({
     }
 
     await ctx.db.patch(args.sourceId, {
-      lastSuccessAt: Date.now(),
+      lastSuccessAt: now,
       consecutiveFailures: 0,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
 
     await ctx.db.insert("ingestionRuns", {
       sourceId: args.sourceId,
       vendorId: args.vendorId,
       startedAt: args.startedAt,
-      finishedAt: Date.now(),
+      finishedAt: now,
       status: "success",
       itemsFetched: args.items.length,
       itemsCreated,

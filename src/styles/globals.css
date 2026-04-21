@@ -500,6 +500,24 @@ button {
     text-decoration-line: underline;
   }
 
+  .vw-hero-primary-cta,
+  .dark .vw-hero-primary-cta {
+    border-color: oklch(97% 0.003 260);
+    background: oklch(97% 0.003 260);
+    color: oklch(12% 0.008 260);
+    box-shadow:
+      0 18px 44px -26px color-mix(in oklch, var(--splash) 70%, transparent),
+      0 2px 10px -4px color-mix(in oklch, black 70%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, black 18%, transparent);
+  }
+
+  .vw-hero-primary-cta:hover,
+  .dark .vw-hero-primary-cta:hover {
+    border-color: oklch(91% 0.006 260);
+    background: oklch(91% 0.006 260);
+    color: oklch(10% 0.008 260);
+  }
+
   .vw-muted {
     color: var(--muted-foreground);
   }

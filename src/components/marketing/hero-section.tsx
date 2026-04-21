@@ -54,7 +54,7 @@ export function HeroSection({ vendorCount, lastPublishedAt }: HeroSectionProps) 
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
-            <Button asChild size="lg">
+            <Button asChild size="lg" className="vw-hero-primary-cta">
               <Link href="/search">
                 <SearchIcon className="size-4" aria-hidden="true" />
                 Search the feed
