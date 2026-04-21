@@ -65,11 +65,11 @@ export const homepageFeed = query({
       .query("changeEvents")
       .withIndex("by_visibility_and_published", (q) => q.eq("visibility", "public"))
       .order("desc")
-      .take(60);
+      .take(24);
 
     const formatted = await Promise.all(rows.map((row) => formatEvent(ctx, row)));
 
-    return formatted.filter(Boolean).sort(sortPublicEvents).slice(0, 24);
+    return formatted.filter(Boolean);
   },
 });
 
