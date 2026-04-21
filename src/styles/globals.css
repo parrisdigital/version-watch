@@ -780,9 +780,9 @@ button {
     mask-repeat: no-repeat;
     mask-size: contain;
     mask-position: center;
-    /* Force alpha-channel masking. The default (luminance) renders colored
-     * raster logos like exa.png (blue on transparent) at the luminance of
-     * the logo color — a dark blue reads as ~25% opaque and looks missing.
+    /* Force alpha-channel masking. The default (luminance) can render colored
+     * raster logos at the luminance of the logo color — a dark blue reads as
+     * ~25% opaque and looks missing.
      * Alpha-mode uses the PNG's transparency channel instead, which
      * correctly outlines the glyph regardless of its color. SVGs with
      * currentColor or solid fills already have 100% alpha where the glyph
@@ -795,6 +795,22 @@ button {
   }
 
   .vw-mark-logo[data-fill="true"] {
+    width: 80%;
+    height: 80%;
+  }
+
+  .vw-mark-image {
+    display: block;
+    width: 62%;
+    height: 62%;
+    border-radius: calc(var(--radius-sm) - 1px);
+    background-image: var(--vw-logo);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: contain;
+  }
+
+  .vw-mark-image[data-fill="true"] {
     width: 80%;
     height: 80%;
   }

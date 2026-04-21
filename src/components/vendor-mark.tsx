@@ -21,7 +21,13 @@ export function VendorMark({ vendorSlug, vendorName, size = "md", className = ""
 
   return (
     <span aria-hidden="true" className={`vw-mark ${sizeClass[size]} ${className}`}>
-      {branding.logoUrl ? (
+      {branding.logoUrl && branding.renderMode === "image" ? (
+        <span
+          className="vw-mark-image"
+          data-fill={branding.fill ? "true" : "false"}
+          style={{ ["--vw-logo" as unknown as string]: `url("${branding.logoUrl}")` } as React.CSSProperties}
+        />
+      ) : branding.logoUrl ? (
         <span
           className="vw-mark-logo"
           data-fill={branding.fill ? "true" : "false"}

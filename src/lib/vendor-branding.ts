@@ -7,6 +7,8 @@
  */
 type VendorBrandConfig = {
   logoUrl?: string;
+  /** Render full-color assets directly instead of recoloring them as masks. */
+  renderMode?: "mask" | "image";
   /** Expand the glyph inside the mark (for logos whose own padding makes them read small). */
   fill?: boolean;
 };
@@ -28,8 +30,8 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   "android-developers": { logoUrl: "https://cdn.simpleicons.org/android" },
   // Firecrawl's CDN doesn't send CORS headers; self-host so mask-image works.
   firecrawl: { logoUrl: "/logos/firecrawl.svg", fill: true },
-  // Exa: self-host the favicon and fill the mark since the source has built-in padding.
-  exa: { logoUrl: "/logos/exa.png", fill: true },
+  // Exa's mark is a blue app-style tile, so preserve the color instead of masking it.
+  exa: { logoUrl: "/logos/exa.svg", renderMode: "image", fill: true },
   clerk: { logoUrl: "https://cdn.simpleicons.org/clerk" },
   resend: { logoUrl: "https://cdn.simpleicons.org/resend" },
   linear: { logoUrl: "https://cdn.simpleicons.org/linear" },
@@ -52,6 +54,7 @@ export function getVendorBranding(vendorSlug: string, vendorName: string) {
   return {
     monogram: getMonogram(vendorName),
     logoUrl: brand?.logoUrl ?? null,
+    renderMode: brand?.renderMode ?? "mask",
     fill: brand?.fill ?? false,
   };
 }
