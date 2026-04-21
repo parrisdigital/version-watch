@@ -3,10 +3,34 @@ import { v } from "convex/values";
 
 import { publishRawCandidate } from "./lib/publish";
 
+function requireAdminSecret(suppliedSecret: string | undefined) {
+  const expectedSecret = process.env.ADMIN_SECRET;
+
+  if (!expectedSecret || suppliedSecret !== expectedSecret) {
+    throw new Error("Unauthorized");
+  }
+}
+
+async function recordReviewAction(
+  ctx: any,
+  rawCandidateId: any,
+  action: "approve" | "reject" | "suppress",
+  performedBy: string,
+) {
+  await ctx.db.insert("reviewActions", {
+    rawCandidateId,
+    action,
+    performedAt: Date.now(),
+    performedBy,
+  });
+}
+
 export const listPending = query({
-  args: {},
+  args: { adminSecret: v.string() },
   returns: v.array(v.any()),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
+    requireAdminSecret(args.adminSecret);
+
     const rows = await ctx.db
       .query("rawCandidates")
       .withIndex("by_status_and_published", (q) => q.eq("status", "pending_review"))
@@ -42,9 +66,15 @@ export const listPending = query({
 });
 
 export const approve = mutation({
-  args: { rawCandidateId: v.id("rawCandidates"), performedBy: v.string() },
+  args: {
+    rawCandidateId: v.id("rawCandidates"),
+    performedBy: v.string(),
+    adminSecret: v.string(),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
+    requireAdminSecret(args.adminSecret);
+
     const rawCandidate = await ctx.db.get(args.rawCandidateId);
 
     if (!rawCandidate) {
@@ -56,12 +86,51 @@ export const approve = mutation({
       ...rawCandidate,
       status: "published",
     });
-    await ctx.db.insert("reviewActions", {
-      rawCandidateId: args.rawCandidateId,
-      action: "approve",
-      performedAt: Date.now(),
-      performedBy: args.performedBy,
-    });
+    await recordReviewAction(ctx, args.rawCandidateId, "approve", args.performedBy);
+    return null;
+  },
+});
+
+export const reject = mutation({
+  args: {
+    rawCandidateId: v.id("rawCandidates"),
+    performedBy: v.string(),
+    adminSecret: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    requireAdminSecret(args.adminSecret);
+
+    const rawCandidate = await ctx.db.get(args.rawCandidateId);
+
+    if (!rawCandidate) {
+      return null;
+    }
+
+    await ctx.db.patch(args.rawCandidateId, { status: "rejected" });
+    await recordReviewAction(ctx, args.rawCandidateId, "reject", args.performedBy);
+    return null;
+  },
+});
+
+export const suppress = mutation({
+  args: {
+    rawCandidateId: v.id("rawCandidates"),
+    performedBy: v.string(),
+    adminSecret: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    requireAdminSecret(args.adminSecret);
+
+    const rawCandidate = await ctx.db.get(args.rawCandidateId);
+
+    if (!rawCandidate) {
+      return null;
+    }
+
+    await ctx.db.patch(args.rawCandidateId, { status: "suppressed" });
+    await recordReviewAction(ctx, args.rawCandidateId, "suppress", args.performedBy);
     return null;
   },
 });

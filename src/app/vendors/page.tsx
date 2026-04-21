@@ -1,4 +1,4 @@
-import { SiteNav } from "@/components/site-nav";
+import { SiteHeader } from "@/components/marketing/site-header";
 import { VendorGrid } from "@/components/vendor-grid";
 import { getVendors } from "@/lib/site-data";
 
@@ -6,22 +6,28 @@ export const dynamic = "force-dynamic";
 
 export default async function VendorsPage() {
   const vendors = await getVendors();
+  const totalSources = vendors.reduce((sum, vendor) => sum + vendor.sources.length, 0);
 
   return (
-    <main className="min-h-dvh isolate overflow-x-hidden bg-zinc-950 pb-24">
-      <SiteNav />
-      <section className="px-4 pb-20 pt-16 sm:px-6">
-        <div className="mx-auto max-w-7xl">
-          <p className="font-mono text-sm uppercase tracking-wide text-zinc-500">Vendor Directory</p>
-          <h1 className="mt-4 max-w-[14ch] text-balance text-5xl font-semibold tracking-tight text-zinc-50">
-            Browse the platforms Version Watch tracks from one source-first index.
+    <main className="vw-page">
+      <SiteHeader />
+
+      <section className="px-4 pb-8 pt-28 sm:px-6 md:pt-32">
+        <div className="vw-shell">
+          <p className="vw-kicker">Vendor directory</p>
+          <h1 className="vw-display mt-4 text-balance text-4xl sm:text-5xl md:text-6xl">
+            The platforms Version Watch watches.
           </h1>
-          <p className="mt-6 max-w-[56ch] text-pretty text-lg text-zinc-400">
-            Each vendor page keeps the official sources attached and collects the most important recent changes in one place.
+          <p className="vw-copy mt-6 max-w-[68ch] text-lg">
+            {vendors.length} vendors · {totalSources} official release surfaces. Each vendor page collects the
+            most important recent changes with the source attached.
           </p>
-          <div className="mt-12">
-            <VendorGrid items={vendors} />
-          </div>
+        </div>
+      </section>
+
+      <section className="px-4 pb-20 pt-8 sm:px-6">
+        <div className="vw-shell">
+          <VendorGrid items={vendors} />
         </div>
       </section>
     </main>

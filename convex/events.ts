@@ -64,6 +64,7 @@ export const homepageFeed = query({
     const rows = await ctx.db
       .query("changeEvents")
       .withIndex("by_visibility_and_published", (q) => q.eq("visibility", "public"))
+      .order("desc")
       .take(60);
 
     const formatted = await Promise.all(rows.map((row) => formatEvent(ctx, row)));
@@ -88,6 +89,7 @@ export const byVendorSlug = query({
     const rows = await ctx.db
       .query("changeEvents")
       .withIndex("by_vendor_and_published", (q) => q.eq("vendorId", vendor._id))
+      .filter((q) => q.eq(q.field("visibility"), "public"))
       .collect();
 
     const formatted = await Promise.all(rows.map((row) => formatEvent(ctx, row)));

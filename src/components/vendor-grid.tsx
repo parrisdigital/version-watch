@@ -3,25 +3,52 @@ import Link from "next/link";
 import { VendorMark } from "@/components/vendor-mark";
 import type { VendorRecord } from "@/lib/mock-data";
 
+function ArrowIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      className="size-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3.5 8 H12.5 M8.5 4 L12.5 8 L8.5 12" />
+    </svg>
+  );
+}
+
 export function VendorGrid({ items }: { items: VendorRecord[] }) {
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <ul role="list" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {items.map((vendor) => (
-        <Link
-          key={vendor.slug}
-          href={`/vendors/${vendor.slug}`}
-          className="group overflow-hidden rounded-[1.75rem] border border-zinc-800 bg-zinc-950/80 p-5 transition-transform duration-700 hover:-translate-y-1"
-        >
-          <div className="flex items-center gap-4">
-            <VendorMark vendorSlug={vendor.slug} vendorName={vendor.name} />
-            <h3 className="text-xl font-semibold tracking-[-0.04em] text-zinc-50">{vendor.name}</h3>
-          </div>
-          <p className="mt-4 text-base text-zinc-400">{vendor.description}</p>
-          <div className="mt-6 text-sm font-medium text-amber-200 transition-colors group-hover:text-amber-100">
-            Open vendor page
-          </div>
-        </Link>
+        <li key={vendor.slug}>
+          <Link
+            href={`/vendors/${vendor.slug}`}
+            className="group vw-panel-flat flex h-full flex-col p-5 transition-colors hover:border-[var(--color-line-strong)] hover:bg-[var(--color-surface-raised)]"
+          >
+            <div className="flex items-center gap-3">
+              <VendorMark vendorSlug={vendor.slug} vendorName={vendor.name} size="md" />
+              <div className="flex min-w-0 flex-col leading-tight">
+                <h3 className="font-[var(--font-display)] text-base font-semibold tracking-tight text-[var(--color-ink)]">
+                  {vendor.name}
+                </h3>
+                <p className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)]">
+                  {vendor.sources.length} source{vendor.sources.length === 1 ? "" : "s"}
+                </p>
+              </div>
+            </div>
+
+            <p className="vw-copy mt-4 flex-1 text-sm">{vendor.description}</p>
+
+            <div className="mt-4 flex items-center gap-1.5 text-[0.8125rem] font-semibold text-[var(--color-ink-muted)] transition-colors group-hover:text-[var(--color-signal)]">
+              Open vendor <ArrowIcon />
+            </div>
+          </Link>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

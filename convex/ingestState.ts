@@ -99,6 +99,7 @@ export const persistSourceEntries = internalMutation({
         .withIndex("by_dedupe_key", (q) => q.eq("dedupeKey", dedupeKey))
         .unique();
 
+      const status = existingCandidate?.status ?? ("pending_review" as const);
       const rawPayload = {
         vendorId: args.vendorId,
         sourceId: args.sourceId,
@@ -120,7 +121,7 @@ export const persistSourceEntries = internalMutation({
         proposedCategories: item.categories,
         importanceScore: item.importanceScore,
         importanceBand: item.importanceBand,
-        status: "published" as const,
+        status,
         dedupeKey,
       };
 
@@ -141,9 +142,11 @@ export const persistSourceEntries = internalMutation({
         itemsCreated += 1;
       }
 
-      const publishedId = await publishRawCandidate(ctx, rawCandidate);
-      if (publishedId) {
-        published += 1;
+      if (rawCandidate.status === "published") {
+        const publishedId = await publishRawCandidate(ctx, rawCandidate);
+        if (publishedId) {
+          published += 1;
+        }
       }
     }
 

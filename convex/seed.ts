@@ -1,4 +1,4 @@
-import { mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 import {
@@ -133,7 +133,7 @@ async function syncVendorRegistryRecords(ctx: any) {
   };
 }
 
-export const syncRegistry = mutation({
+export const syncRegistry = internalMutation({
   args: {},
   returns: v.object({
     vendors: v.number(),
@@ -149,7 +149,7 @@ export const syncRegistry = mutation({
   },
 });
 
-export const clearContent = mutation({
+export const clearContent = internalMutation({
   args: {},
   returns: v.object({
     eventLinks: v.number(),
@@ -200,7 +200,7 @@ export const clearContent = mutation({
   },
 });
 
-export const seedDemoData = mutation({
+export const seedDemoData = internalMutation({
   args: {},
   returns: v.object({
     vendors: v.number(),

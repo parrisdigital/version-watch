@@ -2,7 +2,7 @@
 
 import Parser from "rss-parser";
 import { action, internalAction } from "./_generated/server";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 import {
@@ -159,10 +159,57 @@ async function ingestSource(ctx: any, source: any, runType: "scheduled" | "manua
   }
 }
 
+function requireAdminSecret(suppliedSecret: string | undefined) {
+  const expectedSecret = process.env.ADMIN_SECRET;
+
+  if (!expectedSecret || suppliedSecret !== expectedSecret) {
+    throw new Error("Unauthorized");
+  }
+}
+
+async function runIngestion(ctx: any, force: boolean, runType: "scheduled" | "manual" | "deep_diff") {
+  await ctx.runMutation(internal.seed.syncRegistry, {});
+
+  const sources = await ctx.runQuery(internal.ingestState.listDueSources, {
+    force,
+  });
+
+  let itemsFetched = 0;
+  let itemsCreated = 0;
+  let itemsDeduped = 0;
+  let published = 0;
+  let failures = 0;
+
+  for (const source of sources) {
+    const result = await ingestSource(ctx, source, runType);
+    itemsFetched += result.itemsFetched;
+    itemsCreated += result.itemsCreated;
+    itemsDeduped += result.itemsDeduped;
+    published += result.published;
+    if (result.failed) {
+      failures += 1;
+    }
+  }
+
+  return {
+    sourcesProcessed: sources.length,
+    itemsFetched,
+    itemsCreated,
+    itemsDeduped,
+    published,
+    failures,
+  };
+}
+
 export const fetchSource = action({
-  args: { url: v.string() },
+  args: {
+    url: v.string(),
+    adminSecret: v.string(),
+  },
   returns: v.object({ ok: v.boolean(), body: v.string() }),
   handler: async (_ctx, args) => {
+    requireAdminSecret(args.adminSecret);
+
     const response = await fetchText(args.url);
 
     return {
@@ -173,7 +220,10 @@ export const fetchSource = action({
 });
 
 export const runManualIngestion: ReturnType<typeof action> = action({
-  args: { force: v.optional(v.boolean()) },
+  args: {
+    adminSecret: v.string(),
+    force: v.optional(v.boolean()),
+  },
   returns: v.object({
     sourcesProcessed: v.number(),
     itemsFetched: v.number(),
@@ -183,37 +233,8 @@ export const runManualIngestion: ReturnType<typeof action> = action({
     failures: v.number(),
   }),
   handler: async (ctx, args) => {
-    await ctx.runMutation(api.seed.syncRegistry, {});
-
-    const sources = await ctx.runQuery(internal.ingestState.listDueSources, {
-      force: args.force ?? true,
-    });
-
-    let itemsFetched = 0;
-    let itemsCreated = 0;
-    let itemsDeduped = 0;
-    let published = 0;
-    let failures = 0;
-
-    for (const source of sources) {
-      const result = await ingestSource(ctx, source, "manual");
-      itemsFetched += result.itemsFetched;
-      itemsCreated += result.itemsCreated;
-      itemsDeduped += result.itemsDeduped;
-      published += result.published;
-      if (result.failed) {
-        failures += 1;
-      }
-    }
-
-    return {
-      sourcesProcessed: sources.length,
-      itemsFetched,
-      itemsCreated,
-      itemsDeduped,
-      published,
-      failures,
-    };
+    requireAdminSecret(args.adminSecret);
+    return await runIngestion(ctx, args.force ?? true, "manual");
   },
 });
 
@@ -228,36 +249,21 @@ export const runScheduledIngestion: ReturnType<typeof internalAction> = internal
     failures: v.number(),
   }),
   handler: async (ctx) => {
-    await ctx.runMutation(api.seed.syncRegistry, {});
+    return await runIngestion(ctx, false, "scheduled");
+  },
+});
 
-    const sources = await ctx.runQuery(internal.ingestState.listDueSources, {
-      force: false,
-    });
-
-    let itemsFetched = 0;
-    let itemsCreated = 0;
-    let itemsDeduped = 0;
-    let published = 0;
-    let failures = 0;
-
-    for (const source of sources) {
-      const result = await ingestSource(ctx, source, "scheduled");
-      itemsFetched += result.itemsFetched;
-      itemsCreated += result.itemsCreated;
-      itemsDeduped += result.itemsDeduped;
-      published += result.published;
-      if (result.failed) {
-        failures += 1;
-      }
-    }
-
-    return {
-      sourcesProcessed: sources.length,
-      itemsFetched,
-      itemsCreated,
-      itemsDeduped,
-      published,
-      failures,
-    };
+export const runDeepDiff: ReturnType<typeof internalAction> = internalAction({
+  args: {},
+  returns: v.object({
+    sourcesProcessed: v.number(),
+    itemsFetched: v.number(),
+    itemsCreated: v.number(),
+    itemsDeduped: v.number(),
+    published: v.number(),
+    failures: v.number(),
+  }),
+  handler: async (ctx) => {
+    return await runIngestion(ctx, true, "deep_diff");
   },
 });

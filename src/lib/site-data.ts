@@ -26,31 +26,48 @@ type SourceHealthView = SourceHealthEntry & {
 
 async function readFromConvex<T>(read: () => Promise<T>, fallback: () => T): Promise<T> {
   if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("NEXT_PUBLIC_CONVEX_URL is required in production.");
+    }
+
     return fallback();
   }
 
   try {
     return await read();
   } catch (error) {
+    if (process.env.NODE_ENV === "production") {
+      throw error;
+    }
+
     console.warn("Version Watch falling back to local data.", error);
     return fallback();
   }
 }
 
-function withComputedScores(items: SiteEvent[]) {
-  return [...items]
-    .sort((a, b) => {
-      const scoreDiff = scoreEvent(b) - scoreEvent(a);
-      if (scoreDiff !== 0) {
-        return scoreDiff;
-      }
+function attachScores(items: SiteEvent[]): SiteEvent[] {
+  return items.map((event) => ({
+    ...event,
+    computedScore: event.computedScore ?? scoreEvent(event),
+  }));
+}
 
-      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-    })
-    .map((event) => ({
-      ...event,
-      computedScore: event.computedScore ?? scoreEvent(event),
-    }));
+// Score-first ordering, date as tiebreaker. Used for search + vendor pages.
+function withComputedScores(items: SiteEvent[]) {
+  return attachScores(items).sort((a, b) => {
+    const scoreDiff = (b.computedScore ?? 0) - (a.computedScore ?? 0);
+    if (scoreDiff !== 0) return scoreDiff;
+    return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+  });
+}
+
+// Recency-first ordering, score as tiebreaker. Used for the homepage feed.
+function withComputedScoresRecent(items: SiteEvent[]) {
+  return attachScores(items).sort((a, b) => {
+    const dateDiff = new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+    if (dateDiff !== 0) return dateDiff;
+    return (b.computedScore ?? 0) - (a.computedScore ?? 0);
+  });
 }
 
 export async function getHomepageEvents() {
@@ -59,7 +76,7 @@ export async function getHomepageEvents() {
     () => fallbackEvents,
   );
 
-  return withComputedScores(items);
+  return withComputedScoresRecent(items);
 }
 
 export async function getAllPublicEvents() {
@@ -115,7 +132,14 @@ export async function getEventBySlug(slug: string) {
 
 export async function getReviewQueue(): Promise<ReviewQueueEntry[]> {
   const items = await readFromConvex<ReviewCandidate[]>(
-    () => fetchQuery(api.review.listPending, {}) as Promise<ReviewCandidate[]>,
+    () => {
+      const adminSecret = process.env.ADMIN_SECRET;
+      if (!adminSecret) {
+        throw new Error("ADMIN_SECRET is required to read the review queue.");
+      }
+
+      return fetchQuery(api.review.listPending, { adminSecret }) as Promise<ReviewCandidate[]>;
+    },
     () => reviewCandidates,
   );
 

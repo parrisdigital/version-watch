@@ -6,3 +6,4 @@ test-results
 .env.local
 coverage
 dist
+tsconfig.tsbuildinfo

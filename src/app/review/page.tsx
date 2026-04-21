@@ -1,53 +1,101 @@
 import Link from "next/link";
 
+import { SiteHeader } from "@/components/marketing/site-header";
+import { VendorMark } from "@/components/vendor-mark";
 import { getReviewQueue } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
+
+const confidenceClass: Record<string, string> = {
+  high: "text-[var(--color-green)]",
+  medium: "text-[var(--color-signal)]",
+  low: "text-[var(--color-red)]",
+};
 
 export default async function ReviewQueuePage() {
   const queue = await getReviewQueue();
 
   return (
-    <main className="min-h-dvh bg-zinc-950 px-4 py-12 text-zinc-50 sm:px-6">
-      <div className="mx-auto max-w-6xl">
-        <div className="flex items-end justify-between gap-6">
+    <main className="vw-page">
+      <SiteHeader />
+
+      <section className="border-b border-[var(--color-line)] px-4 pb-10 pt-28 sm:px-6 md:pb-14 md:pt-32">
+        <div className="vw-shell flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="font-mono text-sm uppercase tracking-wide text-zinc-500">Admin</p>
-            <h1 className="mt-4 text-5xl font-semibold tracking-tight">Review Queue</h1>
+            <p className="vw-kicker">Admin</p>
+            <h1 className="vw-display mt-3 text-4xl md:text-5xl">Review queue</h1>
+            <p className="vw-copy mt-3 max-w-[52ch] text-pretty text-base">
+              {queue.length} candidates waiting for review. Low-confidence parses and docs-page revisions land
+              here before they hit the public feed.
+            </p>
           </div>
-          <Link href="/ops/health" className="rounded-full border border-white/12 px-5 py-3 text-sm font-semibold text-zinc-100">
-            Source Health
+          <Link href="/ops/health" className="vw-button vw-button-secondary">
+            Source health
           </Link>
         </div>
-        <div className="mt-10 overflow-hidden rounded-[2rem] border border-zinc-800 bg-zinc-950/80">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-zinc-800 text-zinc-500">
-              <tr>
-                <th className="px-6 py-4">Vendor</th>
-                <th className="px-6 py-4">Title</th>
-                <th className="px-6 py-4">Source</th>
-                <th className="px-6 py-4">Published</th>
-                <th className="px-6 py-4">Confidence</th>
-              </tr>
-            </thead>
-            <tbody>
-              {queue.map((candidate) => (
-                <tr key={candidate.id} className="border-b border-zinc-900 last:border-b-0">
-                  <td className="px-6 py-4 text-zinc-200">{candidate.vendorName}</td>
-                  <td className="px-6 py-4">
-                    <Link href={`/review/${candidate.id}`} className="text-zinc-50 transition-colors hover:text-amber-200">
-                      {candidate.title}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 uppercase tracking-[0.14em] text-zinc-400">{candidate.sourceType}</td>
-                  <td className="px-6 py-4 text-zinc-400">{candidate.publishedDateLabel}</td>
-                  <td className="px-6 py-4 uppercase tracking-[0.14em] text-zinc-400">{candidate.parseConfidence}</td>
+      </section>
+
+      <section className="px-4 py-10 sm:px-6 md:py-12">
+        <div className="vw-shell">
+          <div className="vw-panel overflow-hidden">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-[var(--color-line)]">
+                <tr className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)]">
+                  <th className="px-5 py-3 font-medium">Vendor</th>
+                  <th className="px-5 py-3 font-medium">Title</th>
+                  <th className="px-5 py-3 font-medium">Source</th>
+                  <th className="px-5 py-3 font-medium">Published</th>
+                  <th className="px-5 py-3 font-medium text-right">Confidence</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {queue.map((candidate) => (
+                  <tr
+                    key={candidate.id}
+                    className="border-b border-[var(--color-line-quiet)] last:border-b-0 transition-colors hover:bg-[var(--color-surface-raised)]"
+                  >
+                    <td className="px-5 py-4">
+                      <span className="flex items-center gap-2.5">
+                        <VendorMark
+                          vendorSlug={candidate.vendorSlug}
+                          vendorName={candidate.vendorName}
+                          size="sm"
+                        />
+                        <span className="text-sm font-semibold text-[var(--color-ink)]">
+                          {candidate.vendorName}
+                        </span>
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <Link
+                        href={`/review/${candidate.id}`}
+                        className="text-[var(--color-ink)] transition-colors hover:text-[var(--color-signal)]"
+                      >
+                        {candidate.title}
+                      </Link>
+                    </td>
+                    <td className="px-5 py-4 font-[var(--font-mono)] text-xs uppercase tracking-wider text-[var(--color-ink-muted)]">
+                      {candidate.sourceType.replace("_", " ")}
+                    </td>
+                    <td className="px-5 py-4 text-[var(--color-ink-muted)]">
+                      {candidate.publishedDateLabel}
+                    </td>
+                    <td className="px-5 py-4 text-right">
+                      <span
+                        className={`font-[var(--font-mono)] text-xs uppercase tracking-wider ${
+                          confidenceClass[candidate.parseConfidence] ?? "text-[var(--color-ink-muted)]"
+                        }`}
+                      >
+                        {candidate.parseConfidence}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 }

@@ -1,5 +1,5 @@
 import { SearchExplorer } from "@/components/search-explorer";
-import { SiteNav } from "@/components/site-nav";
+import { SiteHeader } from "@/components/marketing/site-header";
 import { getAllPublicEvents, getVendors } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +19,8 @@ export default async function SearchPage({
   const [events, vendors] = await Promise.all([getAllPublicEvents(), getVendors()]);
 
   return (
-    <main className="min-h-dvh isolate overflow-x-hidden bg-zinc-950 pb-24">
-      <SiteNav />
+    <main className="vw-page pb-24 pt-28 md:pt-32">
+      <SiteHeader />
       <SearchExplorer
         events={events}
         vendors={vendors}
