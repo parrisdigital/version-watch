@@ -113,6 +113,12 @@
   --color-green: oklch(52% 0.14 158);
   --color-red: oklch(58% 0.22 25);
   --color-blue: oklch(50% 0.16 230);
+
+  --hero-foreground: var(--foreground);
+  --hero-copy: oklch(25% 0.01 260);
+  --hero-muted: oklch(33% 0.012 260);
+  --hero-chip-background: color-mix(in oklch, var(--card) 82%, transparent);
+  --hero-chip-foreground: oklch(27% 0.012 260);
 }
 
 /* ---------------------------------------------------------------------------
@@ -196,6 +202,12 @@ html.dark {
   --color-green: oklch(74% 0.14 158);
   --color-red: oklch(70% 0.2 22);
   --color-blue: oklch(72% 0.13 230);
+
+  --hero-foreground: oklch(99% 0.001 260);
+  --hero-copy: oklch(93% 0.004 260);
+  --hero-muted: oklch(86% 0.006 260);
+  --hero-chip-background: color-mix(in oklch, var(--card) 72%, transparent);
+  --hero-chip-foreground: oklch(91% 0.004 260);
 }
 
 /* Also support light mode being opted into explicitly (for migration from the
@@ -391,6 +403,103 @@ button {
     line-height: 1.65;
   }
 
+  .vw-ui-button-primary {
+    border: 1px solid var(--primary);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow:
+      0 1px 2px color-mix(in oklch, black 12%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, white 12%, transparent);
+  }
+
+  .vw-ui-button-primary:hover {
+    background: color-mix(in oklch, var(--primary) 88%, var(--background));
+    border-color: color-mix(in oklch, var(--primary) 88%, var(--background));
+  }
+
+  .dark .vw-ui-button-primary {
+    color: oklch(13% 0.008 260);
+    box-shadow:
+      0 18px 44px -26px color-mix(in oklch, var(--splash) 70%, transparent),
+      0 2px 10px -4px color-mix(in oklch, black 70%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, black 18%, transparent);
+  }
+
+  .dark .vw-ui-button-primary:hover {
+    background: oklch(92% 0.006 260);
+    border-color: oklch(92% 0.006 260);
+    color: oklch(12% 0.008 260);
+  }
+
+  .vw-ui-button-outline {
+    border: 1px solid var(--border);
+    background: color-mix(in oklch, var(--background) 88%, transparent);
+    color: var(--foreground);
+    box-shadow: 0 1px 2px color-mix(in oklch, black 8%, transparent);
+  }
+
+  .vw-ui-button-outline:hover {
+    background: var(--muted);
+    border-color: var(--border-strong);
+    color: var(--foreground);
+  }
+
+  .dark .vw-ui-button-outline {
+    background: color-mix(in oklch, black 72%, transparent);
+    border-color: color-mix(in oklch, var(--foreground) 16%, transparent);
+    color: var(--foreground);
+    box-shadow:
+      0 2px 10px -6px color-mix(in oklch, black 80%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, white 4%, transparent);
+  }
+
+  .dark .vw-ui-button-outline:hover {
+    background: color-mix(in oklch, black 58%, var(--foreground) 6%);
+    border-color: color-mix(in oklch, var(--foreground) 26%, transparent);
+  }
+
+  .vw-ui-button-secondary {
+    background: var(--secondary);
+    color: var(--secondary-foreground);
+    box-shadow: 0 1px 2px color-mix(in oklch, black 8%, transparent);
+  }
+
+  .vw-ui-button-secondary:hover {
+    background: color-mix(in oklch, var(--secondary) 84%, var(--foreground) 8%);
+  }
+
+  .vw-ui-button-ghost {
+    color: var(--muted-foreground);
+  }
+
+  .vw-ui-button-ghost:hover {
+    background: var(--muted);
+    color: var(--foreground);
+  }
+
+  .dark .vw-ui-button-ghost {
+    color: var(--hero-muted);
+  }
+
+  .vw-ui-button-destructive {
+    background: var(--destructive);
+    color: var(--destructive-foreground);
+    box-shadow: 0 1px 2px color-mix(in oklch, black 10%, transparent);
+  }
+
+  .vw-ui-button-destructive:hover {
+    background: color-mix(in oklch, var(--destructive) 88%, var(--background));
+  }
+
+  .vw-ui-button-link {
+    color: var(--foreground);
+    text-underline-offset: 4px;
+  }
+
+  .vw-ui-button-link:hover {
+    text-decoration-line: underline;
+  }
+
   .vw-muted {
     color: var(--muted-foreground);
   }
@@ -455,13 +564,17 @@ button {
     background: var(--primary);
     color: var(--primary-foreground);
     border: 1px solid var(--primary);
-    box-shadow: 0 1px 2px color-mix(in oklch, black 10%, transparent);
+    box-shadow:
+      0 1px 2px color-mix(in oklch, black 12%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, white 12%, transparent);
   }
 
   .dark .vw-button-primary {
+    color: oklch(13% 0.008 260);
     box-shadow:
-      inset 0 0 0 1px color-mix(in oklch, var(--foreground) 12%, transparent),
-      0 2px 8px -2px color-mix(in oklch, black 40%, transparent);
+      0 18px 44px -26px color-mix(in oklch, var(--splash) 70%, transparent),
+      0 2px 10px -4px color-mix(in oklch, black 70%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, black 18%, transparent);
   }
 
   .vw-button-primary:hover {
@@ -469,21 +582,37 @@ button {
     border-color: color-mix(in oklch, var(--primary) 88%, var(--background));
   }
 
+  .dark .vw-button-primary:hover {
+    background: oklch(92% 0.006 260);
+    border-color: oklch(92% 0.006 260);
+    color: oklch(12% 0.008 260);
+  }
+
   .vw-button-signal {
     background: var(--primary);
     color: var(--primary-foreground);
     border: 1px solid var(--primary);
-    box-shadow: 0 1px 2px color-mix(in oklch, black 10%, transparent);
+    box-shadow:
+      0 1px 2px color-mix(in oklch, black 12%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, white 12%, transparent);
   }
 
   .dark .vw-button-signal {
+    color: oklch(13% 0.008 260);
     box-shadow:
-      inset 0 0 0 1px color-mix(in oklch, var(--foreground) 12%, transparent),
-      0 2px 8px -2px color-mix(in oklch, black 40%, transparent);
+      0 18px 44px -26px color-mix(in oklch, var(--splash) 70%, transparent),
+      0 2px 10px -4px color-mix(in oklch, black 70%, transparent),
+      inset 0 0 0 1px color-mix(in oklch, black 18%, transparent);
   }
 
   .vw-button-signal:hover {
     background: color-mix(in oklch, var(--primary) 88%, var(--background));
+  }
+
+  .dark .vw-button-signal:hover {
+    background: oklch(92% 0.006 260);
+    border-color: oklch(92% 0.006 260);
+    color: oklch(12% 0.008 260);
   }
 
   .vw-button-secondary {
