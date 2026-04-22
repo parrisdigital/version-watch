@@ -73,7 +73,8 @@ export default defineSchema({
   })
     .index("by_status_and_published", ["status", "rawPublishedAt"])
     .index("by_dedupe_key", ["dedupeKey"])
-    .index("by_source_url_published", ["sourceId", "sourceUrl", "rawPublishedAt"]),
+    .index("by_source_url_published", ["sourceId", "sourceUrl", "rawPublishedAt"])
+    .index("by_source_and_title", ["sourceId", "rawTitle"]),
 
   changeEvents: defineTable({
     vendorId: v.id("vendors"),

@@ -433,6 +433,51 @@ function parseDatedHeadingEntries(sourceUrl: string, html: string) {
   return dedupeEntries(entries);
 }
 
+function parseCursorEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const article of $("main article").toArray()) {
+    const time = $(article).find("time[datetime]").first();
+    const publishedAt = parseDateText(time.attr("datetime") ?? cleanText(time.text()), null);
+    if (!publishedAt) {
+      continue;
+    }
+
+    const titleLink = $(article).find('h1 a[href^="/changelog/"], h2 a[href^="/changelog/"]').first();
+    const title = cleanText(titleLink.text() || $(article).find("h1, h2").first().text());
+    if (!isMeaningfulCursorTitle(title)) {
+      continue;
+    }
+
+    const excerpt =
+      truncateSentence(
+        $(article)
+          .find(".prose p")
+          .toArray()
+          .map((element) => cleanText($(element).text()))
+          .filter(Boolean)
+          .slice(0, 2)
+          .join(" "),
+      ) || title;
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(titleLink.attr("href"), sourceUrl),
+      excerpt,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function isMeaningfulCursorTitle(title: string) {
+  const value = cleanText(title);
+  return value.length >= 4 && !NOISE_TITLES.has(value.toLowerCase()) && !isDateLike(value);
+}
+
 function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: string) {
   const lines = markdown.split(/\r?\n/);
 
@@ -1074,6 +1119,13 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "firebase:docs_page") {
     const entries = parseFirebaseEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "cursor:changelog_page") {
+    const entries = parseCursorEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }

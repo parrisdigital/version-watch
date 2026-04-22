@@ -167,6 +167,63 @@ describe("parseHtmlEntries", () => {
     });
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-20T00:00:00.000Z"));
   });
+
+  it("parses Cursor article-grid changelog entries", () => {
+    const html = `
+      <main>
+        <article>
+          <div>
+            <div>
+              <a href="/changelog/04-15-26">
+                <time dateTime="2026-04-15T00:00:00.000Z">Apr 15, 2026</time>
+              </a>
+            </div>
+            <div>
+              <h1><a href="/changelog/04-15-26">Canvases</a></h1>
+              <div class="prose">
+                <p>Cursor can now respond by creating interactive canvases.</p>
+                <p>These visualizations can include dashboards and custom interfaces.</p>
+              </div>
+            </div>
+          </div>
+        </article>
+        <article>
+          <div>
+            <div>
+              <a href="/changelog/04-14-26">
+                <time dateTime="2026-04-14T00:00:00.000Z">Apr 14, 2026</time>
+              </a>
+            </div>
+            <div>
+              <h1><a href="/changelog/04-14-26">CLI Debug Mode and /btw Support</a></h1>
+              <div class="prose">
+                <p>We've shipped quality-of-life improvements to the Cursor CLI.</p>
+              </div>
+            </div>
+          </div>
+        </article>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "cursor:changelog_page",
+      sourceUrl: "https://cursor.com/changelog",
+      html,
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      title: "Canvases",
+      url: "https://cursor.com/changelog/04-15-26",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-15T00:00:00.000Z"));
+    expect(entries[1]).toMatchObject({
+      title: "CLI Debug Mode and /btw Support",
+      url: "https://cursor.com/changelog/04-14-26",
+    });
+    expect(entries[1]?.publishedAt).toBe(Date.parse("2026-04-14T00:00:00.000Z"));
+  });
 });
 
 describe("normalizeParsedEntry", () => {

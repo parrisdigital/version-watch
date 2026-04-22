@@ -68,6 +68,8 @@ const NOISE_TITLE_PATTERNS = [
   /^overview$/i,
 ];
 
+const SHORT_MEANINGFUL_TITLES = new Set(["canvases"]);
+
 const OFFICIAL_HOSTS_BY_VENDOR: Record<string, string[]> = {
   anthropic: ["anthropic.com", "claude.com", "docs.claude.com", "platform.claude.com", "support.claude.com"],
 };
@@ -98,8 +100,13 @@ function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string, vendorSlug
 
 function hasMeaningfulTitle(title: string) {
   const normalized = title.replace(/\s+/g, " ").trim();
+  const normalizedLower = normalized.toLowerCase();
 
-  if (normalized.length < 12 || normalized.length > 180) {
+  if (normalized.length > 180) {
+    return false;
+  }
+
+  if (normalized.length < 12 && !SHORT_MEANINGFUL_TITLES.has(normalizedLower)) {
     return false;
   }
 
@@ -206,7 +213,13 @@ export const persistSourceEntries = internalMutation({
             q.eq("sourceId", args.sourceId).eq("sourceUrl", item.sourceUrl).eq("rawPublishedAt", item.publishedAt),
           )
           .first());
-      const existingCandidate = sameSourceCandidate;
+      const sameTitleCandidate =
+        sameSourceCandidate ??
+        (await ctx.db
+          .query("rawCandidates")
+          .withIndex("by_source_and_title", (q) => q.eq("sourceId", args.sourceId).eq("rawTitle", item.title))
+          .first());
+      const existingCandidate = sameTitleCandidate;
 
       const shouldPublish = shouldAutoPublishCandidate(item, vendor, source, now);
       const status =
