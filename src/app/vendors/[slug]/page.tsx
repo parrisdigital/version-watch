@@ -115,7 +115,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="vw-kicker">Recent changes</p>
-                <h2 className="vw-title mt-2 text-2xl">Ranked by signal</h2>
+                <h2 className="vw-title mt-2 text-2xl">Latest first</h2>
               </div>
               <Link href={`/search?vendor=${vendor.slug}`} className="vw-button vw-button-secondary">
                 Open in search
