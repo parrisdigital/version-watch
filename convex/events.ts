@@ -2,12 +2,19 @@ import { query } from "./_generated/server";
 import { v } from "convex/values";
 
 function sortPublicEvents(a: any, b: any) {
+  const aPublishedAt = typeof a.publishedAt === "string" ? Date.parse(a.publishedAt) : a.publishedAt;
+  const bPublishedAt = typeof b.publishedAt === "string" ? Date.parse(b.publishedAt) : b.publishedAt;
+  const dateDiff = bPublishedAt - aPublishedAt;
+  if (dateDiff !== 0) {
+    return dateDiff;
+  }
+
   const scoreDiff = b.importanceScore - a.importanceScore;
   if (scoreDiff !== 0) {
     return scoreDiff;
   }
 
-  return b.publishedAt - a.publishedAt;
+  return 0;
 }
 
 async function formatEvent(ctx: any, event: any) {

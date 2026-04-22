@@ -36,12 +36,11 @@ function shouldPollSource(source: any, now: number, force: boolean) {
   return now - lastAttemptAt >= source.pollIntervalMinutes * 60 * 1000;
 }
 
-const AUTO_PUBLISH_VENDOR_SLUGS = new Set(["vercel", "clerk", "linear", "supabase", "resend"]);
-
-const MANUAL_REVIEW_VENDOR_SLUGS = new Set([
+const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
+  "android-developers",
   "anthropic",
   "apple-developer",
-  "android-developers",
+  "clerk",
   "cloudflare",
   "cursor",
   "docker",
@@ -50,24 +49,48 @@ const MANUAL_REVIEW_VENDOR_SLUGS = new Set([
   "firecrawl",
   "gemini",
   "github",
+  "linear",
+  "openai",
+  "resend",
   "stripe",
+  "supabase",
+  "vercel",
 ]);
 
 const NOISE_TITLE_PATTERNS = [
   /^release notes$/i,
   /^changelog$/i,
   /^what can we help you with\??$/i,
-  /^what'?s changing$/i,
+  /^what['’]?s changing$/i,
+  /^questions\??$/i,
+  /^timeline$/i,
   /^learn what'?s changing/i,
   /^overview$/i,
 ];
 
-function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string) {
-  try {
-    const candidateHost = new URL(candidateUrl).hostname.replace(/^www\./, "");
-    const sourceHost = new URL(sourceUrl).hostname.replace(/^www\./, "");
+const OFFICIAL_HOSTS_BY_VENDOR: Record<string, string[]> = {
+  anthropic: ["anthropic.com", "claude.com", "docs.claude.com", "platform.claude.com", "support.claude.com"],
+};
 
-    return candidateHost === sourceHost || candidateHost.endsWith(`.${sourceHost}`);
+function normalizeHost(value: string) {
+  return value.replace(/^www\./, "");
+}
+
+function hostMatches(candidateHost: string, sourceHost: string) {
+  return candidateHost === sourceHost || candidateHost.endsWith(`.${sourceHost}`);
+}
+
+function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string, vendorSlug: string) {
+  try {
+    const candidateHost = normalizeHost(new URL(candidateUrl).hostname);
+    const sourceHost = normalizeHost(new URL(sourceUrl).hostname);
+
+    if (hostMatches(candidateHost, sourceHost)) {
+      return true;
+    }
+
+    const officialHosts = OFFICIAL_HOSTS_BY_VENDOR[vendorSlug] ?? [];
+    return officialHosts.some((host) => hostMatches(candidateHost, normalizeHost(host)));
   } catch {
     return false;
   }
@@ -95,15 +118,11 @@ function shouldAutoPublishCandidate(item: any, vendor: any, source: any, now: nu
     return false;
   }
 
-  if (MANUAL_REVIEW_VENDOR_SLUGS.has(vendor.slug)) {
-    return false;
-  }
-
   if (!AUTO_PUBLISH_VENDOR_SLUGS.has(vendor.slug)) {
     return false;
   }
 
-  if (item.parseConfidence !== "high") {
+  if (item.parseConfidence === "low") {
     return false;
   }
 
@@ -111,7 +130,7 @@ function shouldAutoPublishCandidate(item: any, vendor: any, source: any, now: nu
     return false;
   }
 
-  return isOfficialSourceUrl(item.sourceUrl, source.url);
+  return isOfficialSourceUrl(item.sourceUrl, source.url, vendor.slug);
 }
 
 export const listDueSources = internalQuery({
@@ -175,14 +194,25 @@ export const persistSourceEntries = internalMutation({
 
     for (const item of args.items) {
       const dedupeKey = buildDedupeKey(String(args.sourceId), item);
-      const existingCandidate = await ctx.db
+      const exactCandidate = await ctx.db
         .query("rawCandidates")
         .withIndex("by_dedupe_key", (q) => q.eq("dedupeKey", dedupeKey))
         .unique();
+      const sameSourceCandidate =
+        exactCandidate ??
+        (await ctx.db
+          .query("rawCandidates")
+          .withIndex("by_source_url_published", (q) =>
+            q.eq("sourceId", args.sourceId).eq("sourceUrl", item.sourceUrl).eq("rawPublishedAt", item.publishedAt),
+          )
+          .first());
+      const existingCandidate = sameSourceCandidate;
 
+      const shouldPublish = shouldAutoPublishCandidate(item, vendor, source, now);
       const status =
-        existingCandidate?.status ??
-        (shouldAutoPublishCandidate(item, vendor, source, now) ? ("published" as const) : ("pending_review" as const));
+        existingCandidate?.status === "pending_review" && shouldPublish
+          ? ("published" as const)
+          : (existingCandidate?.status ?? (shouldPublish ? ("published" as const) : ("pending_review" as const)));
       const rawPayload = {
         vendorId: args.vendorId,
         sourceId: args.sourceId,

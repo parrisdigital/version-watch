@@ -52,17 +52,8 @@ function attachScores(items: SiteEvent[]): SiteEvent[] {
   }));
 }
 
-// Score-first ordering, date as tiebreaker. Used for search + vendor pages.
+// Recency-first ordering, score as tiebreaker. Used across public event lists.
 function withComputedScores(items: SiteEvent[]) {
-  return attachScores(items).sort((a, b) => {
-    const scoreDiff = (b.computedScore ?? 0) - (a.computedScore ?? 0);
-    if (scoreDiff !== 0) return scoreDiff;
-    return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-  });
-}
-
-// Recency-first ordering, score as tiebreaker. Used for the homepage feed.
-function withComputedScoresRecent(items: SiteEvent[]) {
   return attachScores(items).sort((a, b) => {
     const dateDiff = new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
     if (dateDiff !== 0) return dateDiff;
@@ -76,7 +67,7 @@ export async function getHomepageEvents() {
     () => fallbackEvents,
   );
 
-  return withComputedScoresRecent(items);
+  return withComputedScores(items);
 }
 
 export async function getAllPublicEvents() {

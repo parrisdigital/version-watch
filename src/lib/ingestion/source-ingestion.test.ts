@@ -71,6 +71,102 @@ describe("parseHtmlEntries", () => {
     });
     expect(entries[0]?.publishedAt).toBe(Date.parse("2025-05-20T00:00:00.000Z"));
   });
+
+  it("parses Anthropic Help Center release-note sections", () => {
+    const html = `
+      <main>
+        <h1>Release notes</h1>
+        <h2>April 2026</h2>
+        <h3>April 17, 2026</h3>
+        <p>Claude Design by Anthropic Labs</p>
+        <p>With Opus 4.7, we also launched Claude Design. <a href="https://www.anthropic.com/news/introducing-anthropic-labs">Anthropic Labs</a></p>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "anthropic:changelog_page",
+      sourceUrl: "https://support.claude.com/en/articles/12138966-release-notes",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Claude Design by Anthropic Labs",
+      url: "https://www.anthropic.com/news/introducing-anthropic-labs",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-17T00:00:00.000Z"));
+  });
+
+  it("parses Anthropic Platform markdown into concise titles", () => {
+    const markdown = `
+      # Claude Platform
+      ### April 20, 2026
+      * We've retired the Claude Haiku 3 model (\`claude-3-haiku-20240307\`). All requests to this model will now return an error. We recommend upgrading to [Claude Haiku 4.5](/docs/en/about-claude/models/overview#latest-models-comparison).
+      ### April 16, 2026
+      * We've launched [Claude Opus 4.7](https://www.anthropic.com/news/claude-opus-4-7), our most capable generally available model for complex reasoning and agentic coding.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "anthropic:docs_page",
+      sourceUrl: "https://platform.claude.com/docs/en/release-notes/overview",
+      html: markdown,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Claude Haiku 3 retired from the Claude API",
+      url: "https://platform.claude.com/docs/en/about-claude/models/overview#latest-models-comparison",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-20T00:00:00.000Z"));
+    expect(entries[1]).toMatchObject({
+      title: "Claude Opus 4.7 generally available",
+      url: "https://www.anthropic.com/news/claude-opus-4-7",
+    });
+  });
+
+  it("parses markdown changelog tables from Stripe", () => {
+    const markdown = `
+      # Changelog
+      ## 2026-03-25.dahlia
+      | Title | Affected Products | Breaking change? | Category |
+      | --- | --- | --- | --- |
+      | [Adds support for async flows](https://docs.stripe.com/changelog/dahlia/2026-03-25/async-flows.md) | Checkout | Non-breaking | api |
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "stripe:changelog_page",
+      sourceUrl: "https://docs.stripe.com/changelog",
+      html: markdown,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Adds support for async flows",
+      url: "https://docs.stripe.com/changelog/dahlia/2026-03-25/async-flows",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-03-25T00:00:00.000Z"));
+  });
+
+  it("parses Docker Desktop markdown release entries", () => {
+    const markdown = `
+      # Docker Desktop release notes
+      ## 4.70.0 <em>2026-04-20</em>
+      ### New
+      - Added a CLI hint that surfaces the Logs view.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "docker:docs_page",
+      sourceUrl: "https://docs.docker.com/desktop/release-notes/",
+      html: markdown,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Docker Desktop 4.70.0",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-20T00:00:00.000Z"));
+  });
 });
 
 describe("normalizeParsedEntry", () => {

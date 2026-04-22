@@ -24,7 +24,7 @@ async function fetchText(url: string) {
   const response = await fetch(url, {
     headers: {
       "User-Agent": process.env.INGESTION_USER_AGENT ?? "VersionWatchBot/0.2",
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+      Accept: "text/markdown,text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
       "Accept-Language": "en-US,en;q=0.9",
     },
     redirect: "follow",
@@ -41,6 +41,7 @@ async function fetchText(url: string) {
 const FEED_PARSER_KEYS = new Set([
   "clerk:changelog_page",
   "github:blog",
+  "github:rss",
   "linear:changelog_page",
   "resend:changelog_page",
   "supabase:changelog_page",
@@ -91,7 +92,11 @@ async function ingestSource(ctx: any, source: any, runType: "scheduled" | "manua
 
     let parsedEntries: ParsedSourceEntry[] = [];
 
-    if (FEED_PARSER_KEYS.has(source.parserKey)) {
+    if (source.sourceType === "rss" || /(?:rss|feed|atom).*\.(?:xml|rss)$|\/feed\/?$/i.test(source.url)) {
+      parsedEntries = await parseFeedEntries(sourceResponse.body, source.url);
+    }
+
+    if (parsedEntries.length === 0 && FEED_PARSER_KEYS.has(source.parserKey)) {
       const discoveredFeedUrl = discoverFeedUrl(sourceResponse.body, source.url);
       if (discoveredFeedUrl) {
         try {

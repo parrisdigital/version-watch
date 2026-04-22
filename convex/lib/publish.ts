@@ -27,10 +27,15 @@ export async function publishRawCandidate(ctx: any, rawCandidate: any) {
   }
 
   const slug = buildCandidateSlug(vendor.slug, rawCandidate.rawPublishedAt, rawCandidate.rawTitle);
-  const existingEvent = await ctx.db
+  const existingByCandidate = await ctx.db
+    .query("changeEvents")
+    .withIndex("by_raw_candidate", (q: any) => q.eq("rawCandidateId", rawCandidate._id))
+    .unique();
+  const existingBySlug = await ctx.db
     .query("changeEvents")
     .withIndex("by_slug", (q: any) => q.eq("slug", slug))
     .unique();
+  const existingEvent = existingByCandidate ?? existingBySlug;
 
   const eventPayload = {
     vendorId: rawCandidate.vendorId,

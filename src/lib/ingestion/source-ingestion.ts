@@ -90,6 +90,10 @@ const NOISE_TITLES = new Set([
   "changes",
   "what’s new",
   "what's new",
+  "what’s changing",
+  "what's changing",
+  "questions?",
+  "timeline",
   "learn more",
 ]);
 
@@ -177,7 +181,7 @@ function parseDateText(text: string, context: MonthYearContext | null) {
     return null;
   }
 
-  if (/^\d{4}-\d{2}-\d{2}(?:\.[a-z0-9-]+)?$/i.test(value)) {
+  if (/^\d{4}-\d{2}-\d{2}(?:[tT].*)?(?:\.[a-z0-9-]+)?$/i.test(value)) {
     const isoDate = value.slice(0, 10);
     const parsed = Date.parse(`${isoDate}T00:00:00.000Z`);
     return Number.isNaN(parsed) ? null : parsed;
@@ -206,6 +210,81 @@ function parseDateText(text: string, context: MonthYearContext | null) {
   }
 
   return null;
+}
+
+function parseDateFromText(text: string, context: MonthYearContext | null = null) {
+  const value = cleanText(text);
+  const isoMatch = value.match(/\b\d{4}-\d{2}-\d{2}\b/i);
+  if (isoMatch) {
+    return parseDateText(isoMatch[0], context);
+  }
+
+  const monthMatch = value.match(
+    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2},\s+\d{4}\b/i,
+  );
+  if (monthMatch) {
+    return parseDateText(monthMatch[0], context);
+  }
+
+  const shortMonthMatch = value.match(
+    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2}\b/i,
+  );
+  if (shortMonthMatch) {
+    return parseDateText(shortMonthMatch[0], context);
+  }
+
+  return parseDateText(value, context);
+}
+
+function stripMarkdown(value: string) {
+  return cleanText(value)
+    .replace(/<!--.*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1")
+    .replace(/[`*_>#|]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isLikelyMarkdownDocument(value: string) {
+  const text = value.trim();
+  return !/<(?:html|body|main|article)\b/i.test(text) && /^\s*#{1,4}\s+/m.test(text);
+}
+
+function cleanMarkdownUrl(href: string, sourceUrl: string) {
+  const absolute = toAbsoluteUrl(href, sourceUrl);
+  return absolute.replace(/\.md(#.*)?$/i, "$1");
+}
+
+function collectMarkdownExcerpt(lines: string[], startIndex: number) {
+  const parts: string[] = [];
+
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    if (!line) {
+      continue;
+    }
+
+    if (/^#{1,4}\s+/.test(line) && parts.length > 0) {
+      break;
+    }
+
+    if (/^(download|view downloads?|windows\b|mac\b|linux\b)/i.test(stripMarkdown(line))) {
+      continue;
+    }
+
+    const text = stripMarkdown(line.replace(/^[-*]\s+/, ""));
+    if (text.length >= 24 && !isDateLike(text)) {
+      parts.push(text);
+    }
+
+    if (parts.join(" ").length >= 260) {
+      break;
+    }
+  }
+
+  return truncateSentence(parts.join(" "));
 }
 
 function isMeaningfulTitle(text: string) {
@@ -348,6 +427,473 @@ function parseDatedHeadingEntries(sourceUrl: string, html: string) {
       publishedAt,
       githubUrl,
       parseConfidence: url !== sourceUrl ? "high" : "medium",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: string) {
+  const lines = markdown.split(/\r?\n/);
+
+  if (parserKey.startsWith("stripe:")) {
+    return parseStripeMarkdownEntries(sourceUrl, lines);
+  }
+
+  if (parserKey === "anthropic:docs_page") {
+    return parseAnthropicPlatformMarkdownEntries(sourceUrl, lines);
+  }
+
+  if (parserKey === "docker:docs_page") {
+    return parseDockerMarkdownEntries(sourceUrl, lines);
+  }
+
+  if (parserKey === "exa:docs_page") {
+    return parseExaMarkdownEntries(sourceUrl, lines);
+  }
+
+  if (parserKey === "firecrawl:changelog_page") {
+    return parseFirecrawlMarkdownEntries(sourceUrl, lines);
+  }
+
+  return parseGenericMarkdownEntries(sourceUrl, lines, parserKey);
+}
+
+function parseStripeMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  let publishedAt: number | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const versionMatch = trimmed.match(/^##\s+(\d{4}-\d{2}-\d{2})(?:\.[a-z0-9-]+)?/i);
+    if (versionMatch) {
+      publishedAt = parseDateText(versionMatch[1]!, null);
+      continue;
+    }
+
+    const rowMatch = trimmed.match(/^\|\s*\[([^\]]+)\]\(([^)]+)\)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|/);
+    if (!rowMatch || !publishedAt) {
+      continue;
+    }
+
+    const title = stripMarkdown(rowMatch[1]!);
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const products = stripMarkdown(rowMatch[3]!);
+    const breaking = stripMarkdown(rowMatch[4]!);
+    const category = stripMarkdown(rowMatch[5]!);
+    entries.push({
+      title,
+      url: cleanMarkdownUrl(rowMatch[2]!, sourceUrl),
+      excerpt: truncateSentence(`${title}. Affects ${products}. ${breaking}. ${category}.`),
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseAnthropicPlatformMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  let publishedAt: number | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const headingMatch = trimmed.match(/^###\s+(.+)$/);
+    if (headingMatch) {
+      publishedAt = parseDateFromText(headingMatch[1]!);
+      continue;
+    }
+
+    if (!publishedAt || !/^[-*]\s+/.test(trimmed)) {
+      continue;
+    }
+
+    const excerpt = stripMarkdown(trimmed.replace(/^[-*]\s+/, ""));
+    if (!isMeaningfulTitle(excerpt)) {
+      continue;
+    }
+
+    const linkMatch = trimmed.match(/\[[^\]]+\]\(([^)]+)\)/);
+    const title = buildAnthropicPlatformTitle(trimmed, excerpt);
+    entries.push({
+      title,
+      url: linkMatch ? toAbsoluteUrl(linkMatch[1], sourceUrl) : sourceUrl,
+      excerpt,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function cleanAnthropicLinkTitle(value: string) {
+  const cleaned = stripMarkdown(value)
+    .replace(/^what'?s new in\s+/i, "")
+    .replace(/^migrating to\s+/i, "")
+    .replace(/\s+overview$/i, "")
+    .trim();
+
+  return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+}
+
+function buildAnthropicPlatformTitle(markdownLine: string, excerpt: string) {
+  const linkTextMatch = markdownLine.match(/\[([^\]]+)\]\([^)]+\)/);
+  const linkedTitle = linkTextMatch ? cleanAnthropicLinkTitle(linkTextMatch[1]!) : "";
+
+  const retiredMatch =
+    excerpt.match(/retired the ([^.]+?) model\s*\(/i) ?? excerpt.match(/retired the ([^.]+?) model\b/i);
+  if (retiredMatch) {
+    return truncateSentence(`${retiredMatch[1]} retired from the Claude API`, 140);
+  }
+
+  const deprecationMatch = excerpt.match(/deprecation of the (.+?) model .* and the (.+?) model/i);
+  if (deprecationMatch) {
+    return truncateSentence(`${deprecationMatch[1]} and ${deprecationMatch[2]} deprecation announced`, 140);
+  }
+
+  if (linkedTitle) {
+    if (/bedrock customers/i.test(excerpt)) {
+      return "Claude in Amazon Bedrock self-serve availability";
+    }
+
+    if (/public beta/i.test(excerpt)) {
+      return truncateSentence(`${linkedTitle} public beta`, 140);
+    }
+
+    if (/generally available|no beta header required/i.test(excerpt)) {
+      return truncateSentence(`${linkedTitle} generally available`, 140);
+    }
+
+    if (/launched|launch/i.test(excerpt)) {
+      return truncateSentence(`${linkedTitle} launched`, 140);
+    }
+  }
+
+  const firstSentence = excerpt.split(/(?<=[.!?])\s+/)[0] ?? excerpt;
+  const normalized = firstSentence
+    .replace(/^we(?:'ve| have)\s+/i, "Anthropic ")
+    .replace(/^we announced\s+/i, "Anthropic announced ")
+    .replace(/^we're\s+/i, "Anthropic is ");
+
+  return truncateSentence(normalized, 140);
+}
+
+function parseDockerMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    const versionMatch = line.match(/^##\s+(\d+\.\d+\.\d+)/i);
+    if (!versionMatch) {
+      continue;
+    }
+
+    const dateText = [line, ...lines.slice(index + 1, index + 4)].join(" ");
+    const match = dateText.match(/(\d{4}-\d{2}-\d{2})/i);
+    if (!match) {
+      continue;
+    }
+
+    const publishedAt = parseDateText(match[1]!, null);
+    if (!publishedAt) {
+      continue;
+    }
+
+    const version = versionMatch[1]!;
+    entries.push({
+      title: `Docker Desktop ${version}`,
+      url: `${sourceUrl.replace(/\/$/, "")}/#${version.replace(/\./g, "")}`,
+      excerpt: collectMarkdownExcerpt(lines, index + 1) || `Docker Desktop ${version} release notes.`,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseExaMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const title = stripMarkdown(lines.find((line) => line.trim().startsWith("# "))?.trim().replace(/^#\s+/, "") ?? "");
+  if (!isMeaningfulTitle(title)) {
+    return [] satisfies ParsedSourceEntry[];
+  }
+
+  const pageText = lines.map(stripMarkdown).join(" ");
+  const year = Number(pageText.match(/\b(20\d{2})\b/)?.[1] ?? new Date().getUTCFullYear());
+  const noticeMatch = pageText.match(
+    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2}\s+[—-]\s+this notice/i,
+  );
+  const publishedAt = noticeMatch
+    ? parseDateText(noticeMatch[0]!.split(/[—-]/)[0]!.trim(), { year })
+    : parseDateFromText(pageText, { year });
+
+  if (!publishedAt) {
+    return [] satisfies ParsedSourceEntry[];
+  }
+
+  return [
+    {
+      title,
+      url: sourceUrl.replace(/\.md$/i, ""),
+      excerpt: collectMarkdownExcerpt(lines, lines.findIndex((line) => /^##\s+/i.test(line.trim())) + 1) || title,
+      publishedAt,
+      parseConfidence: "high",
+    },
+  ] satisfies ParsedSourceEntry[];
+}
+
+function parseFirecrawlMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const headingMatch = lines[index]?.trim().match(/^##\s+(.+)$/);
+    if (!headingMatch) {
+      continue;
+    }
+
+    const title = stripMarkdown(headingMatch[1]!);
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const dateText = lines.slice(index + 1, index + 5).join(" ");
+    const publishedAt = parseDateFromText(dateText);
+    if (!publishedAt) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: sourceUrl,
+      excerpt: collectMarkdownExcerpt(lines, index + 1) || title,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseGenericMarkdownEntries(sourceUrl: string, lines: string[], parserKey: string) {
+  const entries: ParsedSourceEntry[] = [];
+  const pageTitle = stripMarkdown(lines.find((line) => /^#\s+/.test(line.trim()))?.trim().replace(/^#\s+/, "") ?? "");
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const headingMatch = lines[index]?.trim().match(/^#{2,4}\s+(.+)$/);
+    if (!headingMatch) {
+      continue;
+    }
+
+    const rawTitle = stripMarkdown(headingMatch[1]!);
+    const publishedAt = parseDateFromText(rawTitle);
+    if (!publishedAt) {
+      continue;
+    }
+
+    let title = rawTitle
+      .replace(/\s*[-–]\s*(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2},\s+\d{4}$/i, "")
+      .replace(/\s*[-–]\s*\d{4}-\d{2}-\d{2}$/i, "")
+      .trim();
+
+    if (/^update$/i.test(title) && parserKey.startsWith("firebase:")) {
+      title = `${pageTitle} ${rawTitle}`;
+    }
+
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: sourceUrl,
+      excerpt: collectMarkdownExcerpt(lines, index + 1) || title,
+      publishedAt,
+      parseConfidence: "medium",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseAnthropicProductEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+  let activeDate: number | null = null;
+  let pendingTitle: string | null = null;
+
+  for (const element of root.find("h2, h3, p").toArray()) {
+    const tagName = element.tagName?.toLowerCase?.() ?? "";
+    const text = cleanText($(element).text());
+    if (!text) {
+      continue;
+    }
+
+    if (tagName === "h3") {
+      activeDate = parseDateFromText(text);
+      pendingTitle = null;
+      continue;
+    }
+
+    if (!activeDate || tagName !== "p") {
+      continue;
+    }
+
+    if (!pendingTitle) {
+      if (isMeaningfulTitle(text)) {
+        pendingTitle = text;
+      }
+      continue;
+    }
+
+    entries.push({
+      title: pendingTitle,
+      url: toAbsoluteUrl($(element).find("a").first().attr("href"), sourceUrl),
+      excerpt: truncateSentence(text) || pendingTitle,
+      publishedAt: activeDate,
+      parseConfidence: "high",
+    });
+    activeDate = null;
+    pendingTitle = null;
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseExaEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const title = cleanText(root.find("h1").first().text()) || cleanText($("title").first().text());
+
+  if (!isMeaningfulTitle(title)) {
+    return [] satisfies ParsedSourceEntry[];
+  }
+
+  const pageText = cleanText(root.text());
+  const year = Number(pageText.match(/\b(20\d{2})\b/)?.[1] ?? new Date().getUTCFullYear());
+  const timelineDate = pageText.match(
+    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2}\s+[—-]\s+this notice/i,
+  );
+  const publishedAt = timelineDate
+    ? parseDateText(timelineDate[0]!.split(/[—-]/)[0]!.trim(), { year })
+    : parseDateFromText(pageText, { year });
+
+  if (!publishedAt) {
+    return [] satisfies ParsedSourceEntry[];
+  }
+
+  return [
+    {
+      title,
+      url: sourceUrl,
+      excerpt: collectExcerpt($, root.find("h1").first().get(0)) || title,
+      publishedAt,
+      parseConfidence: "high",
+    },
+  ] satisfies ParsedSourceEntry[];
+}
+
+function parseAndroidReleaseEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const androidVersion = sourceUrl.match(/\/versions\/(\d+)\//)?.[1] ?? "";
+  const pageTitle = androidVersion ? `Android ${androidVersion}` : "Android";
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const heading of root.find("h2, h3").toArray()) {
+    const title = cleanText($(heading).text());
+    if (!/^beta\s+\d+|developer preview\s+\d+/i.test(title)) {
+      continue;
+    }
+
+    const sectionText = cleanText($(heading).nextUntil("h2, h3").text());
+    const releaseDate = sectionText.match(/Release date\s+([A-Za-z]+\s+\d{1,2},\s+\d{4})/i)?.[1];
+    const publishedAt = parseDateFromText(releaseDate ?? sectionText);
+    if (!publishedAt) {
+      continue;
+    }
+
+    entries.push({
+      title: `${pageTitle.replace(/\s+/g, " ").trim()} ${title}`.replace(/^Android\s+/, "Android "),
+      url: `${sourceUrl.replace(/\?.*$/, "")}#${$(heading).attr("id") ?? title.toLowerCase().replace(/\s+/g, "-")}`,
+      excerpt: truncateSentence(sectionText) || title,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseFirebaseEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const pageTitle = cleanText(root.find("h1").first().text()).replace(/Stay organized.*/i, "").trim();
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const heading of root.find("h2").toArray()) {
+    const rawTitle = cleanText($(heading).text());
+    const publishedAt = parseDateFromText(rawTitle);
+    if (!publishedAt) {
+      continue;
+    }
+
+    let title = rawTitle.replace(/\s*[-–]\s*(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2},\s+\d{4}$/i, "").trim();
+    if (/^update$/i.test(title)) {
+      const firstFeature = cleanText($(heading).nextUntil("h2").filter("h3").first().text());
+      title = firstFeature ? `${pageTitle}: ${firstFeature}` : `${pageTitle}: ${rawTitle}`;
+    } else {
+      title = `${pageTitle}: ${title}`;
+    }
+
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: `${sourceUrl.replace(/\?.*$/, "")}#${$(heading).attr("id") ?? ""}`,
+      excerpt: collectExcerpt($, heading) || title,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseTimelineEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const time of root.find("time").toArray()) {
+    const publishedAt = parseDateFromText($(time).attr("datetime") ?? $(time).text());
+    if (!publishedAt) {
+      continue;
+    }
+
+    const container = $(time).closest("li, article, section").length
+      ? $(time).closest("li, article, section")
+      : $(time).parent().parent();
+    const heading = container.find("h1, h2, h3").first();
+    const title = cleanText(heading.text());
+
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(heading.find("a").first().attr("href"), sourceUrl),
+      excerpt: collectExcerpt($, heading.get(0)) || truncateSentence(cleanText(container.text()).replace(title, "")) || title,
+      publishedAt,
+      parseConfidence: "high",
     });
   }
 
@@ -505,6 +1051,48 @@ export function discoverFeedUrl(html: string, sourceUrl: string) {
 }
 
 export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput) {
+  if (isLikelyMarkdownDocument(html)) {
+    const markdownEntries = parseMarkdownEntries(sourceUrl, html, parserKey);
+    if (markdownEntries.length > 0) {
+      return markdownEntries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "anthropic:changelog_page") {
+    const entries = parseAnthropicProductEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "android-developers:docs_page") {
+    const entries = parseAndroidReleaseEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "firebase:docs_page") {
+    const entries = parseFirebaseEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "exa:docs_page") {
+    const entries = parseExaEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "firecrawl:changelog_page" || parserKey === "resend:changelog_page") {
+    const entries = parseTimelineEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
   const linkedEntries = parserKey.startsWith("stripe:")
     ? parseLinkedEntries(sourceUrl, html)
     : [];

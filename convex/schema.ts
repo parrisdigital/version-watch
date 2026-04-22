@@ -72,7 +72,8 @@ export default defineSchema({
     dedupeKey: v.string(),
   })
     .index("by_status_and_published", ["status", "rawPublishedAt"])
-    .index("by_dedupe_key", ["dedupeKey"]),
+    .index("by_dedupe_key", ["dedupeKey"])
+    .index("by_source_url_published", ["sourceId", "sourceUrl", "rawPublishedAt"]),
 
   changeEvents: defineTable({
     vendorId: v.id("vendors"),
@@ -97,6 +98,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_slug", ["slug"])
+    .index("by_raw_candidate", ["rawCandidateId"])
     .index("by_vendor_and_published", ["vendorId", "publishedAt"])
     .index("by_importance_and_published", ["importanceBand", "publishedAt"])
     .index("by_visibility_and_published", ["visibility", "publishedAt"]),
