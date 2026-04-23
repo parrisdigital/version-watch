@@ -49,6 +49,11 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   hono: { logoUrl: "https://cdn.simpleicons.org/hono" },
   bun: { logoUrl: "https://cdn.simpleicons.org/bun" },
   vite: { logoUrl: "https://cdn.simpleicons.org/vite" },
+  openclaw: { logoUrl: "https://openclaw.ai/favicon.svg", renderMode: "image", fill: true },
+  biome: { logoUrl: "https://cdn.simpleicons.org/biome" },
+  pnpm: { logoUrl: "https://cdn.simpleicons.org/pnpm" },
+  fastify: { logoUrl: "https://cdn.simpleicons.org/fastify" },
+  uv: { logoUrl: "https://cdn.simpleicons.org/uv" },
 };
 
 function getMonogram(vendorName: string) {

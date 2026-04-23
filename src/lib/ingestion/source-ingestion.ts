@@ -125,6 +125,11 @@ const VENDOR_STACKS: Record<string, string[]> = {
   hono: ["framework", "backend", "edge-compute"],
   bun: ["runtime", "tooling", "backend"],
   vite: ["frontend-infra", "developer-workflow", "tooling"],
+  openclaw: ["agents", "developer-workflow", "automation"],
+  biome: ["tooling", "developer-workflow", "frontend-infra"],
+  pnpm: ["tooling", "developer-workflow", "frontend-infra"],
+  fastify: ["framework", "backend", "developer-workflow"],
+  uv: ["tooling", "developer-workflow", "backend"],
 };
 
 function cleanText(value: string | null | undefined) {
