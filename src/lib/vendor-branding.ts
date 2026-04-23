@@ -60,6 +60,17 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
     renderMode: "image",
     fill: true,
   },
+  posthog: { logoUrl: "https://cdn.simpleicons.org/posthog" },
+  netlify: { logoUrl: "https://cdn.simpleicons.org/netlify" },
+  render: { logoUrl: "https://cdn.simpleicons.org/render" },
+  railway: { logoUrl: "https://cdn.simpleicons.org/railway" },
+  prisma: { logoUrl: "https://cdn.simpleicons.org/prisma" },
+  neon: { logoUrl: "https://neon.com/favicon/favicon.svg", renderMode: "image", fill: true },
+  planetscale: { logoUrl: "https://cdn.simpleicons.org/planetscale" },
+  expo: { logoUrl: "https://cdn.simpleicons.org/expo" },
+  sentry: { logoUrl: "https://cdn.simpleicons.org/sentry" },
+  "better-auth": { logoUrl: "https://cdn.simpleicons.org/betterauth" },
+  langchain: { logoUrl: "https://cdn.simpleicons.org/langchain" },
 };
 
 function getMonogram(vendorName: string) {

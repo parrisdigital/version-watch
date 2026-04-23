@@ -278,6 +278,72 @@ export const vendors: VendorRecord[] = [
       { name: "AuthKit JS Releases", url: "https://github.com/workos/authkit-js/releases", type: "github_release" },
     ],
   },
+  {
+    slug: "posthog",
+    name: "PostHog",
+    description: "Product engineering, analytics, experimentation, and platform updates.",
+    sources: [{ name: "PostHog Changelog", url: "https://posthog.com/changelog", type: "changelog_page" }],
+  },
+  {
+    slug: "netlify",
+    name: "Netlify",
+    description: "Hosting, agent runners, edge, and developer workflow updates.",
+    sources: [{ name: "Netlify Changelog", url: "https://www.netlify.com/changelog", type: "changelog_page" }],
+  },
+  {
+    slug: "render",
+    name: "Render",
+    description: "Cloud app platform, runtime, database, and workflow changes.",
+    sources: [{ name: "Render Changelog", url: "https://render.com/changelog", type: "changelog_page" }],
+  },
+  {
+    slug: "railway",
+    name: "Railway",
+    description: "Hosting, managed database, and platform workflow updates.",
+    sources: [{ name: "Railway Changelog", url: "https://railway.com/changelog", type: "changelog_page" }],
+  },
+  {
+    slug: "prisma",
+    name: "Prisma",
+    description: "ORM, Prisma Postgres, and database developer tooling releases.",
+    sources: [{ name: "Prisma Changelog", url: "https://www.prisma.io/changelog", type: "changelog_page" }],
+  },
+  {
+    slug: "neon",
+    name: "Neon",
+    description: "Serverless Postgres, branching, and database platform changelog updates.",
+    sources: [{ name: "Neon Changelog", url: "https://neon.com/docs/changelog", type: "changelog_page" }],
+  },
+  {
+    slug: "planetscale",
+    name: "PlanetScale",
+    description: "Managed database platform, APIs, and tooling release updates.",
+    sources: [{ name: "PlanetScale Changelog", url: "https://planetscale.com/changelog", type: "changelog_page" }],
+  },
+  {
+    slug: "expo",
+    name: "Expo",
+    description: "Expo SDK, EAS, mobile workflow, and app delivery updates.",
+    sources: [{ name: "Expo Changelog", url: "https://expo.dev/changelog", type: "changelog_page" }],
+  },
+  {
+    slug: "sentry",
+    name: "Sentry",
+    description: "Observability, debugging, alerts, and SDK platform updates.",
+    sources: [{ name: "Sentry Changelog", url: "https://sentry.io/changelog/", type: "changelog_page" }],
+  },
+  {
+    slug: "better-auth",
+    name: "Better Auth",
+    description: "Authentication framework releases, fixes, and platform changes.",
+    sources: [{ name: "Better Auth Changelog", url: "https://better-auth.com/changelog", type: "changelog_page" }],
+  },
+  {
+    slug: "langchain",
+    name: "LangChain",
+    description: "LangChain and LangSmith platform changelog updates.",
+    sources: [{ name: "LangChain Changelog", url: "https://changelog.langchain.com/", type: "changelog_page" }],
+  },
 ];
 
 const vendorNameBySlug = new Map(vendors.map((vendor) => [vendor.slug, vendor.name]));

@@ -62,6 +62,17 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "convex",
   "pnpm",
   "fastify",
+  "posthog",
+  "netlify",
+  "render",
+  "railway",
+  "prisma",
+  "neon",
+  "planetscale",
+  "expo",
+  "sentry",
+  "better-auth",
+  "langchain",
   "resend",
   "shadcn",
   "stripe",
@@ -90,6 +101,7 @@ const GITHUB_RELEASE_TAG_TITLE_PATTERN =
 
 const OFFICIAL_HOSTS_BY_VENDOR: Record<string, string[]> = {
   anthropic: ["anthropic.com", "claude.com", "docs.claude.com", "platform.claude.com", "support.claude.com"],
+  "better-auth": ["better-auth.com", "github.com"],
 };
 
 function normalizeHost(value: string) {

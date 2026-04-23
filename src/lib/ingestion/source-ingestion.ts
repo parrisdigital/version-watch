@@ -132,6 +132,17 @@ const VENDOR_STACKS: Record<string, string[]> = {
   uv: ["tooling", "developer-workflow", "backend"],
   convex: ["backend", "database", "developer-workflow"],
   workos: ["auth", "developer-workflow", "security"],
+  posthog: ["analytics", "observability", "experimentation"],
+  netlify: ["hosting", "frontend-infra", "developer-workflow"],
+  render: ["hosting", "backend", "developer-workflow"],
+  railway: ["hosting", "database", "developer-workflow"],
+  prisma: ["database", "orm", "developer-workflow"],
+  neon: ["database", "backend", "serverless"],
+  planetscale: ["database", "backend", "developer-workflow"],
+  expo: ["mobile-platform", "developer-workflow", "frontend-infra"],
+  sentry: ["observability", "developer-workflow", "backend"],
+  "better-auth": ["auth", "security", "developer-workflow"],
+  langchain: ["llms", "agents", "developer-workflow"],
 };
 
 function cleanText(value: string | null | undefined) {
@@ -517,6 +528,14 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
     return parseFirecrawlMarkdownEntries(sourceUrl, lines);
   }
 
+  if (parserKey === "railway:changelog_page") {
+    return parseRailwayMarkdownEntries(sourceUrl, lines);
+  }
+
+  if (parserKey === "neon:changelog_page") {
+    return parseNeonMarkdownEntries(sourceUrl, lines);
+  }
+
   return parseGenericMarkdownEntries(sourceUrl, lines, parserKey);
 }
 
@@ -740,6 +759,92 @@ function parseFirecrawlMarkdownEntries(sourceUrl: string, lines: string[]) {
   return dedupeEntries(entries);
 }
 
+function parseRailwayMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  let activeTitle: string | null = null;
+  let activeDate: number | null = null;
+  let activeUrl = sourceUrl;
+
+  const flush = () => {
+    if (!activeTitle || !activeDate) {
+      return;
+    }
+
+    entries.push({
+      title: activeTitle,
+      url: activeUrl,
+      excerpt: activeTitle,
+      publishedAt: activeDate,
+      parseConfidence: "high",
+    });
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    const headingMatch = trimmed.match(/^##\s+(.+)$/);
+    if (headingMatch) {
+      const title = stripMarkdown(headingMatch[1]!);
+      if (!isMeaningfulTitle(title)) {
+        continue;
+      }
+
+      flush();
+      activeTitle = title;
+      activeDate = null;
+      activeUrl = sourceUrl;
+      continue;
+    }
+
+    const dateMatch = trimmed.match(/^-\s+Date:\s*(\d{4}-\d{2}-\d{2})$/i);
+    if (dateMatch) {
+      activeDate = parseDateText(dateMatch[1]!, null);
+      continue;
+    }
+
+    const linkMatch = trimmed.match(/^-\s+Link:\s*(https?:\/\/\S+)$/i);
+    if (linkMatch) {
+      activeUrl = cleanMarkdownUrl(linkMatch[1]!, sourceUrl);
+    }
+  }
+
+  flush();
+  return dedupeEntries(entries);
+}
+
+function parseNeonMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  let activeDate: number | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    const dateMatch = line.match(/^###\s+(\d{4}-\d{2}-\d{2})$/);
+    if (dateMatch) {
+      activeDate = parseDateText(dateMatch[1]!, null);
+      continue;
+    }
+
+    const headingMatch = line.match(/^##\s+(.+)$/);
+    if (!headingMatch || !activeDate) {
+      continue;
+    }
+
+    const title = stripMarkdown(headingMatch[1]!);
+    if (!isMeaningfulTitle(title) || /^entries$/i.test(title)) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: sourceUrl,
+      excerpt: collectMarkdownExcerpt(lines, index + 1) || title,
+      publishedAt: activeDate,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
 function parseGenericMarkdownEntries(sourceUrl: string, lines: string[], parserKey: string) {
   const entries: ParsedSourceEntry[] = [];
   const pageTitle = stripMarkdown(lines.find((line) => /^#\s+/.test(line.trim()))?.trim().replace(/^#\s+/, "") ?? "");
@@ -857,6 +962,198 @@ function parseExaEntries(sourceUrl: string, html: string) {
       parseConfidence: "high",
     },
   ] satisfies ParsedSourceEntry[];
+}
+
+export function parsePostHogPageData(sourceUrl: string, pageData: string) {
+  try {
+    const parsed = JSON.parse(pageData);
+    const nodes = parsed?.result?.data?.allRoadmap?.nodes;
+    if (!Array.isArray(nodes)) {
+      return [] satisfies ParsedSourceEntry[];
+    }
+
+    const entries = nodes
+      .map((node: any) => {
+        const title = cleanText(node?.title);
+        const publishedAt = parseDateText(cleanText(node?.date), null);
+        if (!isMeaningfulTitle(title) || !publishedAt) {
+          return null;
+        }
+
+        const description = stripMarkdown(node?.description ?? "");
+        const ctaUrl = cleanText(node?.cta?.url);
+        const primaryUrl =
+          ctaUrl && /(^https?:\/\/)?([^.]+\.)*posthog\.com\//i.test(ctaUrl) ? ctaUrl : sourceUrl;
+        const githubUrl = Array.isArray(node?.githubUrls)
+          ? node.githubUrls.find((value: unknown) => typeof value === "string" && value.includes("github.com"))
+          : undefined;
+
+        return {
+          title,
+          url: primaryUrl,
+          excerpt: truncateSentence(description || title),
+          publishedAt,
+          githubUrl,
+          parseConfidence: "high" as const,
+        };
+      })
+      .filter(Boolean) as ParsedSourceEntry[];
+
+    return dedupeEntries(entries)
+      .sort((left, right) => right.publishedAt - left.publishedAt)
+      .slice(0, 12);
+  } catch {
+    return [] satisfies ParsedSourceEntry[];
+  }
+}
+
+function parseRailwayEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const link of $('a[href^="/changelog/"]').toArray()) {
+    const href = $(link).attr("href");
+    if (!href || !/^\/changelog\/\d{4}-\d{2}-\d{2}/.test(href)) {
+      continue;
+    }
+
+    const title =
+      cleanText($(link).find("p.font-semibold").first().text()) ||
+      cleanText($(link).find("p").first().text());
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const year = Number(href.match(/^\/changelog\/(\d{4})-/)?.[1] ?? 0);
+    const dateText = cleanText($(link).find("p.text-sm").first().text());
+    const publishedAt =
+      parseDateText(dateText, year ? { year } : null) ??
+      parseDateText(href.match(/^\/changelog\/(\d{4}-\d{2}-\d{2})/)?.[1] ?? "", null);
+
+    if (!publishedAt) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(href, sourceUrl),
+      excerpt: title,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parsePrismaEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const link of $('a[href^="/changelog/"]').toArray()) {
+    const href = $(link).attr("href");
+    const title = cleanText($(link).find("h2").first().text());
+    const publishedAt =
+      parseDateText(href?.match(/\/changelog\/(\d{4}-\d{2}-\d{2})/)?.[1] ?? "", null) ??
+      parseDateFromText(cleanText($(link).find(".eyebrow").first().text()));
+    if (!href || !isMeaningfulTitle(title) || !publishedAt) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(href, sourceUrl),
+      excerpt: truncateSentence(cleanText($(link).find("p").first().text()) || title),
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseExpoEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const article of $("article").toArray()) {
+    const time = $(article).find("time[datetime]").first();
+    const heading = $(article).find("h2").first();
+    const titleLink = heading.closest('a[href^="/changelog/"]');
+    const title = cleanText(heading.text());
+    const publishedAt = parseDateText(time.attr("datetime") ?? cleanText(time.text()), null);
+    if (!titleLink.length || !isMeaningfulTitle(title) || !publishedAt) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(titleLink.attr("href"), sourceUrl),
+      excerpt: truncateSentence(cleanText($(article).find("p").first().text()) || title),
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseSentryEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const link of $('a[href^="/changelog/"]').toArray()) {
+    const title = cleanText($(link).find("h3").first().text());
+    const publishedAt = parseDateFromText(cleanText($(link).find("time").first().text()));
+    if (!isMeaningfulTitle(title) || !publishedAt) {
+      continue;
+    }
+
+    const excerpt =
+      truncateSentence(cleanText($(link).find(".prose p").first().text())) ||
+      truncateSentence(cleanText($(link).text()).replace(title, "").replace(cleanText($(link).find("time").first().text()), "")) ||
+      title;
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl($(link).attr("href"), sourceUrl),
+      excerpt,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseBetterAuthEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const header of $("div.flex.items-baseline.mb-4").toArray()) {
+    const releaseLink = $(header).find('a[href*="/releases/tag/"]').first();
+    const version = cleanText(releaseLink.text());
+    const publishedAt = parseDateFromText(cleanText($(header).find("time").first().text()));
+    if (!version || !publishedAt) {
+      continue;
+    }
+
+    const content = $(header).next("div");
+    const excerpt =
+      truncateSentence(cleanText(content.find("li").first().text())) ||
+      truncateSentence(cleanText(content.find("p").first().text())) ||
+      `Better Auth ${version}`;
+
+    entries.push({
+      title: `Better Auth ${version}`,
+      url: toAbsoluteUrl(releaseLink.attr("href"), sourceUrl),
+      excerpt,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
 }
 
 function parseAndroidReleaseEntries(sourceUrl: string, html: string) {
@@ -1149,6 +1446,41 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "exa:docs_page") {
     const entries = parseExaEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "railway:changelog_page") {
+    const entries = parseRailwayEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "prisma:changelog_page") {
+    const entries = parsePrismaEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "expo:changelog_page") {
+    const entries = parseExpoEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "sentry:changelog_page") {
+    const entries = parseSentryEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "better-auth:changelog_page") {
+    const entries = parseBetterAuthEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }

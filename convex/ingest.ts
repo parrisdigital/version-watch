@@ -9,6 +9,7 @@ import {
   discoverFeedUrl,
   normalizeParsedEntry,
   parseHtmlEntries,
+  parsePostHogPageData,
   type ParsedSourceEntry,
 } from "../src/lib/ingestion/source-ingestion";
 
@@ -54,6 +55,11 @@ const FEED_PARSER_KEYS = new Set([
   "convex:changelog_page",
   "pnpm:changelog_page",
   "fastify:changelog_page",
+  "langchain:changelog_page",
+  "netlify:changelog_page",
+  "neon:changelog_page",
+  "planetscale:changelog_page",
+  "render:changelog_page",
   "resend:changelog_page",
   "shadcn:changelog_page",
   "supabase:changelog_page",
@@ -98,6 +104,15 @@ function parseFeedEntries(feedXml: string, fallbackUrl: string) {
   });
 }
 
+function buildPostHogPageDataUrl(sourceUrl: string) {
+  const url = new URL(sourceUrl);
+  const normalizedPath = url.pathname.replace(/\/$/, "") || "/";
+  url.pathname = `/page-data${normalizedPath}/page-data.json`;
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
 async function ingestSource(ctx: any, source: any, runType: "scheduled" | "manual" | "deep_diff") {
   const startedAt = Date.now();
 
@@ -124,6 +139,17 @@ async function ingestSource(ctx: any, source: any, runType: "scheduled" | "manua
         } catch {
           parsedEntries = [];
         }
+      }
+    }
+
+    if (parsedEntries.length === 0 && source.parserKey === "posthog:changelog_page") {
+      try {
+        const pageDataResponse = await fetchText(buildPostHogPageDataUrl(sourceResponse.url));
+        if (pageDataResponse.ok) {
+          parsedEntries = parsePostHogPageData(sourceResponse.url, pageDataResponse.body);
+        }
+      } catch {
+        parsedEntries = [];
       }
     }
 
