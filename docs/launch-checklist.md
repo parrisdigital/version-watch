@@ -4,8 +4,9 @@
 
 - homepage clearly communicates the product in the first screen
 - homepage defaults to importance-ranked results
-- vendor pages default to chronological results
+- vendor pages list events alphabetically by title
 - event pages expose source links clearly
+- event pages return to the originating feed for homepage, vendor, and search flows
 
 ## Source Coverage
 
@@ -47,12 +48,14 @@
 - Convex deployment is connected correctly
 - cron jobs are active in the intended environment
 - required environment variables are set
+- `npm run health:production` passes after production deploys and forced refreshes
 
 ## Operations
 
 - source health page shows failing sources
 - stale source timestamps are visible
 - parser failures do not create public garbage
+- production freshness checks flag stale feeds, noisy titles, future-dated events, and recent ingestion failures
 
 ## Documentation
 

@@ -74,7 +74,10 @@ Optional later:
 1. Merge approved PR to `main`
 2. Vercel deploys the web app
 3. Convex production deployment is updated
-4. Cron jobs continue using the production Convex environment
+4. Run a forced production ingestion refresh when parser or dedupe logic changed
+5. Run `npm run health:production`
+6. Browser-check homepage, vendor, search, and event back-navigation flows
+7. Cron jobs continue using the production Convex environment
 
 ## Cron Ownership
 
@@ -93,6 +96,21 @@ Why:
 - check review queue
 - check degraded sources
 - check stale source timestamps
+- run `npm run health:production` when a deploy or forced refresh changes feed behavior
+
+### Production freshness check
+
+`npm run health:production` queries the production Convex deployment and fails when:
+
+- the latest public event is stale
+- active sources have not succeeded recently
+- recent ingestion runs contain failures
+- top public events include noisy parser artifacts
+- public events are future-dated or not returned newest first
+
+The defaults are intentionally strict enough for the four-hour ingestion cadence. They can be tuned with
+`SINCE_HOURS`, `MAX_SOURCE_LAG_HOURS`, `MAX_LATEST_EVENT_AGE_HOURS`, `MAX_FUTURE_SKEW_HOURS`, and
+`EVENT_LIMIT`.
 
 ### Weekly
 

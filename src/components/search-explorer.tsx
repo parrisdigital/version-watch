@@ -150,6 +150,12 @@ export function SearchExplorer({ events, vendors, initialFilters }: SearchExplor
     updateFilters({ query: "", vendor: "", category: "", stack: "", importance: "" });
   }
 
+  function getEventHref(slug: string) {
+    const params = new URLSearchParams(toQueryString({ query, vendor, category, stack, importance }));
+    params.set("fromSearch", "true");
+    return `/events/${slug}?${params.toString()}`;
+  }
+
   const featuredRelative = featuredEvent
     ? formatDistanceToNowStrict(new Date(featuredEvent.publishedAt), { addSuffix: true })
     : null;
@@ -298,7 +304,7 @@ export function SearchExplorer({ events, vendors, initialFilters }: SearchExplor
                   </div>
                 </div>
                 <div className="mt-6 flex flex-wrap gap-2">
-                  <Link href={`/events/${featuredEvent.slug}`} className="vw-button vw-button-primary">
+                  <Link href={getEventHref(featuredEvent.slug)} className="vw-button vw-button-primary">
                     Open event page
                   </Link>
                   <a
@@ -339,7 +345,7 @@ export function SearchExplorer({ events, vendors, initialFilters }: SearchExplor
 
             <div className="grid gap-3">
               {remainingEvents.map((event) => (
-                <EventCard key={event.id} event={event} compact />
+                <EventCard key={event.id} event={event} compact eventHref={getEventHref(event.slug)} />
               ))}
             </div>
           </div>

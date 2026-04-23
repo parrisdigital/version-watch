@@ -18,19 +18,54 @@ const sourceTypeLabel: Record<MockEvent["sourceType"], string> = {
   rss: "RSS",
 };
 
+const searchBackKeys = ["query", "vendor", "category", "stack", "importance"] as const;
+const importanceBands = new Set(["critical", "high", "medium", "low"]);
+
 function normalize(value: string | undefined | null): string {
   return (value ?? "").trim().toLowerCase();
 }
+
+function buildSearchBackHref(searchParams: EventSearchParams) {
+  const params = new URLSearchParams();
+
+  for (const key of searchBackKeys) {
+    const value = searchParams[key]?.trim();
+
+    if (!value) {
+      continue;
+    }
+
+    if (key === "importance" && !importanceBands.has(value)) {
+      continue;
+    }
+
+    params.set(key, value);
+  }
+
+  const query = params.toString();
+  return query ? `/search?${query}` : "/search";
+}
+
+type EventSearchParams = {
+  fromVendor?: string;
+  fromSearch?: string;
+  query?: string;
+  vendor?: string;
+  category?: string;
+  stack?: string;
+  importance?: string;
+};
 
 export default async function EventPage({
   params,
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ fromVendor?: string }>;
+  searchParams: Promise<EventSearchParams>;
 }) {
   const { slug } = await params;
-  const { fromVendor } = await searchParams;
+  const resolvedSearchParams = await searchParams;
+  const { fromVendor, fromSearch } = resolvedSearchParams;
   const event = await getEventBySlug(slug);
 
   if (!event) {
@@ -46,7 +81,12 @@ export default async function EventPage({
   const showSummary = normalize(event.summary) !== normalizedTitle;
   const showWhatChanged =
     normalize(event.whatChanged) !== normalizedTitle && normalize(event.whatChanged) !== normalize(event.summary);
-  const backHref = fromVendor === event.vendorSlug ? `/vendors/${event.vendorSlug}` : "/";
+  const backHref =
+    fromSearch === "true"
+      ? buildSearchBackHref(resolvedSearchParams)
+      : fromVendor === event.vendorSlug
+        ? `/vendors/${event.vendorSlug}`
+        : "/";
 
   return (
     <main className="vw-page">
