@@ -18,7 +18,6 @@ function relativeTime(value: string | null) {
 }
 
 export function FreshnessSummaryBadge({ summary, className }: FreshnessSummaryBadgeProps) {
-  const latestEventLabel = relativeTime(summary.latestEventAt);
   const latestRunLabel = relativeTime(summary.latestRunAt);
 
   return (
@@ -33,11 +32,7 @@ export function FreshnessSummaryBadge({ summary, className }: FreshnessSummaryBa
         aria-hidden="true"
       />
       <span className="tabular-nums">
-        {latestEventLabel ? `Latest update ${latestEventLabel}` : "Latest feed active"}
-      </span>
-      <span aria-hidden="true">·</span>
-      <span className="tabular-nums">
-        {latestRunLabel ? `Last updated ${latestRunLabel}` : "Updates running"}
+        {latestRunLabel ? `Feed refreshed ${latestRunLabel}` : "Feed refresh active"}
       </span>
       <span aria-hidden="true">·</span>
       <span className="tabular-nums">{summary.sourceCount} official sources</span>

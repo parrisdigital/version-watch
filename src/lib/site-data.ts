@@ -18,7 +18,6 @@ export type SiteEvent = MockEvent & { computedScore?: number };
 
 export type FreshnessSummary = {
   checkedAt: string;
-  latestEventAt: string | null;
   latestRunAt: string | null;
   sourceCount: number;
 };
@@ -98,26 +97,19 @@ export async function getFreshnessSummary(): Promise<FreshnessSummary> {
     () =>
       fetchQuery(api.ops.productionFreshness, {
         sinceHours: 8,
-        eventLimit: 24,
+        eventLimit: 1,
       }) as Promise<any>,
     () => ({
       checkedAt: new Date().toISOString(),
-      latestEvents: fallbackEvents
-        .slice()
-        .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-        .slice(0, 24),
       sources: sourceHealth,
       recentRuns: [],
-      recentFailureCount: 0,
     }),
   );
 
-  const latestEvent = report.latestEvents?.[0];
   const latestRun = report.recentRuns?.find((run: any) => run.finishedAt || run.startedAt);
 
   return {
     checkedAt: report.checkedAt,
-    latestEventAt: latestEvent?.publishedAt ?? null,
     latestRunAt: latestRun?.finishedAt ?? latestRun?.startedAt ?? null,
     sourceCount: report.sources?.length ?? 0,
   };
