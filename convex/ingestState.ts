@@ -23,6 +23,10 @@ function buildDedupeKey(sourceId: string, item: { sourceUrl: string; publishedAt
   return `${sourceId}::${item.sourceUrl}::${item.publishedAt}::${item.title.toLowerCase()}`;
 }
 
+function normalizeTitleKey(title: string) {
+  return title.replace(/\s+/g, " ").trim().toLowerCase();
+}
+
 function shouldPollSource(source: any, now: number, force: boolean) {
   if (force) {
     return true;
@@ -96,6 +100,7 @@ const NOISE_TITLE_PATTERNS = [
 ];
 
 const SHORT_MEANINGFUL_TITLES = new Set(["canvases"]);
+const SHORT_MEANINGFUL_SUFFIXES = new Set(["api", "cli", "sdk", "mcp"]);
 const GITHUB_RELEASE_TAG_TITLE_PATTERN =
   /^(?:[a-z0-9][a-z0-9+._/-]*[@ ]+)?v?\d+\.\d+(?:\.\d+)?(?:[-+.][a-z0-9]+)*(?:\.[a-z0-9]+)*$/i;
 
@@ -130,7 +135,7 @@ function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string, vendorSlug
 
 export function hasMeaningfulTitle(title: string, sourceUrl?: string) {
   const normalized = title.replace(/\s+/g, " ").trim();
-  const normalizedLower = normalized.toLowerCase();
+  const normalizedLower = normalizeTitleKey(normalized);
 
   if (normalized.length > 180) {
     return false;
@@ -139,13 +144,21 @@ export function hasMeaningfulTitle(title: string, sourceUrl?: string) {
   if (normalized.length < 12 && !SHORT_MEANINGFUL_TITLES.has(normalizedLower)) {
     const isGitHubReleaseTitle =
       sourceUrl?.includes("github.com/") && GITHUB_RELEASE_TAG_TITLE_PATTERN.test(normalized);
+    const titleTokens = normalizedLower.split(/\s+/).filter(Boolean);
+    const hasMeaningfulShortSuffix =
+      titleTokens.length >= 2 && SHORT_MEANINGFUL_SUFFIXES.has(titleTokens[titleTokens.length - 1]!);
 
-    if (!isGitHubReleaseTitle) {
+    if (!isGitHubReleaseTitle && !hasMeaningfulShortSuffix) {
       return false;
     }
   }
 
   return !NOISE_TITLE_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
+export function findSameSourceCandidateByTitle<T extends { rawTitle: string }>(candidates: T[], title: string) {
+  const normalizedTitle = normalizeTitleKey(title);
+  return candidates.find((candidate) => normalizeTitleKey(candidate.rawTitle) === normalizedTitle) ?? null;
 }
 
 function isReasonablePublishDate(publishedAt: number, now: number) {
@@ -242,12 +255,15 @@ export const persistSourceEntries = internalMutation({
         .unique();
       const sameSourceCandidate =
         exactCandidate ??
-        (await ctx.db
-          .query("rawCandidates")
-          .withIndex("by_source_url_published", (q) =>
-            q.eq("sourceId", args.sourceId).eq("sourceUrl", item.sourceUrl).eq("rawPublishedAt", item.publishedAt),
-          )
-          .first());
+        findSameSourceCandidateByTitle(
+          await ctx.db
+            .query("rawCandidates")
+            .withIndex("by_source_url_published", (q) =>
+              q.eq("sourceId", args.sourceId).eq("sourceUrl", item.sourceUrl).eq("rawPublishedAt", item.publishedAt),
+            )
+            .collect(),
+          item.title,
+        );
       const sameTitleCandidate =
         sameSourceCandidate ??
         (await ctx.db

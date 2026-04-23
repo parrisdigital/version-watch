@@ -8,6 +8,7 @@ async function getVendorSources(ctx: any, vendorId: any) {
     .collect();
 
   return sources
+    .filter((source: any) => source.isActive)
     .slice()
     .sort((a: any, b: any) => a.pollIntervalMinutes - b.pollIntervalMinutes || a.name.localeCompare(b.name))
     .map((source: any) => ({
