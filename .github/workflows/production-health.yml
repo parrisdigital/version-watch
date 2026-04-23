@@ -1,0 +1,54 @@
+name: Production Health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 */4 * * *"
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - ".github/workflows/production-health.yml"
+      - "scripts/check-production-freshness.mjs"
+      - "package.json"
+      - "package-lock.json"
+      - "convex/ops.ts"
+
+concurrency:
+  group: production-health-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  production-health:
+    name: Production freshness check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      CONVEX_URL: https://joyous-mole-525.convex.cloud
+      EVENT_LIMIT: "24"
+      MAX_FUTURE_SKEW_HOURS: "1"
+      MAX_LATEST_EVENT_AGE_HOURS: "72"
+      MAX_SOURCE_LAG_HOURS: "8"
+      SINCE_HOURS: "8"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for production deploy window
+        if: github.event_name == 'push'
+        run: sleep 180
+
+      - name: Run production freshness check
+        run: npm run health:production

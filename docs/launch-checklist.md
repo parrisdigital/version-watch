@@ -49,6 +49,7 @@
 - cron jobs are active in the intended environment
 - required environment variables are set
 - `npm run health:production` passes after production deploys and forced refreshes
+- GitHub Actions production health monitor is enabled on schedule, push, manual dispatch, and monitor PRs
 
 ## Operations
 
@@ -56,6 +57,7 @@
 - stale source timestamps are visible
 - parser failures do not create public garbage
 - production freshness checks flag stale feeds, noisy titles, future-dated events, and recent ingestion failures
+- failed production health workflow runs are treated as operational alerts
 
 ## Documentation
 
