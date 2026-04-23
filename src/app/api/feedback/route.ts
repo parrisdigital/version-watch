@@ -1,4 +1,4 @@
-import { fetchAction } from "convex/nextjs";
+import { fetchMutation } from "convex/nextjs";
 import { NextResponse } from "next/server";
 
 import { api } from "../../../../convex/_generated/api";
@@ -52,10 +52,9 @@ export async function POST(request: Request) {
   }
 
   try {
-    await fetchAction(api.feedback.submit, {
+    await fetchMutation(api.feedback.submit, {
       type: type as "suggest_vendor" | "missing_update" | "wrong_signal" | "incorrect_summary" | "general",
       message,
-      email: getString(data.email),
       pageUrl: normalizePageUrl(getString(data.pageUrl), request.url),
       company: getString(data.company),
       userAgent: request.headers.get("user-agent") ?? undefined,

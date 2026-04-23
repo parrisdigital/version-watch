@@ -21,7 +21,6 @@ export type FreshnessSummary = {
   latestEventAt: string | null;
   latestRunAt: string | null;
   sourceCount: number;
-  recentFailureCount: number;
 };
 
 type ReviewQueueEntry = ReviewCandidate & {
@@ -121,7 +120,6 @@ export async function getFreshnessSummary(): Promise<FreshnessSummary> {
     latestEventAt: latestEvent?.publishedAt ?? null,
     latestRunAt: latestRun?.finishedAt ?? latestRun?.startedAt ?? null,
     sourceCount: report.sources?.length ?? 0,
-    recentFailureCount: report.recentFailureCount ?? 0,
   };
 }
 

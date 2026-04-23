@@ -11,7 +11,6 @@
 import type * as crons from "../crons.js";
 import type * as events from "../events.js";
 import type * as feedback from "../feedback.js";
-import type * as feedbackState from "../feedbackState.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
 import type * as ingestState from "../ingestState.js";
@@ -31,7 +30,6 @@ declare const fullApi: ApiFromModules<{
   crons: typeof crons;
   events: typeof events;
   feedback: typeof feedback;
-  feedbackState: typeof feedbackState;
   http: typeof http;
   ingest: typeof ingest;
   ingestState: typeof ingestState;

@@ -15,7 +15,6 @@ test("feedback page submits through the lightweight form", async ({ page }) => {
   await expect(page.getByLabel("Feedback type")).toHaveValue("suggest_vendor");
 
   await page.getByLabel("Message").fill("Please track Example Cloud release notes.");
-  await page.getByLabel("Email optional").fill("reader@example.com");
   await page.getByRole("button", { name: /Send suggest vendor/i }).click();
 
   await expect(page.getByText("Feedback sent. Thank you.")).toBeVisible();
