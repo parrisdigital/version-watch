@@ -60,15 +60,8 @@ Optional later:
 - `SENTRY_DSN`
 - `VERCEL_GIT_COMMIT_SHA`
 
-Feedback notifications:
-
-- `RESEND_API_KEY`
-- `FEEDBACK_TO_EMAIL`
-- `FEEDBACK_FROM_EMAIL`
-
-Feedback submissions are always stored in Convex. Email notifications are skipped unless `RESEND_API_KEY`
-and `FEEDBACK_TO_EMAIL` are configured in the Convex environment. `FEEDBACK_FROM_EMAIL` should be a verified
-Resend sender; otherwise the action falls back to Resend's onboarding sender.
+Feedback submissions are stored in Convex under `feedbackSubmissions`. No email provider or API key is
+required for the MVP feedback loop.
 
 ## Deployment Flow
 

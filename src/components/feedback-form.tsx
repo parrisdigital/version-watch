@@ -38,9 +38,8 @@ function sameOriginReferrer() {
 export function FeedbackForm({ initialType, initialPageUrl }: FeedbackFormProps) {
   const [type, setType] = useState<FeedbackType>(() => normalizeType(initialType));
   const [message, setMessage] = useState("");
-  const [email, setEmail] = useState("");
   const [company, setCompany] = useState("");
-  const [pageUrl, setPageUrl] = useState(initialPageUrl ?? "");
+  const pageUrl = initialPageUrl ?? "";
   const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
   const [error, setError] = useState("");
   const selectedLabel = useMemo(
@@ -60,7 +59,6 @@ export function FeedbackForm({ initialType, initialPageUrl }: FeedbackFormProps)
       body: JSON.stringify({
         type,
         message,
-        email,
         pageUrl: resolvedPageUrl,
         company,
       }),
@@ -76,7 +74,6 @@ export function FeedbackForm({ initialType, initialPageUrl }: FeedbackFormProps)
 
     setStatus("success");
     setMessage("");
-    setEmail("");
     setCompany("");
   }
 
@@ -116,17 +113,6 @@ export function FeedbackForm({ initialType, initialPageUrl }: FeedbackFormProps)
           />
         </label>
 
-        <label className="grid gap-2">
-          <span className="vw-kicker vw-kicker-muted">Email optional</span>
-          <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
-            className="vw-input"
-          />
-        </label>
-
         <label className="hidden" aria-hidden="true">
           Company
           <input
@@ -161,9 +147,6 @@ export function FeedbackForm({ initialType, initialPageUrl }: FeedbackFormProps)
             <Send aria-hidden="true" className="size-4" />
             {status === "submitting" ? "Sending..." : `Send ${selectedLabel.toLowerCase()}`}
           </Button>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            It is stored privately and can notify the maintainer when email is configured.
-          </p>
         </div>
       </div>
     </form>

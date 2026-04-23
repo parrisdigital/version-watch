@@ -20,7 +20,6 @@ function relativeTime(value: string | null) {
 export function FreshnessSummaryBadge({ summary, className }: FreshnessSummaryBadgeProps) {
   const latestEventLabel = relativeTime(summary.latestEventAt);
   const latestRunLabel = relativeTime(summary.latestRunAt);
-  const failureLabel = `${summary.recentFailureCount} recent failure${summary.recentFailureCount === 1 ? "" : "s"}`;
 
   return (
     <div
@@ -38,19 +37,10 @@ export function FreshnessSummaryBadge({ summary, className }: FreshnessSummaryBa
       </span>
       <span aria-hidden="true">·</span>
       <span className="tabular-nums">
-        {latestRunLabel ? `Checked ${latestRunLabel}` : "Monitoring active"}
+        {latestRunLabel ? `Last updated ${latestRunLabel}` : "Updates running"}
       </span>
       <span aria-hidden="true">·</span>
       <span className="tabular-nums">{summary.sourceCount} official sources</span>
-      <span aria-hidden="true">·</span>
-      <span
-        className={cn(
-          "tabular-nums",
-          summary.recentFailureCount > 0 ? "text-[var(--color-critical)]" : "text-[var(--color-green)]",
-        )}
-      >
-        {failureLabel}
-      </span>
     </div>
   );
 }
