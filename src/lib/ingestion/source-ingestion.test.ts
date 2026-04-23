@@ -4,6 +4,7 @@ import {
   discoverFeedUrl,
   normalizeParsedEntry,
   parseHtmlEntries,
+  parsePostHogPageData,
 } from "@/lib/ingestion/source-ingestion";
 
 describe("discoverFeedUrl", () => {
@@ -42,6 +43,48 @@ describe("discoverFeedUrl", () => {
 });
 
 describe("parseHtmlEntries", () => {
+  it("parses PostHog Gatsby page-data changelog nodes", () => {
+    const pageData = JSON.stringify({
+      result: {
+        data: {
+          allRoadmap: {
+            nodes: [
+              {
+                date: "2026-04-21",
+                title: "Multiple Slack channels for support ticket creation",
+                description: "Support ticket creation can now fan out to more than one Slack channel.",
+                cta: { url: "https://github.com/PostHog/posthog/pull/54970" },
+                githubUrls: ["https://github.com/PostHog/posthog/pull/54970"],
+              },
+              {
+                date: "2026-04-17",
+                title: "Weekly email digest for Web Analytics",
+                description: "Web Analytics can now send a weekly digest so teams can track changes without opening dashboards.",
+                cta: { url: "https://posthog.com/blog/weekly-email-digest-for-web-analytics" },
+                githubUrls: ["https://github.com/PostHog/posthog/pull/52785"],
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    const entries = parsePostHogPageData("https://posthog.com/changelog", pageData);
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      title: "Multiple Slack channels for support ticket creation",
+      url: "https://posthog.com/changelog",
+      githubUrl: "https://github.com/PostHog/posthog/pull/54970",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-21T00:00:00.000Z"));
+    expect(entries[1]).toMatchObject({
+      title: "Weekly email digest for Web Analytics",
+      url: "https://posthog.com/blog/weekly-email-digest-for-web-analytics",
+    });
+  });
+
   it("parses date-plus-heading changelog blocks", () => {
     const html = `
       <main>
@@ -242,6 +285,178 @@ describe("parseHtmlEntries", () => {
       url: "https://cursor.com/changelog/04-14-26",
     });
     expect(entries[1]?.publishedAt).toBe(Date.parse("2026-04-14T00:00:00.000Z"));
+  });
+
+  it("parses Railway markdown changelog entries", () => {
+    const markdown = `
+      # Railway Changelog
+      ## Remote MCP, Railway Agent in the CLI, one-command skills install
+      - Date: 2026-04-17
+      - Link: https://railway.com/changelog/2026-04-17-remote-mcp
+      - Markdown: https://railway.com/changelog/2026-04-17-remote-mcp.md
+      ## Skip rebuilds, Guardrails, better CLI
+      - Date: 2026-04-03
+      - Link: https://railway.com/changelog/2026-04-03-skip-rebuilds
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "railway:changelog_page",
+      sourceUrl: "https://railway.com/changelog",
+      html: markdown,
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      title: "Remote MCP, Railway Agent in the CLI, one-command skills install",
+      url: "https://railway.com/changelog/2026-04-17-remote-mcp",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-17T00:00:00.000Z"));
+  });
+
+  it("parses Prisma changelog cards with embedded date metadata", () => {
+    const html = `
+      <main>
+        <a href="/changelog/2026-04-07">
+          <div class="eyebrow">v7.7.0Prisma ORMApril 7, 2026</div>
+          <h2>Prisma ORM v7.7.0: the new prisma bootstrap command</h2>
+          <p>Prisma ORM v7.7.0 introduces a new prisma bootstrap command that sequences the full Prisma Postgres setup.</p>
+        </a>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "prisma:changelog_page",
+      sourceUrl: "https://www.prisma.io/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Prisma ORM v7.7.0: the new prisma bootstrap command",
+      url: "https://www.prisma.io/changelog/2026-04-07",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-07T00:00:00.000Z"));
+  });
+
+  it("parses Expo changelog timeline articles", () => {
+    const html = `
+      <main>
+        <article>
+          <div>
+            <time datetime="2026-03-04T16:30:00.000Z">March 4, 2026</time>
+            <a href="/changelog/introducing-expo-observe">/ Read more -></a>
+          </div>
+          <a href="/changelog/introducing-expo-observe">
+            <h2>Introducing Expo Observe (Private Preview)</h2>
+          </a>
+          <p>We are building Expo Observe, a new way to understand how your app performs in the real world.</p>
+        </article>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "expo:changelog_page",
+      sourceUrl: "https://expo.dev/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Introducing Expo Observe (Private Preview)",
+      url: "https://expo.dev/changelog/introducing-expo-observe",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-03-04T00:00:00.000Z"));
+  });
+
+  it("parses Sentry changelog cards", () => {
+    const html = `
+      <main>
+        <a href="/changelog/monitors--alerts-are-in-early-access/">
+          <article>
+            <h3>Monitors & Alerts are in Early Access</h3>
+            <div class="prose">
+              <p>Sentry Alerts is splitting into two features to give teams more control over what they track.</p>
+            </div>
+            <time datetime="April 20, 2026">April 20, 2026</time>
+          </article>
+        </a>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "sentry:changelog_page",
+      sourceUrl: "https://sentry.io/changelog/",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Monitors & Alerts are in Early Access",
+      url: "https://sentry.io/changelog/monitors--alerts-are-in-early-access/",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-20T00:00:00.000Z"));
+  });
+
+  it("parses Neon markdown changelog entries grouped under a release date", () => {
+    const markdown = `
+      # Changelog
+      ## Entries
+      ### 2026-04-17
+      ## Neon plugin for OpenAI Codex
+      The Neon Postgres plugin is now available in the OpenAI Codex plugin directory.
+      ## Snapshot API responses include storage size fields
+      Snapshot responses now expose full_size and diff_size fields.
+      ### 2026-04-10
+      ## Neon Auth Plugins tab
+      You can now manage authentication plugins from a dedicated tab.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "neon:changelog_page",
+      sourceUrl: "https://neon.com/docs/changelog",
+      html: markdown,
+    });
+
+    expect(entries).toHaveLength(3);
+    expect(entries[0]).toMatchObject({
+      title: "Neon plugin for OpenAI Codex",
+      url: "https://neon.com/docs/changelog",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-17T00:00:00.000Z"));
+    expect(entries[1]).toMatchObject({
+      title: "Snapshot API responses include storage size fields",
+    });
+  });
+
+  it("parses Better Auth release sections from the official changelog page", () => {
+    const html = `
+      <div class="flex items-baseline mb-4">
+        <a href="https://github.com/better-auth/better-auth/releases/tag/v1.6.8">v1.6.8</a>
+        <time>Apr 23, 2026</time>
+      </div>
+      <div>
+        <div class="changelog-content">
+          <ul>
+            <li>Fixed mapProfileToUser fallback for OAuth providers that omit email from their profile response.</li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "better-auth:changelog_page",
+      sourceUrl: "https://better-auth.com/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Better Auth v1.6.8",
+      url: "https://github.com/better-auth/better-auth/releases/tag/v1.6.8",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-23T00:00:00.000Z"));
   });
 });
 
