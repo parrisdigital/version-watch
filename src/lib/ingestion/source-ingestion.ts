@@ -1449,7 +1449,7 @@ function parseOpenAIChangelogCards(sourceUrl: string, html: string) {
         ) || title;
 
       entries.push({
-        title: truncateSentence(title) || title,
+        title: truncateSentence(title, 160) || title,
         url: sourceUrl,
         excerpt,
         publishedAt,
