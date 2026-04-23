@@ -112,6 +112,19 @@ The defaults are intentionally strict enough for the four-hour ingestion cadence
 `SINCE_HOURS`, `MAX_SOURCE_LAG_HOURS`, `MAX_LATEST_EVENT_AGE_HOURS`, `MAX_FUTURE_SKEW_HOURS`, and
 `EVENT_LIMIT`.
 
+### Automated monitoring
+
+GitHub Actions runs `.github/workflows/production-health.yml`:
+
+- every four hours at minute 23
+- after pushes to `main`, with a short wait for the production deploy window
+- manually through `workflow_dispatch`
+- on PRs that change the monitor, health script, package metadata, or production freshness query
+
+A failed run is the alert. It shows up in the GitHub Actions UI and in normal GitHub notification surfaces for
+the repository. The first response is to check whether production ingestion failed, whether a source is stale,
+or whether parser noise made it into the top feed.
+
 ### Weekly
 
 - review suppressed items for pattern drift
