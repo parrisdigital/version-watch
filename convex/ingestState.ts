@@ -40,21 +40,30 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "android-developers",
   "anthropic",
   "apple-developer",
+  "bun",
   "clerk",
   "cloudflare",
   "cursor",
+  "dp-code",
   "docker",
   "exa",
   "firebase",
   "firecrawl",
   "gemini",
   "github",
+  "hermes-agent",
+  "hono",
   "linear",
   "openai",
+  "opencode",
+  "openusage",
   "resend",
+  "shadcn",
   "stripe",
   "supabase",
+  "t3-code",
   "vercel",
+  "vite",
 ]);
 
 const NOISE_TITLE_PATTERNS = [
@@ -69,6 +78,8 @@ const NOISE_TITLE_PATTERNS = [
 ];
 
 const SHORT_MEANINGFUL_TITLES = new Set(["canvases"]);
+const GITHUB_RELEASE_TAG_TITLE_PATTERN =
+  /^(?:[a-z0-9][a-z0-9+._/-]*[@ ]+)?v?\d+\.\d+(?:\.\d+)?(?:[-+.][a-z0-9]+)*(?:\.[a-z0-9]+)*$/i;
 
 const OFFICIAL_HOSTS_BY_VENDOR: Record<string, string[]> = {
   anthropic: ["anthropic.com", "claude.com", "docs.claude.com", "platform.claude.com", "support.claude.com"],
@@ -98,7 +109,7 @@ function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string, vendorSlug
   }
 }
 
-function hasMeaningfulTitle(title: string) {
+export function hasMeaningfulTitle(title: string, sourceUrl?: string) {
   const normalized = title.replace(/\s+/g, " ").trim();
   const normalizedLower = normalized.toLowerCase();
 
@@ -107,7 +118,12 @@ function hasMeaningfulTitle(title: string) {
   }
 
   if (normalized.length < 12 && !SHORT_MEANINGFUL_TITLES.has(normalizedLower)) {
-    return false;
+    const isGitHubReleaseTitle =
+      sourceUrl?.includes("github.com/") && GITHUB_RELEASE_TAG_TITLE_PATTERN.test(normalized);
+
+    if (!isGitHubReleaseTitle) {
+      return false;
+    }
   }
 
   return !NOISE_TITLE_PATTERNS.some((pattern) => pattern.test(normalized));
@@ -133,7 +149,7 @@ function shouldAutoPublishCandidate(item: any, vendor: any, source: any, now: nu
     return false;
   }
 
-  if (!hasMeaningfulTitle(item.title) || !isReasonablePublishDate(item.publishedAt, now)) {
+  if (!hasMeaningfulTitle(item.title, source.url) || !isReasonablePublishDate(item.publishedAt, now)) {
     return false;
   }
 

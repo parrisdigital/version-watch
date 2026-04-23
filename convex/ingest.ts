@@ -39,13 +39,22 @@ async function fetchText(url: string) {
 }
 
 const FEED_PARSER_KEYS = new Set([
+  "bun:changelog_page",
   "clerk:changelog_page",
+  "dp-code:changelog_page",
   "github:blog",
   "github:rss",
+  "hermes-agent:changelog_page",
+  "hono:changelog_page",
   "linear:changelog_page",
+  "opencode:changelog_page",
+  "openusage:changelog_page",
   "resend:changelog_page",
+  "shadcn:changelog_page",
   "supabase:changelog_page",
+  "t3-code:changelog_page",
   "vercel:changelog_page",
+  "vite:changelog_page",
 ]);
 
 function parseFeedEntries(feedXml: string, fallbackUrl: string) {
