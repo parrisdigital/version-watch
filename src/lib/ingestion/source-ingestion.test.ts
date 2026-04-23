@@ -209,6 +209,62 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-03-25T00:00:00.000Z"));
   });
 
+  it("parses Stripe linked changelog cards without using ingestion time", () => {
+    const html = `
+      <main>
+        <a href="/changelog/dahlia">Learn what's changing in Dahlia</a>
+        <a href="/changelog/dahlia/2026-03-25/remove-legacy-stripejs-methods">
+          <span>Removes deprecated Payment Intents, Setup Intents, and Sources methods from Stripe.js</span>
+          <span>Payments</span>
+        </a>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "stripe:changelog_page",
+      sourceUrl: "https://docs.stripe.com/changelog",
+      html,
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      title: "Removes deprecated Payment Intents, Setup Intents, and Sources methods from Stripe.js",
+      url: "https://docs.stripe.com/changelog/dahlia/2026-03-25/remove-legacy-stripejs-methods",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-03-25T00:00:00.000Z"));
+  });
+
+  it("keeps Exa deprecation notices anchored to their notice date", () => {
+    const html = `
+      <main>
+        <h1>API Deprecation Notice</h1>
+        <p>Date: April 1, 2026 We're retiring a few legacy fields before May 1, 2026.</p>
+        <h2>\u200BWhat's Changing</h2>
+        <p>/research endpoint sunsets on May 1.</p>
+        <h2>Timeline</h2>
+        <ol>
+          <li>April 1 — This notice</li>
+          <li>May 1 — Hard removal.</li>
+        </ol>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "exa:docs_page",
+      sourceUrl: "https://exa.ai/docs/changelog/may-2026-api-deprecations",
+      html,
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      title: "API Deprecation Notice",
+      url: "https://exa.ai/docs/changelog/may-2026-api-deprecations",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-01T00:00:00.000Z"));
+  });
+
   it("parses Docker Desktop markdown release entries", () => {
     const markdown = `
       # Docker Desktop release notes

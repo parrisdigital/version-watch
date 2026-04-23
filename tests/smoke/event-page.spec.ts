@@ -9,6 +9,7 @@ test("event page keeps the official source entry visible", async ({ page }) => {
   await firstEventLink.click();
 
   await expect(page.getByRole("heading", { level: 1, name: eventTitle?.trim() ?? "" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Back to feed/i })).toHaveAttribute("href", "/vendors/stripe");
   await expect(page.getByText(/Official source entry/i)).toBeVisible();
   await expect(page.getByRole("link", { name: /Official source/i })).toBeVisible();
 });

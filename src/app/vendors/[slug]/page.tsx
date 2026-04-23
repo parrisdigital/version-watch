@@ -26,7 +26,9 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
   }
 
   const vendorEvents = await getEventsForVendor(slug);
-  const latestEvent = vendorEvents[0];
+  const latestEvent = vendorEvents
+    .slice()
+    .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())[0];
   const highSignalCount = vendorEvents.filter((event) => {
     return event.importanceBand === "critical" || event.importanceBand === "high";
   }).length;
@@ -115,7 +117,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
             <div className="flex items-end justify-between gap-3">
               <div>
                 <p className="vw-kicker">Recent changes</p>
-                <h2 className="vw-title mt-2 text-2xl">Latest first</h2>
+                <h2 className="vw-title mt-2 text-2xl">A to Z</h2>
               </div>
               <Link href={`/search?vendor=${vendor.slug}`} className="vw-button vw-button-secondary">
                 Open in search
@@ -124,7 +126,14 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
 
             <div className="mt-6 grid gap-4">
               {vendorEvents.length > 0 ? (
-                vendorEvents.map((event) => <EventCard key={event.id} event={event} compact />)
+                vendorEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    compact
+                    eventHref={`/events/${event.slug}?fromVendor=${vendor.slug}`}
+                  />
+                ))
               ) : (
                 <p className="vw-panel p-6 text-sm text-[var(--color-ink-muted)]">
                   No tracked events yet for {vendor.name}.

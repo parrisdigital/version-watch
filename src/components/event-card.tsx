@@ -8,6 +8,7 @@ import type { MockEvent } from "@/lib/mock-data";
 type EventCardProps = {
   event: MockEvent & { computedScore?: number };
   compact?: boolean;
+  eventHref?: string;
 };
 
 const sourceTypeLabel: Record<MockEvent["sourceType"], string> = {
@@ -66,10 +67,11 @@ function GithubIcon() {
   );
 }
 
-export function EventCard({ event, compact = false }: EventCardProps) {
+export function EventCard({ event, compact = false, eventHref }: EventCardProps) {
   const publishedDate = new Date(event.publishedAt);
   const relative = formatDistanceToNowStrict(publishedDate, { addSuffix: true });
   const absolute = format(publishedDate, "MMM d, yyyy");
+  const href = eventHref ?? `/events/${event.slug}`;
 
   return (
     <article className="group vw-panel relative overflow-hidden p-6 transition-[border-color,background-color] duration-300 hover:border-[var(--color-line-strong)] hover:bg-[var(--color-surface-raised)] md:p-7">
@@ -99,7 +101,7 @@ export function EventCard({ event, compact = false }: EventCardProps) {
 
       <h3 className="vw-title mt-6 text-[1.5rem] leading-[1.15] md:text-[1.75rem]">
         <Link
-          href={`/events/${event.slug}`}
+          href={href}
           className="vw-stretched-link text-[var(--color-ink)] transition-colors group-hover:text-[var(--color-signal)]"
         >
           {event.title}
