@@ -133,4 +133,24 @@ export default defineSchema({
     errorMessage: v.optional(v.string()),
     runType: v.union(v.literal("scheduled"), v.literal("manual"), v.literal("deep_diff")),
   }).index("by_source_and_start", ["sourceId", "startedAt"]),
+
+  feedbackSubmissions: defineTable({
+    type: v.union(
+      v.literal("suggest_vendor"),
+      v.literal("missing_update"),
+      v.literal("wrong_signal"),
+      v.literal("incorrect_summary"),
+      v.literal("general"),
+    ),
+    message: v.string(),
+    email: v.optional(v.string()),
+    pageUrl: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    status: v.union(v.literal("new"), v.literal("emailed"), v.literal("email_failed"), v.literal("email_skipped")),
+    notificationError: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_created_at", ["createdAt"])
+    .index("by_status_and_created_at", ["status", "createdAt"]),
 });

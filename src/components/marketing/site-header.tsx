@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { href: "/vendors", label: "Vendors" },
   { href: "/search", label: "Search" },
   { href: "/about", label: "About" },
+  { href: "/feedback", label: "Feedback" },
 ] as const;
 
 function subscribeScroll(callback: () => void) {

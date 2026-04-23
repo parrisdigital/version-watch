@@ -7,6 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Check, ChevronDown, Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
 
 import { EventCard } from "@/components/event-card";
+import { FreshnessSummaryBadge } from "@/components/freshness-summary";
 import { SeverityPill } from "@/components/severity-pill";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,12 +24,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { VendorMark } from "@/components/vendor-mark";
 import { filterEvents, getSearchFacets, type SearchFilters } from "@/lib/search/filter-events";
 import type { ImportanceBand, VendorRecord } from "@/lib/mock-data";
-import type { SiteEvent } from "@/lib/site-data";
+import type { FreshnessSummary, SiteEvent } from "@/lib/site-data";
 import { cn } from "@/lib/utils";
 
 type SearchExplorerProps = {
   events: SiteEvent[];
   vendors: VendorRecord[];
+  freshnessSummary?: FreshnessSummary;
   initialFilters: SearchFilters;
 };
 
@@ -330,7 +332,7 @@ function ActiveFilterChips({
   );
 }
 
-export function SearchExplorer({ events, vendors, initialFilters }: SearchExplorerProps) {
+export function SearchExplorer({ events, vendors, freshnessSummary, initialFilters }: SearchExplorerProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState(initialFilters.query ?? "");
@@ -455,6 +457,11 @@ export function SearchExplorer({ events, vendors, initialFilters }: SearchExplor
           <h1 className="vw-display mt-4 max-w-[22ch] text-balance text-4xl sm:text-5xl md:text-6xl">
             Cut through release surfaces to the changes that actually move a stack.
           </h1>
+          {freshnessSummary ? (
+            <div className="mt-5">
+              <FreshnessSummaryBadge summary={freshnessSummary} />
+            </div>
+          ) : null}
 
           <div className="mt-8 grid gap-4 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
             <div className="vw-panel p-4">
