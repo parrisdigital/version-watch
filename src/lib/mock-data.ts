@@ -263,6 +263,21 @@ export const vendors: VendorRecord[] = [
     description: "Python package, environment, and workflow tool releases.",
     sources: [{ name: "GitHub Releases", url: "https://github.com/astral-sh/uv/releases", type: "changelog_page" }],
   },
+  {
+    slug: "convex",
+    name: "Convex",
+    description: "Backend platform, workflows, and platform update news from Convex.",
+    sources: [{ name: "Convex News", url: "https://news.convex.dev/", type: "changelog_page" }],
+  },
+  {
+    slug: "workos",
+    name: "WorkOS",
+    description: "Enterprise auth, org management, and AuthKit release updates.",
+    sources: [
+      { name: "WorkOS Changelog", url: "https://workos.com/changelog", type: "changelog_page" },
+      { name: "AuthKit JS Releases", url: "https://github.com/workos/authkit-js/releases", type: "github_release" },
+    ],
+  },
 ];
 
 const vendorNameBySlug = new Map(vendors.map((vendor) => [vendor.slug, vendor.name]));

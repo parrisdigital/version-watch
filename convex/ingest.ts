@@ -51,6 +51,7 @@ const FEED_PARSER_KEYS = new Set([
   "opencode:changelog_page",
   "openusage:changelog_page",
   "biome:changelog_page",
+  "convex:changelog_page",
   "pnpm:changelog_page",
   "fastify:changelog_page",
   "resend:changelog_page",
@@ -60,6 +61,8 @@ const FEED_PARSER_KEYS = new Set([
   "uv:changelog_page",
   "vercel:changelog_page",
   "vite:changelog_page",
+  "workos:changelog_page",
+  "workos:github_release",
 ]);
 
 function parseFeedEntries(feedXml: string, fallbackUrl: string) {

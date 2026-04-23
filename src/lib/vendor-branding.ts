@@ -37,7 +37,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   linear: { logoUrl: "https://cdn.simpleicons.org/linear" },
   docker: { logoUrl: "https://cdn.simpleicons.org/docker" },
   "hermes-agent": {
-    logoUrl: "https://hermes-agent.nousresearch.com/favicon.ico",
+    logoUrl: "/logos/hermes-agent.png",
     renderMode: "image",
     fill: true,
   },
@@ -54,6 +54,12 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   pnpm: { logoUrl: "https://cdn.simpleicons.org/pnpm" },
   fastify: { logoUrl: "https://cdn.simpleicons.org/fastify" },
   uv: { logoUrl: "https://cdn.simpleicons.org/uv" },
+  convex: { logoUrl: "https://cdn.simpleicons.org/convex" },
+  workos: {
+    logoUrl: "https://cdn.prod.website-files.com/621f54116cab10f6e9215d8b/621f548d3bca3b62c4bfe1c2_Favicon%2032x32.png",
+    renderMode: "image",
+    fill: true,
+  },
 };
 
 function getMonogram(vendorName: string) {

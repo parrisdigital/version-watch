@@ -130,6 +130,8 @@ const VENDOR_STACKS: Record<string, string[]> = {
   pnpm: ["tooling", "developer-workflow", "frontend-infra"],
   fastify: ["framework", "backend", "developer-workflow"],
   uv: ["tooling", "developer-workflow", "backend"],
+  convex: ["backend", "database", "developer-workflow"],
+  workos: ["auth", "developer-workflow", "security"],
 };
 
 function cleanText(value: string | null | undefined) {

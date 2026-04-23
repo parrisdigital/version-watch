@@ -59,6 +59,7 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "opencode",
   "openusage",
   "biome",
+  "convex",
   "pnpm",
   "fastify",
   "resend",
@@ -69,6 +70,7 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "uv",
   "vercel",
   "vite",
+  "workos",
 ]);
 
 const NOISE_TITLE_PATTERNS = [
