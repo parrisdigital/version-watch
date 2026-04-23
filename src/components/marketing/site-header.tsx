@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
@@ -37,24 +38,15 @@ function isActive(pathname: string, href: string) {
 function BrandMark() {
   return (
     <Link href="/" aria-label="Homepage" className="flex items-center gap-2.5 pl-1">
-      <span
-        aria-hidden="true"
-        className="flex size-7 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--secondary)]"
-      >
-        <svg viewBox="0 0 16 16" className="size-4" aria-hidden="true">
-          <path
-            d="M2 4.5 L7 13 L9 13 L14 4.5 L11.5 4.5 L8 11 L4.5 4.5 Z"
-            fill="currentColor"
-            className="text-[var(--foreground)]"
-          />
-          <circle
-            cx="8"
-            cy="2.5"
-            r="1"
-            fill="currentColor"
-            className="text-[var(--splash)]"
-          />
-        </svg>
+      <span aria-hidden="true" className="relative size-7 shrink-0 overflow-hidden rounded-full">
+        <Image
+          src="/brand/version-watch-icon.png"
+          alt=""
+          fill
+          sizes="28px"
+          className="object-contain"
+          priority
+        />
       </span>
       <span className="text-sm font-semibold tracking-tight text-[var(--foreground)]">
         Version Watch
