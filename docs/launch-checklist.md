@@ -4,7 +4,7 @@
 
 - homepage clearly communicates the product in the first screen
 - homepage defaults to importance-ranked results
-- vendor pages list events alphabetically by title
+- vendor pages list events newest first
 - event pages expose source links clearly
 - event pages return to the originating feed for homepage, vendor, and search flows
 
