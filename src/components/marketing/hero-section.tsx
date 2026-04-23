@@ -2,12 +2,15 @@ import Link from "next/link";
 import { format } from "date-fns";
 import { ArrowDown, ArrowRight, Search as SearchIcon } from "lucide-react";
 
+import { FreshnessSummaryBadge } from "@/components/freshness-summary";
 import { Button } from "@/components/ui/button";
 import { HeroShader } from "@/components/shader/hero-shader";
+import type { FreshnessSummary } from "@/lib/site-data";
 
 type HeroSectionProps = {
   vendorCount: number;
   lastPublishedAt?: string;
+  freshnessSummary?: FreshnessSummary;
 };
 
 /**
@@ -18,7 +21,7 @@ type HeroSectionProps = {
  * around the primary CTA — that's the only place accent chroma enters the
  * hero so it stays restrained.
  */
-export function HeroSection({ vendorCount, lastPublishedAt }: HeroSectionProps) {
+export function HeroSection({ vendorCount, lastPublishedAt, freshnessSummary }: HeroSectionProps) {
   const lastUpdatedLabel = lastPublishedAt
     ? format(new Date(lastPublishedAt), "MMM d · HH:mm 'UTC'")
     : "just now";
@@ -32,15 +35,22 @@ export function HeroSection({ vendorCount, lastPublishedAt }: HeroSectionProps) 
 
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-24 sm:px-6 lg:px-8">
         <div className="flex max-w-full flex-col gap-8">
-          <p className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--hero-chip-background)] px-3 py-1 text-xs text-[var(--hero-chip-foreground)] backdrop-blur-md">
-            <span
-              className="size-1.5 rounded-full bg-[var(--splash)] shadow-[0_0_12px_var(--splash)]"
-              aria-hidden="true"
+          {freshnessSummary ? (
+            <FreshnessSummaryBadge
+              summary={freshnessSummary}
+              className="bg-[var(--hero-chip-background)] text-[var(--hero-chip-foreground)]"
             />
-            <span className="tabular-nums">
-              Ingesting {vendorCount} platforms · Last update {lastUpdatedLabel}
-            </span>
-          </p>
+          ) : (
+            <p className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--hero-chip-background)] px-3 py-1 text-xs text-[var(--hero-chip-foreground)] backdrop-blur-md">
+              <span
+                className="size-1.5 rounded-full bg-[var(--splash)] shadow-[0_0_12px_var(--splash)]"
+                aria-hidden="true"
+              />
+              <span className="tabular-nums">
+                Ingesting {vendorCount} platforms · Last update {lastUpdatedLabel}
+              </span>
+            </p>
+          )}
 
           <h1 className="max-w-[20ch] text-balance text-5xl font-semibold tracking-tight text-[var(--hero-foreground)] sm:text-6xl lg:text-7xl xl:text-8xl">
             Every platform change, ranked. Source attached.

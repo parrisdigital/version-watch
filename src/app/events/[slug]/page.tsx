@@ -87,6 +87,7 @@ export default async function EventPage({
       : fromVendor === event.vendorSlug
         ? `/vendors/${event.vendorSlug}`
         : "/";
+  const feedbackHref = `/feedback?type=incorrect_summary&url=${encodeURIComponent(`/events/${event.slug}`)}`;
 
   return (
     <main className="vw-page">
@@ -181,6 +182,9 @@ export default async function EventPage({
                   View on GitHub
                 </a>
               ) : null}
+              <Link href={feedbackHref} className="vw-button vw-button-ghost">
+                Report this update
+              </Link>
             </div>
           </div>
 

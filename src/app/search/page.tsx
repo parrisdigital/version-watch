@@ -1,6 +1,6 @@
 import { SearchExplorer } from "@/components/search-explorer";
 import { SiteHeader } from "@/components/marketing/site-header";
-import { getAllPublicEvents, getVendors } from "@/lib/site-data";
+import { getAllPublicEvents, getFreshnessSummary, getVendors } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,11 @@ export default async function SearchPage({
   }>;
 }) {
   const params = await searchParams;
-  const [events, vendors] = await Promise.all([getAllPublicEvents(), getVendors()]);
+  const [events, vendors, freshnessSummary] = await Promise.all([
+    getAllPublicEvents(),
+    getVendors(),
+    getFreshnessSummary(),
+  ]);
 
   return (
     <main className="vw-page pb-24 pt-28 md:pt-32">
@@ -24,6 +28,7 @@ export default async function SearchPage({
       <SearchExplorer
         events={events}
         vendors={vendors}
+        freshnessSummary={freshnessSummary}
         initialFilters={{
           query: params.query ?? "",
           vendor: params.vendor ?? "",

@@ -16,6 +16,14 @@ import {
 
 export type SiteEvent = MockEvent & { computedScore?: number };
 
+export type FreshnessSummary = {
+  checkedAt: string;
+  latestEventAt: string | null;
+  latestRunAt: string | null;
+  sourceCount: number;
+  recentFailureCount: number;
+};
+
 type ReviewQueueEntry = ReviewCandidate & {
   publishedDateLabel: string;
 };
@@ -84,6 +92,37 @@ export async function getVendors(): Promise<VendorRecord[]> {
     () => fetchQuery(api.vendors.list, {}) as Promise<VendorRecord[]>,
     () => fallbackVendors,
   );
+}
+
+export async function getFreshnessSummary(): Promise<FreshnessSummary> {
+  const report = await readFromConvex<any>(
+    () =>
+      fetchQuery(api.ops.productionFreshness, {
+        sinceHours: 8,
+        eventLimit: 24,
+      }) as Promise<any>,
+    () => ({
+      checkedAt: new Date().toISOString(),
+      latestEvents: fallbackEvents
+        .slice()
+        .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+        .slice(0, 24),
+      sources: sourceHealth,
+      recentRuns: [],
+      recentFailureCount: 0,
+    }),
+  );
+
+  const latestEvent = report.latestEvents?.[0];
+  const latestRun = report.recentRuns?.find((run: any) => run.finishedAt || run.startedAt);
+
+  return {
+    checkedAt: report.checkedAt,
+    latestEventAt: latestEvent?.publishedAt ?? null,
+    latestRunAt: latestRun?.finishedAt ?? latestRun?.startedAt ?? null,
+    sourceCount: report.sources?.length ?? 0,
+    recentFailureCount: report.recentFailureCount ?? 0,
+  };
 }
 
 export async function getVendorBySlug(slug: string) {

@@ -5,15 +5,16 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { StatsStrip } from "@/components/marketing/stats-strip";
 import { VendorCoverageSection } from "@/components/marketing/vendor-coverage-section";
-import { getAllPublicEvents, getHomepageEvents, getVendors } from "@/lib/site-data";
+import { getAllPublicEvents, getFreshnessSummary, getHomepageEvents, getVendors } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [events, allEvents, vendors] = await Promise.all([
+  const [events, allEvents, vendors, freshnessSummary] = await Promise.all([
     getHomepageEvents(),
     getAllPublicEvents(),
     getVendors(),
+    getFreshnessSummary(),
   ]);
 
   const highSignalCount = allEvents.filter(
@@ -27,7 +28,11 @@ export default async function HomePage() {
       <SiteHeader />
 
       <main className="flex-1">
-        <HeroSection vendorCount={vendors.length} lastPublishedAt={latest?.publishedAt} />
+        <HeroSection
+          vendorCount={vendors.length}
+          lastPublishedAt={latest?.publishedAt}
+          freshnessSummary={freshnessSummary}
+        />
 
         <StatsStrip
           eventCount={allEvents.length}
