@@ -233,6 +233,36 @@ export const vendors: VendorRecord[] = [
     description: "Frontend build tooling and create-vite release updates.",
     sources: [{ name: "GitHub Releases", url: "https://github.com/vitejs/vite/releases", type: "changelog_page" }],
   },
+  {
+    slug: "openclaw",
+    name: "OpenClaw",
+    description: "Open-source AI agent runtime and desktop assistant releases.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/openclaw/openclaw/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "biome",
+    name: "Biome",
+    description: "Formatter, linter, and web toolchain release updates.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/biomejs/biome/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "pnpm",
+    name: "pnpm",
+    description: "Package manager and workspace tooling releases.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/pnpm/pnpm/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "fastify",
+    name: "Fastify",
+    description: "Node.js framework and server release updates.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/fastify/fastify/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "uv",
+    name: "uv",
+    description: "Python package, environment, and workflow tool releases.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/astral-sh/uv/releases", type: "changelog_page" }],
+  },
 ];
 
 const vendorNameBySlug = new Map(vendors.map((vendor) => [vendor.slug, vendor.name]));
