@@ -116,6 +116,15 @@ const VENDOR_STACKS: Record<string, string[]> = {
   resend: ["email", "backend"],
   linear: ["developer-workflow", "product"],
   docker: ["containers", "developer-workflow", "infra"],
+  "hermes-agent": ["agents", "developer-workflow", "automation"],
+  "t3-code": ["developer-workflow", "llms", "desktop-app"],
+  opencode: ["developer-workflow", "llms", "agents"],
+  openusage: ["developer-workflow", "observability", "tooling"],
+  "dp-code": ["developer-workflow", "llms", "desktop-app"],
+  shadcn: ["frontend-ui", "design-system", "developer-workflow"],
+  hono: ["framework", "backend", "edge-compute"],
+  bun: ["runtime", "tooling", "backend"],
+  vite: ["frontend-infra", "developer-workflow", "tooling"],
 };
 
 function cleanText(value: string | null | undefined) {

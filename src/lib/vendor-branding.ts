@@ -36,6 +36,19 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   resend: { logoUrl: "https://cdn.simpleicons.org/resend" },
   linear: { logoUrl: "https://cdn.simpleicons.org/linear" },
   docker: { logoUrl: "https://cdn.simpleicons.org/docker" },
+  "hermes-agent": {
+    logoUrl: "https://hermes-agent.nousresearch.com/favicon.ico",
+    renderMode: "image",
+    fill: true,
+  },
+  "t3-code": { logoUrl: "https://t3.codes/favicon-32x32.png", renderMode: "image", fill: true },
+  opencode: { logoUrl: "https://opencode.ai/favicon-96x96-v3.png", renderMode: "image", fill: true },
+  openusage: { logoUrl: "https://www.openusage.ai/icon.svg", renderMode: "image", fill: true },
+  "dp-code": { logoUrl: "https://www.dpcode.cc/favicon.ico", renderMode: "image", fill: true },
+  shadcn: { logoUrl: "https://cdn.simpleicons.org/shadcnui" },
+  hono: { logoUrl: "https://cdn.simpleicons.org/hono" },
+  bun: { logoUrl: "https://cdn.simpleicons.org/bun" },
+  vite: { logoUrl: "https://cdn.simpleicons.org/vite" },
 };
 
 function getMonogram(vendorName: string) {

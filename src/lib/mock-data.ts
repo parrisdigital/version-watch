@@ -179,6 +179,60 @@ export const vendors: VendorRecord[] = [
     description: "Container tooling and Docker Desktop release changes.",
     sources: [{ name: "Docker Desktop Release Notes", url: "https://docs.docker.com/desktop/release-notes/", type: "docs_page" }],
   },
+  {
+    slug: "hermes-agent",
+    name: "Hermes Agent",
+    description: "Open-source agent runtime, memory, and toolchain releases.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/NousResearch/hermes-agent/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "t3-code",
+    name: "T3 Code",
+    description: "AI coding agent and desktop workflow releases from T3.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/pingdotgg/t3code/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "opencode",
+    name: "OpenCode",
+    description: "Open-source coding agent updates across core, desktop, and SDK.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/anomalyco/opencode/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "openusage",
+    name: "OpenUsage",
+    description: "AI subscription usage tracker releases and provider support changes.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/robinebers/openusage/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "dp-code",
+    name: "DP Code",
+    description: "AI coding environment releases and workflow updates.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/Emanuele-web04/dpcode/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "shadcn",
+    name: "shadcn/ui",
+    description: "Component registry, CLI, and UI system releases.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/shadcn-ui/ui/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "hono",
+    name: "Hono",
+    description: "Web standards-first framework releases for edge and server runtimes.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/honojs/hono/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "bun",
+    name: "Bun",
+    description: "JavaScript runtime, package manager, and tooling releases.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/oven-sh/bun/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "vite",
+    name: "Vite",
+    description: "Frontend build tooling and create-vite release updates.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/vitejs/vite/releases", type: "changelog_page" }],
+  },
 ];
 
 const vendorNameBySlug = new Map(vendors.map((vendor) => [vendor.slug, vendor.name]));

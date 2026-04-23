@@ -20,6 +20,25 @@ describe("discoverFeedUrl", () => {
       "https://clerk.com/changelog/rss.xml",
     );
   });
+
+  it("discovers GitHub release atom feeds from alternate links", () => {
+    const html = `
+      <html>
+        <head>
+          <link
+            rel="alternate"
+            type="application/atom+xml"
+            title="ui Release Notes"
+            href="https://github.com/shadcn-ui/ui/releases.atom"
+          />
+        </head>
+      </html>
+    `;
+
+    expect(discoverFeedUrl(html, "https://github.com/shadcn-ui/ui/releases")).toBe(
+      "https://github.com/shadcn-ui/ui/releases.atom",
+    );
+  });
 });
 
 describe("parseHtmlEntries", () => {
