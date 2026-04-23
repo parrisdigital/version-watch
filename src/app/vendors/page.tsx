@@ -4,8 +4,16 @@ import { getVendors } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
+const vendorNameCollator = new Intl.Collator("en", {
+  sensitivity: "base",
+  numeric: true,
+});
+
 export default async function VendorsPage() {
   const vendors = await getVendors();
+  const alphabeticalVendors = vendors
+    .slice()
+    .sort((a, b) => vendorNameCollator.compare(a.name, b.name) || a.slug.localeCompare(b.slug));
   const totalSources = vendors.reduce((sum, vendor) => sum + vendor.sources.length, 0);
 
   return (
@@ -27,7 +35,7 @@ export default async function VendorsPage() {
 
       <section className="px-4 pb-20 pt-8 sm:px-6">
         <div className="vw-shell">
-          <VendorGrid items={vendors} />
+          <VendorGrid items={alphabeticalVendors} />
         </div>
       </section>
     </main>
