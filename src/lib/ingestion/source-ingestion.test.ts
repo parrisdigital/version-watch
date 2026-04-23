@@ -134,6 +134,74 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2025-05-20T00:00:00.000Z"));
   });
 
+  it("parses OpenAI changelog cards by date instead of model snapshot strings", () => {
+    const html = `
+      <main>
+        <div>
+          <h1>Changelog</h1>
+          <div>
+            <h3>April, 2026</h3>
+            <div>
+              <div>
+                <div data-variant="outline">Apr 21</div>
+              </div>
+              <div>
+                <div data-variant="soft">Feature</div>
+                <div data-variant="soft">gpt-image-2</div>
+                <p>Released GPT Image 2, a state-of-the-art image generation model for image generation and editing.</p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3>March, 2025</h3>
+            <div>
+              <div>
+                <div data-variant="outline">Mar 3</div>
+              </div>
+              <div>
+                <div data-variant="soft">Feature</div>
+                <div data-variant="soft">v1/fine_tuning/jobs</div>
+                <p>Added metadata field support to fine-tuning jobs.</p>
+              </div>
+            </div>
+          </div>
+          <div>
+            <h3>December, 2025</h3>
+            <div>
+              <div>
+                <div data-variant="outline">Dec 15</div>
+              </div>
+              <div>
+                <div data-variant="soft">Feature</div>
+                <p>Released four new dated audio snapshots.</p>
+                <ul>
+                  <li>gpt-4o-mini-transcribe-2025-12-15</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "openai:docs_page",
+      sourceUrl: "https://developers.openai.com/api/docs/changelog",
+      html,
+    });
+
+    expect(entries.map((entry) => entry.title)).toEqual([
+      "Released GPT Image 2, a state-of-the-art image generation model for image generation and editing.",
+      "Released four new dated audio snapshots.",
+      "Added metadata field support to fine-tuning jobs.",
+    ]);
+    expect(entries.map((entry) => new Date(entry.publishedAt).toISOString())).toEqual([
+      "2026-04-21T00:00:00.000Z",
+      "2025-12-15T00:00:00.000Z",
+      "2025-03-03T00:00:00.000Z",
+    ]);
+  });
+
   it("parses Anthropic Help Center release-note sections", () => {
     const html = `
       <main>

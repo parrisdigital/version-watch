@@ -220,8 +220,11 @@ function parseDateText(text: string, context: MonthYearContext | null) {
     return Date.UTC(Number(eastAsiaMatch[1]), Number(eastAsiaMatch[2]) - 1, Number(eastAsiaMatch[3]));
   }
 
-  const withExplicitYear = Date.parse(value);
-  if (!Number.isNaN(withExplicitYear) && /\d{4}/.test(value)) {
+  const explicitMonthDate = value.match(
+    /^(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2},?\s+\d{4}$/i,
+  );
+  const withExplicitYear = explicitMonthDate ? Date.parse(value) : NaN;
+  if (!Number.isNaN(withExplicitYear)) {
     return Date.UTC(
       new Date(withExplicitYear).getUTCFullYear(),
       new Date(withExplicitYear).getUTCMonth(),
@@ -1403,6 +1406,61 @@ function parseSingleDocumentEntry(sourceUrl: string, html: string) {
   ] satisfies ParsedSourceEntry[];
 }
 
+function parseOpenAIChangelogCards(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const heading of root.find("h2, h3").toArray()) {
+    const context = parseMonthYearContext(cleanText($(heading).text()));
+    if (!context) {
+      continue;
+    }
+
+    const section = $(heading).parent();
+    for (const card of section.children("div").toArray()) {
+      const cardRoot = $(card);
+      const dateText = cleanText(cardRoot.find('[data-variant="outline"]').first().text());
+      const publishedAt = parseDateText(dateText, context);
+
+      if (!publishedAt) {
+        continue;
+      }
+
+      const paragraphs = cardRoot
+        .find("p")
+        .toArray()
+        .map((paragraph) => cleanText($(paragraph).text()))
+        .filter((text) => text && isMeaningfulTitle(text));
+      const title = paragraphs[0];
+
+      if (!title) {
+        continue;
+      }
+
+      const excerpt =
+        truncateSentence(
+          cardRoot
+            .find("p, li")
+            .toArray()
+            .map((element) => cleanText($(element).text()))
+            .filter(Boolean)
+            .join(" "),
+        ) || title;
+
+      entries.push({
+        title: truncateSentence(title) || title,
+        url: sourceUrl,
+        excerpt,
+        publishedAt,
+        parseConfidence: "high",
+      });
+    }
+  }
+
+  return dedupeEntries(entries).sort((left, right) => right.publishedAt - left.publishedAt);
+}
+
 function parseOpenAITimeline(sourceUrl: string, html: string) {
   const $ = load(html);
   const root = $("main").length > 0 ? $("main").first() : $("body");
@@ -1563,7 +1621,19 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
     }
   }
 
-  if (parserKey === "openai:docs_page" || parserKey === "gemini:docs_page") {
+  if (parserKey === "openai:docs_page") {
+    const cardEntries = parseOpenAIChangelogCards(sourceUrl, html);
+    if (cardEntries.length > 0) {
+      return cardEntries.slice(0, 12);
+    }
+
+    const entries = parseOpenAITimeline(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "gemini:docs_page") {
     const entries = parseOpenAITimeline(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);

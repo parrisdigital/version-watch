@@ -61,14 +61,6 @@ function withComputedScores(items: SiteEvent[]) {
   });
 }
 
-function alphabeticalByTitle(items: SiteEvent[]) {
-  return items.slice().sort((a, b) => {
-    const titleDiff = a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
-    if (titleDiff !== 0) return titleDiff;
-    return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
-  });
-}
-
 export async function getHomepageEvents() {
   const items = await readFromConvex<SiteEvent[]>(
     () => fetchQuery(api.events.homepageFeed, {}) as Promise<SiteEvent[]>,
@@ -110,7 +102,7 @@ export async function getEventsForVendor(slug: string) {
       }),
   );
 
-  return alphabeticalByTitle(attachScores(items));
+  return withComputedScores(items);
 }
 
 export async function getEventBySlug(slug: string) {
