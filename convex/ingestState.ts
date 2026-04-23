@@ -24,7 +24,25 @@ function buildDedupeKey(sourceId: string, item: { sourceUrl: string; publishedAt
 }
 
 function normalizeTitleKey(title: string) {
-  return title.replace(/\s+/g, " ").trim().toLowerCase();
+  return title
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/\s+/g, " ")
+    .replace(
+      /([^\s])(?:Checkout|Paymentlinks|Connect|Elements|Payments|Crypto|Issuing|Radar|Billing|Invoicing|Climate|Payouts|Financialconnections|Tax|Treasury)(?:\+\s*\d+\s*more)?$/i,
+      "$1",
+    )
+    .trim()
+    .toLowerCase();
+}
+
+function canonicalSourceUrl(value: string) {
+  try {
+    const url = new URL(value);
+    url.hash = "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return value.split("#")[0]!.replace(/\/$/, "");
+  }
 }
 
 function shouldPollSource(source: any, now: number, force: boolean) {
@@ -134,10 +152,14 @@ function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string, vendorSlug
 }
 
 export function hasMeaningfulTitle(title: string, sourceUrl?: string) {
-  const normalized = title.replace(/\s+/g, " ").trim();
+  const normalized = title.replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim();
   const normalizedLower = normalizeTitleKey(normalized);
 
   if (normalized.length > 180) {
+    return false;
+  }
+
+  if (/^learn what['’]s changing/i.test(normalized)) {
     return false;
   }
 
@@ -159,6 +181,19 @@ export function hasMeaningfulTitle(title: string, sourceUrl?: string) {
 export function findSameSourceCandidateByTitle<T extends { rawTitle: string }>(candidates: T[], title: string) {
   const normalizedTitle = normalizeTitleKey(title);
   return candidates.find((candidate) => normalizeTitleKey(candidate.rawTitle) === normalizedTitle) ?? null;
+}
+
+function findSameCanonicalSourceCandidate<T extends { rawTitle: string; sourceUrl: string }>(
+  candidates: T[],
+  item: { sourceUrl: string },
+) {
+  const normalizedUrl = canonicalSourceUrl(item.sourceUrl);
+
+  return (
+    candidates.find((candidate) => {
+      return canonicalSourceUrl(candidate.sourceUrl) === normalizedUrl && !hasMeaningfulTitle(candidate.rawTitle);
+    }) ?? null
+  );
 }
 
 function isReasonablePublishDate(publishedAt: number, now: number) {
@@ -270,7 +305,17 @@ export const persistSourceEntries = internalMutation({
           .query("rawCandidates")
           .withIndex("by_source_and_title", (q) => q.eq("sourceId", args.sourceId).eq("rawTitle", item.title))
           .first());
-      const existingCandidate = sameTitleCandidate;
+      const sourceCandidates = sameTitleCandidate
+        ? []
+        : await ctx.db
+            .query("rawCandidates")
+            .withIndex("by_source_and_title", (q) => q.eq("sourceId", args.sourceId))
+            .collect();
+      const sameNormalizedTitleCandidate =
+        sameTitleCandidate ?? findSameSourceCandidateByTitle(sourceCandidates, item.title);
+      const sameCanonicalSourceCandidate =
+        sameNormalizedTitleCandidate ?? findSameCanonicalSourceCandidate(sourceCandidates, item);
+      const existingCandidate = sameCanonicalSourceCandidate;
 
       const shouldPublish = shouldAutoPublishCandidate(item, vendor, source, now);
       const status =

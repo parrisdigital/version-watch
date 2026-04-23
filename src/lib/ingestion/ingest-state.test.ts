@@ -19,6 +19,10 @@ describe("hasMeaningfulTitle", () => {
     expect(hasMeaningfulTitle("Clerk CLI", "https://clerk.com/changelog")).toBe(true);
     expect(hasMeaningfulTitle("Linear MCP", "https://linear.app/changelog")).toBe(true);
   });
+
+  it("rejects hidden-character section headings", () => {
+    expect(hasMeaningfulTitle("\u200BWhat's Changing", "https://exa.ai/docs/changelog")).toBe(false);
+  });
 });
 
 describe("findSameSourceCandidateByTitle", () => {
@@ -30,5 +34,19 @@ describe("findSameSourceCandidateByTitle", () => {
 
     expect(findSameSourceCandidateByTitle(candidates, "Schedule recurring Workflows")).toBe(candidates[1]);
     expect(findSameSourceCandidateByTitle(candidates, "Weekly email digest for Web Analytics")).toBeNull();
+  });
+
+  it("matches old Stripe titles with appended product labels", () => {
+    const candidates = [
+      { rawTitle: "Adds support for the UPI payment methodPayments" },
+      { rawTitle: "Updates the elements.update() method to return a PromiseElements" },
+    ];
+
+    expect(findSameSourceCandidateByTitle(candidates, "Adds support for the UPI payment method")).toBe(
+      candidates[0],
+    );
+    expect(findSameSourceCandidateByTitle(candidates, "Updates the elements.update() method to return a Promise")).toBe(
+      candidates[1],
+    );
   });
 });

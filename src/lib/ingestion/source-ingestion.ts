@@ -147,6 +147,7 @@ const VENDOR_STACKS: Record<string, string[]> = {
 
 function cleanText(value: string | null | undefined) {
   return (value ?? "")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
     .replace(/\s+/g, " ")
     .replace(/\u00a0/g, " ")
     .trim();
@@ -326,6 +327,10 @@ function isMeaningfulTitle(text: string) {
   }
 
   if (/stay organized with collections|save and categorize content/i.test(value)) {
+    return false;
+  }
+
+  if (/^learn what['’]s changing/i.test(value)) {
     return false;
   }
 
@@ -704,13 +709,7 @@ function parseExaMarkdownEntries(sourceUrl: string, lines: string[]) {
   }
 
   const pageText = lines.map(stripMarkdown).join(" ");
-  const year = Number(pageText.match(/\b(20\d{2})\b/)?.[1] ?? new Date().getUTCFullYear());
-  const noticeMatch = pageText.match(
-    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2}\s+[—-]\s+this notice/i,
-  );
-  const publishedAt = noticeMatch
-    ? parseDateText(noticeMatch[0]!.split(/[—-]/)[0]!.trim(), { year })
-    : parseDateFromText(pageText, { year });
+  const publishedAt = parseExaPublishedAt(pageText);
 
   if (!publishedAt) {
     return [] satisfies ParsedSourceEntry[];
@@ -941,13 +940,7 @@ function parseExaEntries(sourceUrl: string, html: string) {
   }
 
   const pageText = cleanText(root.text());
-  const year = Number(pageText.match(/\b(20\d{2})\b/)?.[1] ?? new Date().getUTCFullYear());
-  const timelineDate = pageText.match(
-    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2}\s+[—-]\s+this notice/i,
-  );
-  const publishedAt = timelineDate
-    ? parseDateText(timelineDate[0]!.split(/[—-]/)[0]!.trim(), { year })
-    : parseDateFromText(pageText, { year });
+  const publishedAt = parseExaPublishedAt(pageText);
 
   if (!publishedAt) {
     return [] satisfies ParsedSourceEntry[];
@@ -962,6 +955,26 @@ function parseExaEntries(sourceUrl: string, html: string) {
       parseConfidence: "high",
     },
   ] satisfies ParsedSourceEntry[];
+}
+
+function parseExaPublishedAt(pageText: string) {
+  const year = Number(pageText.match(/\b(20\d{2})\b/)?.[1] ?? new Date().getUTCFullYear());
+  const explicitDate = pageText.match(
+    /\bdate:\s*(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2},\s+20\d{2}\b/i,
+  );
+  const noticeDate = pageText.match(
+    /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2}\s+[—-]\s+this notice/i,
+  );
+
+  if (explicitDate) {
+    return parseDateFromText(explicitDate[0]!, { year });
+  }
+
+  if (noticeDate) {
+    return parseDateText(noticeDate[0]!.split(/[—-]/)[0]!.trim(), { year });
+  }
+
+  return parseDateFromText(pageText, { year });
 }
 
 export function parsePostHogPageData(sourceUrl: string, pageData: string) {
@@ -1275,8 +1288,11 @@ function parseLinkedEntries(sourceUrl: string, html: string) {
     const excerpt = truncateSentence(cleanText(parent.text()).replace(title, "").trim()) || title;
     const publishedAt =
       findDateBeforeElement($, parent.get(0) ?? link) ??
-      findDateBeforeElement($, link) ??
-      Date.now();
+      findDateBeforeElement($, link);
+
+    if (!publishedAt) {
+      continue;
+    }
 
     entries.push({
       title,
@@ -1288,6 +1304,53 @@ function parseLinkedEntries(sourceUrl: string, html: string) {
   }
 
   return dedupeEntries(entries);
+}
+
+function stripAppendedProductSuffix(value: string) {
+  return cleanText(value)
+    .replace(
+      /\s*(?:Checkout|Paymentlinks|Connect|Elements|Payments|Crypto|Issuing|Radar|Billing|Invoicing|Climate|Payouts|Financialconnections|Tax|Treasury)(?:\+\s*\d+\s*more)?$/i,
+      "",
+    )
+    .trim();
+}
+
+function parseStripeLinkedEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const link of root.find('a[href*="/changelog/"]').toArray()) {
+    const href = $(link).attr("href");
+    const publishedAt = parseDateText(
+      href?.match(/\/changelog\/[^/]+\/(\d{4}-\d{2}-\d{2})\//)?.[1] ?? "",
+      null,
+    );
+
+    if (!href || !publishedAt) {
+      continue;
+    }
+
+    const title = stripAppendedProductSuffix(cleanText($(link).text()));
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const parent = $(link).closest("li, article, section, tr, div");
+    const excerpt =
+      truncateSentence(stripAppendedProductSuffix(cleanText(parent.text()).replace(title, "").trim())) ||
+      title;
+
+    entries.push({
+      title,
+      url: cleanMarkdownUrl(href, sourceUrl),
+      excerpt,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries).sort((left, right) => right.publishedAt - left.publishedAt);
 }
 
 function parseSingleDocumentEntry(sourceUrl: string, html: string) {
@@ -1493,11 +1556,11 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
     }
   }
 
-  const linkedEntries = parserKey.startsWith("stripe:")
-    ? parseLinkedEntries(sourceUrl, html)
-    : [];
-  if (linkedEntries.length > 0) {
-    return linkedEntries.slice(0, 12);
+  if (parserKey.startsWith("stripe:")) {
+    const entries = parseStripeLinkedEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
   }
 
   if (parserKey === "openai:docs_page" || parserKey === "gemini:docs_page") {

@@ -22,8 +22,15 @@ function normalize(value: string | undefined | null): string {
   return (value ?? "").trim().toLowerCase();
 }
 
-export default async function EventPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function EventPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ fromVendor?: string }>;
+}) {
   const { slug } = await params;
+  const { fromVendor } = await searchParams;
   const event = await getEventBySlug(slug);
 
   if (!event) {
@@ -39,6 +46,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
   const showSummary = normalize(event.summary) !== normalizedTitle;
   const showWhatChanged =
     normalize(event.whatChanged) !== normalizedTitle && normalize(event.whatChanged) !== normalize(event.summary);
+  const backHref = fromVendor === event.vendorSlug ? `/vendors/${event.vendorSlug}` : "/";
 
   return (
     <main className="vw-page">
@@ -47,7 +55,7 @@ export default async function EventPage({ params }: { params: Promise<{ slug: st
       <section className="px-4 pb-16 pt-28 sm:px-6 md:pt-32">
         <div className="vw-shell max-w-[72rem]">
           <Link
-            href="/"
+            href={backHref}
             className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
           >
             ← Back to feed
