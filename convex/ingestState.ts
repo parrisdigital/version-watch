@@ -45,7 +45,9 @@ function canonicalSourceUrl(value: string) {
   }
 }
 
-function shouldPollSource(source: any, now: number, force: boolean) {
+const POLL_DUE_GRACE_MS = 5 * 60 * 1000;
+
+export function shouldPollSource(source: any, now: number, force: boolean) {
   if (force) {
     return true;
   }
@@ -55,7 +57,8 @@ function shouldPollSource(source: any, now: number, force: boolean) {
     return true;
   }
 
-  return now - lastAttemptAt >= source.pollIntervalMinutes * 60 * 1000;
+  const pollIntervalMs = source.pollIntervalMinutes * 60 * 1000;
+  return now - lastAttemptAt >= pollIntervalMs - POLL_DUE_GRACE_MS;
 }
 
 const AUTO_PUBLISH_VENDOR_SLUGS = new Set([

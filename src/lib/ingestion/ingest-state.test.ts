@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { findSameSourceCandidateByTitle, hasMeaningfulTitle } from "../../../convex/ingestState";
+import { findSameSourceCandidateByTitle, hasMeaningfulTitle, shouldPollSource } from "../../../convex/ingestState";
 
 describe("hasMeaningfulTitle", () => {
   it("allows short semver release titles for GitHub release sources", () => {
@@ -48,5 +48,50 @@ describe("findSameSourceCandidateByTitle", () => {
     expect(findSameSourceCandidateByTitle(candidates, "Updates the elements.update() method to return a Promise")).toBe(
       candidates[1],
     );
+  });
+});
+
+describe("shouldPollSource", () => {
+  const now = Date.UTC(2026, 3, 23, 12, 0, 0);
+  const fourHoursMs = 240 * 60 * 1000;
+
+  it("treats sources as due when the cron fires just before the full poll interval", () => {
+    expect(
+      shouldPollSource(
+        {
+          pollIntervalMinutes: 240,
+          lastSuccessAt: now - fourHoursMs + 30 * 1000,
+        },
+        now,
+        false,
+      ),
+    ).toBe(true);
+  });
+
+  it("does not poll sources that are still outside the grace window", () => {
+    expect(
+      shouldPollSource(
+        {
+          pollIntervalMinutes: 240,
+          lastSuccessAt: now - fourHoursMs + 5 * 60 * 1000 + 1,
+        },
+        now,
+        false,
+      ),
+    ).toBe(false);
+  });
+
+  it("uses the latest attempt time when failures are newer than successes", () => {
+    expect(
+      shouldPollSource(
+        {
+          pollIntervalMinutes: 240,
+          lastSuccessAt: now - fourHoursMs,
+          lastFailureAt: now - 10 * 60 * 1000,
+        },
+        now,
+        false,
+      ),
+    ).toBe(false);
   });
 });
