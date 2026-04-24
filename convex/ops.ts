@@ -23,8 +23,10 @@ async function formatSourceHealth(ctx: any, source: any) {
   return {
     vendorName: vendor.name,
     sourceName: source.name,
+    sourceUrl: source.url,
     status: getStatusForSource(source),
     lastSuccessAt: source.lastSuccessAt ? new Date(source.lastSuccessAt).toISOString() : null,
+    lastFailureAt: source.lastFailureAt ? new Date(source.lastFailureAt).toISOString() : null,
     pollIntervalMinutes: source.pollIntervalMinutes,
     consecutiveFailures: source.consecutiveFailures ?? 0,
   };
@@ -59,6 +61,10 @@ export const productionFreshness = query({
     const since = now - (args.sinceHours ?? 8) * 60 * 60 * 1000;
     const eventLimit = Math.max(1, Math.min(args.eventLimit ?? 24, 100));
     const sources = await ctx.db.query("sources").collect();
+    const sourceById = new Map(sources.map((source) => [source._id, source]));
+    const vendorIds = Array.from(new Set(sources.map((source) => source.vendorId)));
+    const vendorEntries = await Promise.all(vendorIds.map(async (vendorId) => [vendorId, await ctx.db.get(vendorId)] as const));
+    const vendorById = new Map(vendorEntries);
     const events = await ctx.db
       .query("changeEvents")
       .withIndex("by_visibility_and_published", (q) => q.eq("visibility", "public"))
@@ -91,16 +97,24 @@ export const productionFreshness = query({
     const recentRuns = ingestionRuns
       .filter((run) => run.startedAt >= since)
       .sort((a, b) => b.startedAt - a.startedAt)
-      .map((run) => ({
-        status: run.status,
-        runType: run.runType,
-        startedAt: new Date(run.startedAt).toISOString(),
-        finishedAt: run.finishedAt ? new Date(run.finishedAt).toISOString() : null,
-        itemsFetched: run.itemsFetched,
-        itemsCreated: run.itemsCreated,
-        itemsDeduped: run.itemsDeduped,
-        errorMessage: run.errorMessage ?? null,
-      }));
+      .map((run) => {
+        const source = sourceById.get(run.sourceId);
+        const vendor = source ? vendorById.get(source.vendorId) : null;
+
+        return {
+          vendorName: vendor?.name ?? "Unknown vendor",
+          sourceName: source?.name ?? "Unknown source",
+          sourceUrl: source?.url ?? null,
+          status: run.status,
+          runType: run.runType,
+          startedAt: new Date(run.startedAt).toISOString(),
+          finishedAt: run.finishedAt ? new Date(run.finishedAt).toISOString() : null,
+          itemsFetched: run.itemsFetched,
+          itemsCreated: run.itemsCreated,
+          itemsDeduped: run.itemsDeduped,
+          errorMessage: run.errorMessage ?? null,
+        };
+      });
 
     return {
       checkedAt: new Date(now).toISOString(),
