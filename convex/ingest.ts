@@ -21,15 +21,36 @@ function cleanText(value: string | null | undefined) {
     .trim();
 }
 
-async function fetchText(url: string) {
-  const response = await fetch(url, {
+const DEFAULT_INGESTION_USER_AGENT =
+  process.env.INGESTION_USER_AGENT ?? "VersionWatchBot/1.0 (+https://version-watch.vercel.app)";
+const BROWSER_FALLBACK_USER_AGENT =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
+const BROWSER_RETRY_STATUSES = new Set([403, 406, 429]);
+
+function buildFetchHeaders(userAgent: string) {
+  return {
+    "User-Agent": userAgent,
+    Accept: "text/markdown,text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+    "Accept-Language": "en-US,en;q=0.9",
+  };
+}
+
+async function fetchTextOnce(url: string, userAgent: string) {
+  return await fetch(url, {
     headers: {
-      "User-Agent": process.env.INGESTION_USER_AGENT ?? "VersionWatchBot/0.2",
-      Accept: "text/markdown,text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
-      "Accept-Language": "en-US,en;q=0.9",
+      ...buildFetchHeaders(userAgent),
     },
     redirect: "follow",
   });
+}
+
+async function fetchText(url: string) {
+  let response = await fetchTextOnce(url, DEFAULT_INGESTION_USER_AGENT);
+
+  if (!response.ok && BROWSER_RETRY_STATUSES.has(response.status)) {
+    await response.body?.cancel();
+    response = await fetchTextOnce(url, BROWSER_FALLBACK_USER_AGENT);
+  }
 
   return {
     ok: response.ok,
