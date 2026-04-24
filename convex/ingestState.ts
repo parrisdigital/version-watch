@@ -45,7 +45,7 @@ function canonicalSourceUrl(value: string) {
   }
 }
 
-const POLL_DUE_GRACE_MS = 5 * 60 * 1000;
+const POLL_DUE_GRACE_MS = 15 * 60 * 1000;
 
 export function shouldPollSource(source: any, now: number, force: boolean) {
   if (force) {

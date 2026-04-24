@@ -73,7 +73,7 @@ describe("shouldPollSource", () => {
       shouldPollSource(
         {
           pollIntervalMinutes: 240,
-          lastSuccessAt: now - fourHoursMs + 5 * 60 * 1000 + 1,
+          lastSuccessAt: now - fourHoursMs + 15 * 60 * 1000 + 1,
         },
         now,
         false,
