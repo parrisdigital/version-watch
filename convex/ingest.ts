@@ -26,6 +26,10 @@ const DEFAULT_INGESTION_USER_AGENT =
 const BROWSER_FALLBACK_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const BROWSER_RETRY_STATUSES = new Set([403, 406, 429]);
+const WATCHDOG_STALE_AFTER_MS = 270 * 60 * 1000;
+const WATCHDOG_RUNNING_GRACE_MS = 30 * 60 * 1000;
+
+type RunType = "scheduled" | "manual" | "deep_diff" | "watchdog";
 
 function buildFetchHeaders(userAgent: string) {
   return {
@@ -134,7 +138,7 @@ function buildPostHogPageDataUrl(sourceUrl: string) {
   return url.toString();
 }
 
-async function ingestSource(ctx: any, source: any, runType: "scheduled" | "manual" | "deep_diff") {
+async function ingestSource(ctx: any, source: any, runType: RunType) {
   const startedAt = Date.now();
 
   try {
@@ -236,38 +240,75 @@ function requireAdminSecret(suppliedSecret: string | undefined) {
   }
 }
 
-async function runIngestion(ctx: any, force: boolean, runType: "scheduled" | "manual" | "deep_diff") {
-  await ctx.runMutation(internal.seed.syncRegistry, {});
-
-  const sources = await ctx.runQuery(internal.ingestState.listDueSources, {
+async function runIngestion(ctx: any, force: boolean, runType: RunType, reason?: string) {
+  const refreshStart = await ctx.runMutation(internal.ingestState.startRefreshRun, {
+    runType,
     force,
+    reason,
   });
 
-  let itemsFetched = 0;
-  let itemsCreated = 0;
-  let itemsDeduped = 0;
-  let published = 0;
-  let failures = 0;
-
-  for (const source of sources) {
-    const result = await ingestSource(ctx, source, runType);
-    itemsFetched += result.itemsFetched;
-    itemsCreated += result.itemsCreated;
-    itemsDeduped += result.itemsDeduped;
-    published += result.published;
-    if (result.failed) {
-      failures += 1;
-    }
+  if (refreshStart.skipped || !refreshStart.refreshRunId) {
+    return {
+      sourcesProcessed: 0,
+      itemsFetched: 0,
+      itemsCreated: 0,
+      itemsDeduped: 0,
+      published: 0,
+      failures: 0,
+      skipped: true,
+      skipReason: refreshStart.reason ?? "A refresh is already running.",
+    };
   }
 
-  return {
-    sourcesProcessed: sources.length,
-    itemsFetched,
-    itemsCreated,
-    itemsDeduped,
-    published,
-    failures,
-  };
+  const refreshRunId = refreshStart.refreshRunId;
+
+  try {
+    await ctx.runMutation(internal.seed.syncRegistry, {});
+
+    const sources = await ctx.runQuery(internal.ingestState.listDueSources, {
+      force,
+    });
+
+    let itemsFetched = 0;
+    let itemsCreated = 0;
+    let itemsDeduped = 0;
+    let published = 0;
+    let failures = 0;
+
+    for (const source of sources) {
+      const result = await ingestSource(ctx, source, runType);
+      itemsFetched += result.itemsFetched;
+      itemsCreated += result.itemsCreated;
+      itemsDeduped += result.itemsDeduped;
+      published += result.published;
+      if (result.failed) {
+        failures += 1;
+      }
+    }
+
+    const result = {
+      sourcesProcessed: sources.length,
+      itemsFetched,
+      itemsCreated,
+      itemsDeduped,
+      published,
+      failures,
+    };
+
+    await ctx.runMutation(internal.ingestState.finishRefreshRun, {
+      refreshRunId,
+      ...result,
+    });
+
+    return result;
+  } catch (error) {
+    await ctx.runMutation(internal.ingestState.failRefreshRun, {
+      refreshRunId,
+      errorMessage: error instanceof Error ? error.message : "Unknown refresh error",
+    });
+
+    throw error;
+  }
 }
 
 export const fetchSource = action({
@@ -300,6 +341,8 @@ export const runManualIngestion: ReturnType<typeof action> = action({
     itemsDeduped: v.number(),
     published: v.number(),
     failures: v.number(),
+    skipped: v.optional(v.boolean()),
+    skipReason: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     requireAdminSecret(args.adminSecret);
@@ -316,9 +359,11 @@ export const runScheduledIngestion: ReturnType<typeof internalAction> = internal
     itemsDeduped: v.number(),
     published: v.number(),
     failures: v.number(),
+    skipped: v.optional(v.boolean()),
+    skipReason: v.optional(v.string()),
   }),
   handler: async (ctx) => {
-    // Fixed-slot public refreshes should not be suppressed by manual runs.
+    // Fixed-slot public refreshes can be skipped when another run is active.
     return await runIngestion(ctx, true, "scheduled");
   },
 });
@@ -332,8 +377,53 @@ export const runDeepDiff: ReturnType<typeof internalAction> = internalAction({
     itemsDeduped: v.number(),
     published: v.number(),
     failures: v.number(),
+    skipped: v.optional(v.boolean()),
+    skipReason: v.optional(v.string()),
   }),
   handler: async (ctx) => {
     return await runIngestion(ctx, true, "deep_diff");
+  },
+});
+
+export const runRefreshWatchdog: ReturnType<typeof internalAction> = internalAction({
+  args: {},
+  returns: v.object({
+    recovered: v.boolean(),
+    reason: v.string(),
+    sourcesProcessed: v.optional(v.number()),
+    itemsFetched: v.optional(v.number()),
+    itemsCreated: v.optional(v.number()),
+    itemsDeduped: v.optional(v.number()),
+    published: v.optional(v.number()),
+    failures: v.optional(v.number()),
+    skipped: v.optional(v.boolean()),
+    skipReason: v.optional(v.string()),
+  }),
+  handler: async (ctx) => {
+    const state = await ctx.runQuery(internal.ingestState.getRefreshWatchdogState, {
+      staleAfterMs: WATCHDOG_STALE_AFTER_MS,
+      runningGraceMs: WATCHDOG_RUNNING_GRACE_MS,
+    });
+
+    if (!state.shouldRecover) {
+      return {
+        recovered: false,
+        reason: state.reason,
+      };
+    }
+
+    await ctx.runMutation(internal.ingestState.expireStaleRefreshRuns, {
+      runningGraceMs: WATCHDOG_RUNNING_GRACE_MS,
+    });
+
+    const result = await runIngestion(ctx, true, "watchdog", state.reason);
+    const skipped = "skipped" in result && result.skipped === true;
+    const skipReason = "skipReason" in result ? result.skipReason : undefined;
+
+    return {
+      recovered: !skipped,
+      reason: skipReason ?? state.reason,
+      ...result,
+    };
   },
 });

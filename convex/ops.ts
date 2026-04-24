@@ -1,6 +1,8 @@
 import { query } from "./_generated/server";
 import { v } from "convex/values";
 
+import { isCompletedRefreshStatus } from "./ingestState";
+
 function getStatusForSource(source: any) {
   if ((source.consecutiveFailures ?? 0) >= 3) {
     return "failing";
@@ -11,6 +13,27 @@ function getStatusForSource(source: any) {
   }
 
   return "healthy";
+}
+
+function isCompletedRefreshRun(run: any) {
+  return run.finishedAt && isCompletedRefreshStatus(run.status);
+}
+
+function formatRefreshRun(run: any) {
+  return {
+    status: run.status,
+    runType: run.runType,
+    reason: run.reason ?? null,
+    startedAt: new Date(run.startedAt).toISOString(),
+    finishedAt: run.finishedAt ? new Date(run.finishedAt).toISOString() : null,
+    sourcesProcessed: run.sourcesProcessed,
+    itemsFetched: run.itemsFetched,
+    itemsCreated: run.itemsCreated,
+    itemsDeduped: run.itemsDeduped,
+    published: run.published,
+    failures: run.failures,
+    errorMessage: run.errorMessage ?? null,
+  };
 }
 
 async function formatSourceHealth(ctx: any, source: any) {
@@ -71,6 +94,7 @@ export const productionFreshness = query({
       .order("desc")
       .take(eventLimit);
     const ingestionRuns = await ctx.db.query("ingestionRuns").collect();
+    const refreshRuns = await ctx.db.query("refreshRuns").withIndex("by_started_at").order("desc").take(100);
 
     const sourceHealth = await Promise.all(
       sources
@@ -115,6 +139,14 @@ export const productionFreshness = query({
           errorMessage: run.errorMessage ?? null,
         };
       });
+    const recentRefreshRuns = refreshRuns
+      .filter((run) => run.startedAt >= since)
+      .sort((a, b) => b.startedAt - a.startedAt)
+      .map(formatRefreshRun);
+    const latestFeedRefresh = refreshRuns
+      .filter(isCompletedRefreshRun)
+      .sort((a, b) => (b.finishedAt ?? b.startedAt) - (a.finishedAt ?? a.startedAt))
+      .map(formatRefreshRun)[0] ?? null;
 
     return {
       checkedAt: new Date(now).toISOString(),
@@ -123,6 +155,9 @@ export const productionFreshness = query({
       sources: sourceHealth.filter(Boolean).sort((a, b) => {
         return a!.vendorName.localeCompare(b!.vendorName) || a!.sourceName.localeCompare(b!.sourceName);
       }),
+      latestFeedRefresh,
+      recentRefreshRuns,
+      recentRefreshFailureCount: recentRefreshRuns.filter((run) => run.status === "failure").length,
       recentRuns,
       recentFailureCount: recentRuns.filter((run) => run.status === "failure").length,
     };

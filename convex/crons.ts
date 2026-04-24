@@ -6,5 +6,6 @@ const crons = cronJobs();
 
 crons.cron("scheduled-ingestion", "0 0,8,12,16,20 * * *", internal.ingest.runScheduledIngestion, {});
 crons.cron("daily-deep-diff", "0 4 * * *", internal.ingest.runDeepDiff, {});
+crons.interval("refresh-watchdog", { minutes: 30 }, internal.ingest.runRefreshWatchdog, {});
 
 export default crons;

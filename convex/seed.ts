@@ -157,6 +157,7 @@ export const clearContent = internalMutation({
     rawCandidates: v.number(),
     reviewActions: v.number(),
     ingestionRuns: v.number(),
+    refreshRuns: v.number(),
   }),
   handler: async (ctx) => {
     let eventLinks = 0;
@@ -164,6 +165,7 @@ export const clearContent = internalMutation({
     let rawCandidates = 0;
     let reviewActions = 0;
     let ingestionRuns = 0;
+    let refreshRuns = 0;
 
     for (const row of await ctx.db.query("eventLinks").collect()) {
       await ctx.db.delete(row._id);
@@ -190,12 +192,18 @@ export const clearContent = internalMutation({
       ingestionRuns += 1;
     }
 
+    for (const row of await ctx.db.query("refreshRuns").collect()) {
+      await ctx.db.delete(row._id);
+      refreshRuns += 1;
+    }
+
     return {
       eventLinks,
       changeEvents,
       rawCandidates,
       reviewActions,
       ingestionRuns,
+      refreshRuns,
     };
   },
 });

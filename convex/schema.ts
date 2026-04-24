@@ -131,8 +131,32 @@ export default defineSchema({
     itemsCreated: v.number(),
     itemsDeduped: v.number(),
     errorMessage: v.optional(v.string()),
-    runType: v.union(v.literal("scheduled"), v.literal("manual"), v.literal("deep_diff")),
+    runType: v.union(v.literal("scheduled"), v.literal("manual"), v.literal("deep_diff"), v.literal("watchdog")),
   }).index("by_source_and_start", ["sourceId", "startedAt"]),
+
+  refreshRuns: defineTable({
+    startedAt: v.number(),
+    finishedAt: v.optional(v.number()),
+    status: v.union(
+      v.literal("running"),
+      v.literal("success"),
+      v.literal("partial_failure"),
+      v.literal("failure"),
+    ),
+    runType: v.union(v.literal("scheduled"), v.literal("manual"), v.literal("deep_diff"), v.literal("watchdog")),
+    force: v.boolean(),
+    reason: v.optional(v.string()),
+    sourcesProcessed: v.number(),
+    itemsFetched: v.number(),
+    itemsCreated: v.number(),
+    itemsDeduped: v.number(),
+    published: v.number(),
+    failures: v.number(),
+    errorMessage: v.optional(v.string()),
+  })
+    .index("by_started_at", ["startedAt"])
+    .index("by_status_and_started_at", ["status", "startedAt"])
+    .index("by_run_type_and_started_at", ["runType", "startedAt"]),
 
   feedbackSubmissions: defineTable({
     type: v.union(
