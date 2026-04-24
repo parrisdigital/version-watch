@@ -57,6 +57,38 @@ function getSourceLagLimitHours(source, defaultLimitHours, multiplier, graceHour
   return Math.max(defaultLimitHours, pollIntervalHours * multiplier + graceHours);
 }
 
+function formatSource(source) {
+  const label = `${source.vendorName} / ${source.sourceName}`;
+  return source.sourceUrl ? `${label} (${source.sourceUrl})` : label;
+}
+
+function formatRunSource(run) {
+  const vendorName = run.vendorName ?? "Unknown vendor";
+  const sourceName = run.sourceName ?? "Unknown source";
+  const label = `${vendorName} / ${sourceName}`;
+  return run.sourceUrl ? `${label} (${run.sourceUrl})` : label;
+}
+
+function getRunSourceKey(run) {
+  return [run.vendorName ?? "", run.sourceName ?? "", run.sourceUrl ?? ""].join("::");
+}
+
+function groupFailureRuns(runs) {
+  const groups = new Map();
+
+  for (const run of runs) {
+    const key = getRunSourceKey(run);
+    const group = groups.get(key) ?? {
+      label: formatRunSource(run),
+      runs: [],
+    };
+    group.runs.push(run);
+    groups.set(key, group);
+  }
+
+  return Array.from(groups.values());
+}
+
 const convexUrl =
   process.env.CONVEX_URL ||
   process.env.NEXT_PUBLIC_CONVEX_URL ||
@@ -68,6 +100,10 @@ const maxFeedRefreshAgeHours = readNumber("MAX_FEED_REFRESH_AGE_HOURS", 5);
 const maxSourceLagHours = readNumber("MAX_SOURCE_LAG_HOURS", 8);
 const maxSourceLagGraceHours = readNumber("MAX_SOURCE_LAG_GRACE_HOURS", 1);
 const maxSourceLagMultiplier = readNumber("MAX_SOURCE_LAG_MULTIPLIER", 2);
+const maxDegradedSourceCount = Math.trunc(readNumber("MAX_DEGRADED_SOURCE_COUNT", 1));
+const maxConsecutiveSourceFailures = Math.trunc(readNumber("MAX_CONSECUTIVE_SOURCE_FAILURES", 1));
+const maxRecentFailureSourceCount = Math.trunc(readNumber("MAX_RECENT_FAILURE_SOURCE_COUNT", 1));
+const maxRecentFailuresPerSource = Math.trunc(readNumber("MAX_RECENT_FAILURES_PER_SOURCE", 1));
 const maxFutureSkewHours = readNumber("MAX_FUTURE_SKEW_HOURS", 1);
 
 const client = new ConvexHttpClient(convexUrl);
@@ -78,6 +114,7 @@ const report = await client.query(api.ops.productionFreshness, {
 
 const now = Date.now();
 const failures = [];
+const warnings = [];
 const latestEvents = report.latestEvents ?? [];
 const sources = report.sources ?? [];
 const recentRuns = report.recentRuns ?? [];
@@ -128,13 +165,56 @@ if (noisyEvents.length) {
   );
 }
 
-const unhealthySources = sources.filter((source) => source.status !== "healthy");
+const degradedSources = sources.filter((source) => source.status === "degraded");
+const failingSources = sources.filter((source) => source.status === "failing");
+const repeatedDegradedSources = degradedSources.filter((source) => {
+  return (source.consecutiveFailures ?? 0) > maxConsecutiveSourceFailures;
+});
+const transientDegradedSources = degradedSources.filter((source) => {
+  return (source.consecutiveFailures ?? 0) <= maxConsecutiveSourceFailures;
+});
+const unknownStatusSources = sources.filter((source) => {
+  return !["healthy", "degraded", "failing"].includes(source.status);
+});
 
-if (unhealthySources.length) {
+if (unknownStatusSources.length) {
   failures.push(
-    `Found unhealthy sources: ${unhealthySources
+    `Found sources with unknown health status: ${unknownStatusSources
       .slice(0, 5)
-      .map((source) => `${source.vendorName} / ${source.sourceName} (${source.status})`)
+      .map((source) => `${formatSource(source)} (${source.status})`)
+      .join("; ")}.`,
+  );
+}
+
+if (failingSources.length) {
+  failures.push(
+    `Found failing sources: ${failingSources
+      .slice(0, 5)
+      .map((source) => `${formatSource(source)} (${source.consecutiveFailures ?? 0} consecutive failures)`)
+      .join("; ")}.`,
+  );
+}
+
+if (repeatedDegradedSources.length) {
+  failures.push(
+    `Found repeatedly degraded sources: ${repeatedDegradedSources
+      .slice(0, 5)
+      .map((source) => `${formatSource(source)} (${source.consecutiveFailures ?? 0} consecutive failures)`)
+      .join("; ")}.`,
+  );
+}
+
+if (transientDegradedSources.length > maxDegradedSourceCount) {
+  failures.push(
+    `Found ${transientDegradedSources.length} transient degraded sources, limit ${maxDegradedSourceCount}: ${transientDegradedSources
+      .slice(0, 5)
+      .map((source) => `${formatSource(source)} (${source.consecutiveFailures ?? 0} consecutive failures)`)
+      .join("; ")}.`,
+  );
+} else if (transientDegradedSources.length) {
+  warnings.push(
+    `Transient degraded source: ${transientDegradedSources
+      .map((source) => `${formatSource(source)} (${source.consecutiveFailures ?? 0} consecutive failure)`)
       .join("; ")}.`,
   );
 }
@@ -163,7 +243,7 @@ if (staleSources.length) {
         const limit = formatHours(
           getSourceLagLimitHours(source, maxSourceLagHours, maxSourceLagMultiplier, maxSourceLagGraceHours),
         );
-        return `${source.vendorName} / ${source.sourceName} (${age}, limit ${limit})`;
+        return `${formatSource(source)} (${age}, limit ${limit})`;
       })
       .join("; ")}.`,
   );
@@ -183,8 +263,37 @@ if (!recentRuns.length) {
   }
 }
 
-if ((report.recentFailureCount ?? 0) > 0) {
-  failures.push(`Found ${report.recentFailureCount} ingestion failures in the last ${sinceHours}h.`);
+const recentFailureRuns = recentRuns.filter((run) => run.status === "failure");
+const recentFailureGroups = groupFailureRuns(recentFailureRuns);
+const repeatedFailureGroups = recentFailureGroups.filter((group) => {
+  return group.runs.length > maxRecentFailuresPerSource;
+});
+
+if (recentFailureGroups.length > maxRecentFailureSourceCount) {
+  failures.push(
+    `Found ingestion failures across ${recentFailureGroups.length} sources in the last ${sinceHours}h, limit ${maxRecentFailureSourceCount}: ${recentFailureGroups
+      .slice(0, 5)
+      .map((group) => `${group.label} (${group.runs.length} failures)`)
+      .join("; ")}.`,
+  );
+} else if (repeatedFailureGroups.length) {
+  failures.push(
+    `Found repeated ingestion failures for a source in the last ${sinceHours}h: ${repeatedFailureGroups
+      .slice(0, 5)
+      .map((group) => `${group.label} (${group.runs.length} failures)`)
+      .join("; ")}.`,
+  );
+} else if (recentFailureRuns.length) {
+  warnings.push(
+    `Transient ingestion failure in the last ${sinceHours}h: ${recentFailureGroups
+      .map((group) => {
+        const latestFailure = group.runs[0];
+        const failedAt = latestFailure.finishedAt ?? latestFailure.startedAt;
+        const message = latestFailure.errorMessage ? `: ${latestFailure.errorMessage}` : "";
+        return `${group.label} at ${failedAt}${message}`;
+      })
+      .join("; ")}.`,
+  );
 }
 
 const severityCounts = latestEvents.reduce((counts, event) => {
@@ -217,7 +326,14 @@ if (recentRuns[0]) {
   const latestRunAt = recentRuns[0].finishedAt ?? recentRuns[0].startedAt;
   console.log(`Latest feed refresh: ${latestRunAt} (${formatHours(hoursBetween(now, latestRunAt))} old)`);
 }
-console.log(`Recent ingestion failures: ${report.recentFailureCount ?? 0}`);
+console.log(`Recent ingestion failures: ${recentFailureRuns.length}`);
+
+if (warnings.length) {
+  console.log("\nProduction freshness warnings:");
+  for (const warning of warnings) {
+    console.log(`- ${warning}`);
+  }
+}
 
 if (failures.length) {
   console.error("\nProduction freshness check failed:");
@@ -226,5 +342,5 @@ if (failures.length) {
   }
   process.exitCode = 1;
 } else {
-  console.log("\n[ok] Production freshness checks passed.");
+  console.log(warnings.length ? "\n[ok] Production freshness checks passed with warnings." : "\n[ok] Production freshness checks passed.");
 }
