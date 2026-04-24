@@ -48,6 +48,15 @@ function titleLooksNoisy(title) {
   return noisyTitlePatterns.some((pattern) => pattern.test(normalized));
 }
 
+function getSourceLagLimitHours(source, defaultLimitHours, multiplier, graceHours) {
+  if (!source.pollIntervalMinutes) {
+    return defaultLimitHours;
+  }
+
+  const pollIntervalHours = source.pollIntervalMinutes / 60;
+  return Math.max(defaultLimitHours, pollIntervalHours * multiplier + graceHours);
+}
+
 const convexUrl =
   process.env.CONVEX_URL ||
   process.env.NEXT_PUBLIC_CONVEX_URL ||
@@ -57,6 +66,8 @@ const eventLimit = Math.trunc(readNumber("EVENT_LIMIT", 24));
 const maxLatestEventAgeHours = readNumber("MAX_LATEST_EVENT_AGE_HOURS", 72);
 const maxFeedRefreshAgeHours = readNumber("MAX_FEED_REFRESH_AGE_HOURS", 5);
 const maxSourceLagHours = readNumber("MAX_SOURCE_LAG_HOURS", 8);
+const maxSourceLagGraceHours = readNumber("MAX_SOURCE_LAG_GRACE_HOURS", 1);
+const maxSourceLagMultiplier = readNumber("MAX_SOURCE_LAG_MULTIPLIER", 2);
 const maxFutureSkewHours = readNumber("MAX_FUTURE_SKEW_HOURS", 1);
 
 const client = new ConvexHttpClient(convexUrl);
@@ -133,7 +144,14 @@ const staleSources = sources.filter((source) => {
     return true;
   }
 
-  return hoursBetween(now, source.lastSuccessAt) > maxSourceLagHours;
+  const sourceLimitHours = getSourceLagLimitHours(
+    source,
+    maxSourceLagHours,
+    maxSourceLagMultiplier,
+    maxSourceLagGraceHours,
+  );
+
+  return hoursBetween(now, source.lastSuccessAt) > sourceLimitHours;
 });
 
 if (staleSources.length) {
@@ -142,7 +160,10 @@ if (staleSources.length) {
       .slice(0, 5)
       .map((source) => {
         const age = source.lastSuccessAt ? formatHours(hoursBetween(now, source.lastSuccessAt)) : "never";
-        return `${source.vendorName} / ${source.sourceName} (${age})`;
+        const limit = formatHours(
+          getSourceLagLimitHours(source, maxSourceLagHours, maxSourceLagMultiplier, maxSourceLagGraceHours),
+        );
+        return `${source.vendorName} / ${source.sourceName} (${age}, limit ${limit})`;
       })
       .join("; ")}.`,
   );

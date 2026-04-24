@@ -25,6 +25,7 @@ async function formatSourceHealth(ctx: any, source: any) {
     sourceName: source.name,
     status: getStatusForSource(source),
     lastSuccessAt: source.lastSuccessAt ? new Date(source.lastSuccessAt).toISOString() : null,
+    pollIntervalMinutes: source.pollIntervalMinutes,
     consecutiveFailures: source.consecutiveFailures ?? 0,
   };
 }
