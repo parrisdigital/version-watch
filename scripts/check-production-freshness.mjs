@@ -55,6 +55,7 @@ const convexUrl =
 const sinceHours = readNumber("SINCE_HOURS", 8);
 const eventLimit = Math.trunc(readNumber("EVENT_LIMIT", 24));
 const maxLatestEventAgeHours = readNumber("MAX_LATEST_EVENT_AGE_HOURS", 72);
+const maxFeedRefreshAgeHours = readNumber("MAX_FEED_REFRESH_AGE_HOURS", 5);
 const maxSourceLagHours = readNumber("MAX_SOURCE_LAG_HOURS", 8);
 const maxFutureSkewHours = readNumber("MAX_FUTURE_SKEW_HOURS", 1);
 
@@ -149,6 +150,16 @@ if (staleSources.length) {
 
 if (!recentRuns.length) {
   failures.push(`No ingestion runs found in the last ${sinceHours}h.`);
+} else {
+  const latestRun = recentRuns[0];
+  const latestRunAt = latestRun.finishedAt ?? latestRun.startedAt;
+  const latestRunAge = hoursBetween(now, latestRunAt);
+
+  if (latestRunAge > maxFeedRefreshAgeHours) {
+    failures.push(
+      `Latest feed refresh is stale: ${formatHours(latestRunAge)} old, limit ${maxFeedRefreshAgeHours}h.`,
+    );
+  }
 }
 
 if ((report.recentFailureCount ?? 0) > 0) {
@@ -181,6 +192,10 @@ console.log(
 );
 console.log(`Sources checked: ${sources.length}`);
 console.log(`Recent ingestion runs: ${recentRuns.length}`);
+if (recentRuns[0]) {
+  const latestRunAt = recentRuns[0].finishedAt ?? recentRuns[0].startedAt;
+  console.log(`Latest feed refresh: ${latestRunAt} (${formatHours(hoursBetween(now, latestRunAt))} old)`);
+}
 console.log(`Recent ingestion failures: ${report.recentFailureCount ?? 0}`);
 
 if (failures.length) {
