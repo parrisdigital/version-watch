@@ -103,10 +103,15 @@ export async function getFreshnessSummary(): Promise<FreshnessSummary> {
       checkedAt: new Date().toISOString(),
       sources: sourceHealth,
       recentRuns: [],
+      recentRefreshRuns: [],
+      latestFeedRefresh: null,
     }),
   );
 
-  const latestRun = report.recentRuns?.find((run: any) => run.finishedAt || run.startedAt);
+  const latestRun =
+    report.latestFeedRefresh ??
+    report.recentRefreshRuns?.find((run: any) => run.finishedAt || run.startedAt) ??
+    report.recentRuns?.find((run: any) => run.finishedAt || run.startedAt);
 
   return {
     checkedAt: report.checkedAt,

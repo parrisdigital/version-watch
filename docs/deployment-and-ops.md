@@ -107,15 +107,23 @@ Why:
 
 - the latest public event is stale
 - active sources have not succeeded recently
-- recent ingestion runs contain failures
+- no recent feed refresh run exists or the latest completed refresh is stale
 - top public events include noisy parser artifacts
 - public events are future-dated or not returned newest first
+
+It warns, without failing, when recent refresh or ingestion runs contain recovered transient failures.
 
 The defaults are intentionally strict enough for the four-hour ingestion cadence. They can be tuned with
 `SINCE_HOURS`, `MAX_SOURCE_LAG_HOURS`, `MAX_LATEST_EVENT_AGE_HOURS`, `MAX_FUTURE_SKEW_HOURS`, and
 `EVENT_LIMIT`.
 
 ### Automated monitoring
+
+Convex owns the primary automation:
+
+- `scheduled-ingestion` force-refreshes the public feed at 00:00, 08:00, 12:00, 16:00, and 20:00 UTC
+- `daily-deep-diff` runs at 04:00 UTC and also records a completed refresh batch
+- `refresh-watchdog` runs every 30 minutes and forces a recovery refresh if no completed refresh batch has been recorded within the freshness window
 
 GitHub Actions runs `.github/workflows/production-health.yml`:
 

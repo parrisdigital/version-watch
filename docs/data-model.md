@@ -142,6 +142,27 @@ Log of source processing attempts.
 - `errorMessage`
 - `runType`
 
+### `refreshRuns`
+
+Batch-level log of each full feed refresh cycle. This is the authoritative source for the public
+`Feed refreshed` timestamp and production freshness monitor.
+
+**Fields**
+
+- `startedAt`
+- `finishedAt`
+- `status`
+- `runType`
+- `force`
+- `reason`
+- `sourcesProcessed`
+- `itemsFetched`
+- `itemsCreated`
+- `itemsDeduped`
+- `published`
+- `failures`
+- `errorMessage`
+
 ## Enumerations
 
 ### `sourceType`

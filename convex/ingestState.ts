@@ -19,6 +19,20 @@ const normalizedEntryValidator = v.object({
   githubUrl: v.optional(v.string()),
 });
 
+const runTypeValidator = v.union(
+  v.literal("scheduled"),
+  v.literal("manual"),
+  v.literal("deep_diff"),
+  v.literal("watchdog"),
+);
+
+const refreshRunStatusValidator = v.union(
+  v.literal("running"),
+  v.literal("success"),
+  v.literal("partial_failure"),
+  v.literal("failure"),
+);
+
 function buildDedupeKey(sourceId: string, item: { sourceUrl: string; publishedAt: number; title: string }) {
   return `${sourceId}::${item.sourceUrl}::${item.publishedAt}::${item.title.toLowerCase()}`;
 }
@@ -59,6 +73,22 @@ export function shouldPollSource(source: any, now: number, force: boolean) {
 
   const pollIntervalMs = source.pollIntervalMinutes * 60 * 1000;
   return now - lastAttemptAt >= pollIntervalMs - POLL_DUE_GRACE_MS;
+}
+
+function getRefreshRunStatus(result: { sourcesProcessed: number; failures: number }) {
+  if (result.sourcesProcessed === 0 || result.failures >= result.sourcesProcessed) {
+    return "failure" as const;
+  }
+
+  if (result.failures > 0) {
+    return "partial_failure" as const;
+  }
+
+  return "success" as const;
+}
+
+export function isCompletedRefreshStatus(status: string) {
+  return status === "success" || status === "partial_failure";
 }
 
 const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
@@ -262,12 +292,203 @@ export const listDueSources = internalQuery({
   },
 });
 
+export const startRefreshRun = internalMutation({
+  args: {
+    runType: runTypeValidator,
+    force: v.boolean(),
+    reason: v.optional(v.string()),
+  },
+  returns: v.object({
+    refreshRunId: v.optional(v.id("refreshRuns")),
+    skipped: v.boolean(),
+    reason: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const running = await ctx.db
+      .query("refreshRuns")
+      .withIndex("by_status_and_started_at", (q) => q.eq("status", "running"))
+      .order("desc")
+      .first();
+
+    if (running) {
+      return {
+        skipped: true,
+        reason: `Refresh already running since ${new Date(running.startedAt).toISOString()}.`,
+      };
+    }
+
+    const refreshRunId = await ctx.db.insert("refreshRuns", {
+      startedAt: now,
+      status: "running",
+      runType: args.runType,
+      force: args.force,
+      reason: args.reason,
+      sourcesProcessed: 0,
+      itemsFetched: 0,
+      itemsCreated: 0,
+      itemsDeduped: 0,
+      published: 0,
+      failures: 0,
+    });
+
+    return {
+      refreshRunId,
+      skipped: false,
+    };
+  },
+});
+
+export const expireStaleRefreshRuns = internalMutation({
+  args: {
+    runningGraceMs: v.number(),
+  },
+  returns: v.object({
+    expired: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const runningRuns = await ctx.db
+      .query("refreshRuns")
+      .withIndex("by_status_and_started_at", (q) => q.eq("status", "running"))
+      .collect();
+    let expired = 0;
+
+    for (const run of runningRuns) {
+      if (now - run.startedAt <= args.runningGraceMs) {
+        continue;
+      }
+
+      await ctx.db.patch(run._id, {
+        finishedAt: now,
+        status: "failure",
+        errorMessage: `Marked failed by watchdog after running longer than ${Math.round(
+          args.runningGraceMs / 60000,
+        )} minutes.`,
+      });
+      expired += 1;
+    }
+
+    return { expired };
+  },
+});
+
+export const finishRefreshRun = internalMutation({
+  args: {
+    refreshRunId: v.id("refreshRuns"),
+    sourcesProcessed: v.number(),
+    itemsFetched: v.number(),
+    itemsCreated: v.number(),
+    itemsDeduped: v.number(),
+    published: v.number(),
+    failures: v.number(),
+  },
+  returns: refreshRunStatusValidator,
+  handler: async (ctx, args) => {
+    const status = getRefreshRunStatus(args);
+
+    await ctx.db.patch(args.refreshRunId, {
+      finishedAt: Date.now(),
+      status,
+      sourcesProcessed: args.sourcesProcessed,
+      itemsFetched: args.itemsFetched,
+      itemsCreated: args.itemsCreated,
+      itemsDeduped: args.itemsDeduped,
+      published: args.published,
+      failures: args.failures,
+    });
+
+    return status;
+  },
+});
+
+export const failRefreshRun = internalMutation({
+  args: {
+    refreshRunId: v.id("refreshRuns"),
+    errorMessage: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.refreshRunId, {
+      finishedAt: Date.now(),
+      status: "failure",
+      errorMessage: args.errorMessage,
+    });
+
+    return null;
+  },
+});
+
+export const getRefreshWatchdogState = internalQuery({
+  args: {
+    staleAfterMs: v.number(),
+    runningGraceMs: v.number(),
+  },
+  returns: v.object({
+    checkedAt: v.number(),
+    shouldRecover: v.boolean(),
+    reason: v.string(),
+    latestCompletedAt: v.optional(v.number()),
+    latestRunningAt: v.optional(v.number()),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const rows = await ctx.db.query("refreshRuns").withIndex("by_started_at").order("desc").take(50);
+    const latestRunning = rows.find((run) => run.status === "running");
+    const latestCompleted = rows.find((run) => run.finishedAt && isCompletedRefreshStatus(run.status));
+
+    if (latestRunning) {
+      if (now - latestRunning.startedAt <= args.runningGraceMs) {
+        return {
+          checkedAt: now,
+          shouldRecover: false,
+          reason: "A refresh is already running.",
+          latestCompletedAt: latestCompleted?.finishedAt,
+          latestRunningAt: latestRunning.startedAt,
+        };
+      }
+
+      return {
+        checkedAt: now,
+        shouldRecover: true,
+        reason: `A refresh has been running longer than ${Math.round(args.runningGraceMs / 60000)} minutes.`,
+        latestCompletedAt: latestCompleted?.finishedAt,
+        latestRunningAt: latestRunning.startedAt,
+      };
+    }
+
+    if (!latestCompleted?.finishedAt) {
+      return {
+        checkedAt: now,
+        shouldRecover: true,
+        reason: "No completed refresh run has been recorded.",
+      };
+    }
+
+    if (now - latestCompleted.finishedAt > args.staleAfterMs) {
+      return {
+        checkedAt: now,
+        shouldRecover: true,
+        reason: `Latest completed refresh is older than ${Math.round(args.staleAfterMs / 60000)} minutes.`,
+        latestCompletedAt: latestCompleted.finishedAt,
+      };
+    }
+
+    return {
+      checkedAt: now,
+      shouldRecover: false,
+      reason: "Feed refresh is current.",
+      latestCompletedAt: latestCompleted.finishedAt,
+    };
+  },
+});
+
 export const persistSourceEntries = internalMutation({
   args: {
     sourceId: v.id("sources"),
     vendorId: v.id("vendors"),
     startedAt: v.number(),
-    runType: v.union(v.literal("scheduled"), v.literal("manual"), v.literal("deep_diff")),
+    runType: runTypeValidator,
     items: v.array(normalizedEntryValidator),
   },
   returns: v.object({
@@ -408,7 +629,7 @@ export const persistSourceFailure = internalMutation({
     sourceId: v.id("sources"),
     vendorId: v.id("vendors"),
     startedAt: v.number(),
-    runType: v.union(v.literal("scheduled"), v.literal("manual"), v.literal("deep_diff")),
+    runType: runTypeValidator,
     errorMessage: v.string(),
   },
   returns: v.object({

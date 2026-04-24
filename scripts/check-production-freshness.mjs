@@ -118,6 +118,8 @@ const warnings = [];
 const latestEvents = report.latestEvents ?? [];
 const sources = report.sources ?? [];
 const recentRuns = report.recentRuns ?? [];
+const recentRefreshRuns = report.recentRefreshRuns ?? [];
+const latestFeedRefresh = report.latestFeedRefresh ?? null;
 
 if (!latestEvents.length) {
   failures.push("No public events were returned from the production feed.");
@@ -249,10 +251,10 @@ if (staleSources.length) {
   );
 }
 
-if (!recentRuns.length) {
-  failures.push(`No ingestion runs found in the last ${sinceHours}h.`);
+if (!recentRefreshRuns.length) {
+  failures.push(`No refresh runs found in the last ${sinceHours}h.`);
 } else {
-  const latestRun = recentRuns[0];
+  const latestRun = latestFeedRefresh ?? recentRefreshRuns[0];
   const latestRunAt = latestRun.finishedAt ?? latestRun.startedAt;
   const latestRunAge = hoursBetween(now, latestRunAt);
 
@@ -261,6 +263,31 @@ if (!recentRuns.length) {
       `Latest feed refresh is stale: ${formatHours(latestRunAge)} old, limit ${maxFeedRefreshAgeHours}h.`,
     );
   }
+}
+
+const failedRefreshRuns = recentRefreshRuns.filter((run) => run.status === "failure");
+const partialRefreshRuns = recentRefreshRuns.filter((run) => run.status === "partial_failure");
+
+if (failedRefreshRuns.length) {
+  warnings.push(
+    `Failed refresh run in the last ${sinceHours}h: ${failedRefreshRuns
+      .slice(0, 3)
+      .map((run) => {
+        const runAt = run.finishedAt ?? run.startedAt;
+        const message = run.errorMessage ? `: ${run.errorMessage}` : "";
+        return `${run.runType} at ${runAt}${message}`;
+      })
+      .join("; ")}.`,
+  );
+}
+
+if (partialRefreshRuns.length) {
+  warnings.push(
+    `Partial refresh run in the last ${sinceHours}h: ${partialRefreshRuns
+      .slice(0, 3)
+      .map((run) => `${run.runType} at ${run.finishedAt ?? run.startedAt} (${run.failures} source failures)`)
+      .join("; ")}.`,
+  );
 }
 
 const recentFailureRuns = recentRuns.filter((run) => run.status === "failure");
@@ -321,11 +348,13 @@ console.log(
   }, medium=${severityCounts.medium ?? 0}, low=${severityCounts.low ?? 0}`,
 );
 console.log(`Sources checked: ${sources.length}`);
-console.log(`Recent ingestion runs: ${recentRuns.length}`);
-if (recentRuns[0]) {
-  const latestRunAt = recentRuns[0].finishedAt ?? recentRuns[0].startedAt;
+console.log(`Recent refresh runs: ${recentRefreshRuns.length}`);
+if (latestFeedRefresh ?? recentRefreshRuns[0]) {
+  const latestRun = latestFeedRefresh ?? recentRefreshRuns[0];
+  const latestRunAt = latestRun.finishedAt ?? latestRun.startedAt;
   console.log(`Latest feed refresh: ${latestRunAt} (${formatHours(hoursBetween(now, latestRunAt))} old)`);
 }
+console.log(`Recent ingestion runs: ${recentRuns.length}`);
 console.log(`Recent ingestion failures: ${recentFailureRuns.length}`);
 
 if (warnings.length) {
