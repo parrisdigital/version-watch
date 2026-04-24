@@ -67,7 +67,7 @@ export function LatestUpdatesSection({ events }: LatestUpdatesSectionProps) {
           </p>
         </div>
 
-        <div className="mt-10 grid gap-4">
+        <div className="mt-10 grid gap-4 lg:grid-cols-2">
           {visible.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}
