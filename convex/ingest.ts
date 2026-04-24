@@ -318,7 +318,8 @@ export const runScheduledIngestion: ReturnType<typeof internalAction> = internal
     failures: v.number(),
   }),
   handler: async (ctx) => {
-    return await runIngestion(ctx, false, "scheduled");
+    // Fixed-slot public refreshes should not be suppressed by manual runs.
+    return await runIngestion(ctx, true, "scheduled");
   },
 });
 
