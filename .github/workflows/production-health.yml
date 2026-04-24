@@ -26,11 +26,14 @@ jobs:
     timeout-minutes: 10
 
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
       CONVEX_URL: https://joyous-mole-525.convex.cloud
       EVENT_LIMIT: "24"
       MAX_FUTURE_SKEW_HOURS: "1"
       MAX_LATEST_EVENT_AGE_HOURS: "72"
       MAX_SOURCE_LAG_HOURS: "8"
+      MAX_SOURCE_LAG_GRACE_HOURS: "1"
+      MAX_SOURCE_LAG_MULTIPLIER: "2"
       SINCE_HOURS: "8"
 
     steps:
