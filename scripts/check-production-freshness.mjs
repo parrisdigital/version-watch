@@ -14,6 +14,10 @@ const noisyTitlePatterns = [
   /\bcheckout\+\s*\d+\s*more\b/i,
   /\bpayment intents\s+payments\b/i,
 ];
+const knownBlockedSourceUrls = new Set([
+  // Railway currently returns a Cloudflare managed challenge to server-side fetches and no official feed endpoint.
+  "https://railway.com/changelog",
+]);
 
 function readNumber(name, fallback) {
   const raw = process.env[name];
@@ -71,6 +75,10 @@ function formatRunSource(run) {
 
 function getRunSourceKey(run) {
   return [run.vendorName ?? "", run.sourceName ?? "", run.sourceUrl ?? ""].join("::");
+}
+
+function isKnownBlockedSourceUrl(url) {
+  return Boolean(url && knownBlockedSourceUrls.has(url));
 }
 
 function groupFailureRuns(runs) {
@@ -235,10 +243,24 @@ const staleSources = sources.filter((source) => {
 
   return hoursBetween(now, source.lastSuccessAt) > sourceLimitHours;
 });
+const knownBlockedStaleSources = staleSources.filter((source) => isKnownBlockedSourceUrl(source.sourceUrl));
+const actionableStaleSources = staleSources.filter((source) => !isKnownBlockedSourceUrl(source.sourceUrl));
 
-if (staleSources.length) {
+if (knownBlockedStaleSources.length) {
+  warnings.push(
+    `Known blocked source stale: ${knownBlockedStaleSources
+      .slice(0, 5)
+      .map((source) => {
+        const age = source.lastSuccessAt ? formatHours(hoursBetween(now, source.lastSuccessAt)) : "never";
+        return `${formatSource(source)} (${age}, upstream anti-bot challenge)`;
+      })
+      .join("; ")}.`,
+  );
+}
+
+if (actionableStaleSources.length) {
   failures.push(
-    `Found stale sources: ${staleSources
+    `Found stale sources: ${actionableStaleSources
       .slice(0, 5)
       .map((source) => {
         const age = source.lastSuccessAt ? formatHours(hoursBetween(now, source.lastSuccessAt)) : "never";
@@ -292,27 +314,41 @@ if (partialRefreshRuns.length) {
 
 const recentFailureRuns = recentRuns.filter((run) => run.status === "failure");
 const recentFailureGroups = groupFailureRuns(recentFailureRuns);
-const repeatedFailureGroups = recentFailureGroups.filter((group) => {
+const knownBlockedFailureGroups = recentFailureGroups.filter((group) => {
+  return group.runs.some((run) => isKnownBlockedSourceUrl(run.sourceUrl));
+});
+const actionableFailureGroups = recentFailureGroups.filter((group) => {
+  return !group.runs.some((run) => isKnownBlockedSourceUrl(run.sourceUrl));
+});
+const actionableRepeatedFailureGroups = actionableFailureGroups.filter((group) => {
   return group.runs.length > maxRecentFailuresPerSource;
 });
 
-if (recentFailureGroups.length > maxRecentFailureSourceCount) {
-  failures.push(
-    `Found ingestion failures across ${recentFailureGroups.length} sources in the last ${sinceHours}h, limit ${maxRecentFailureSourceCount}: ${recentFailureGroups
-      .slice(0, 5)
-      .map((group) => `${group.label} (${group.runs.length} failures)`)
-      .join("; ")}.`,
-  );
-} else if (repeatedFailureGroups.length) {
-  failures.push(
-    `Found repeated ingestion failures for a source in the last ${sinceHours}h: ${repeatedFailureGroups
-      .slice(0, 5)
-      .map((group) => `${group.label} (${group.runs.length} failures)`)
-      .join("; ")}.`,
-  );
-} else if (recentFailureRuns.length) {
+if (knownBlockedFailureGroups.length) {
   warnings.push(
-    `Transient ingestion failure in the last ${sinceHours}h: ${recentFailureGroups
+    `Known blocked ingestion source in the last ${sinceHours}h: ${knownBlockedFailureGroups
+      .map((group) => `${group.label} (${group.runs.length} failures, upstream anti-bot challenge)`)
+      .join("; ")}.`,
+  );
+}
+
+if (actionableFailureGroups.length > maxRecentFailureSourceCount) {
+  failures.push(
+    `Found ingestion failures across ${actionableFailureGroups.length} sources in the last ${sinceHours}h, limit ${maxRecentFailureSourceCount}: ${actionableFailureGroups
+      .slice(0, 5)
+      .map((group) => `${group.label} (${group.runs.length} failures)`)
+      .join("; ")}.`,
+  );
+} else if (actionableRepeatedFailureGroups.length) {
+  failures.push(
+    `Found repeated ingestion failures for a source in the last ${sinceHours}h: ${actionableRepeatedFailureGroups
+      .slice(0, 5)
+      .map((group) => `${group.label} (${group.runs.length} failures)`)
+      .join("; ")}.`,
+  );
+} else if (recentFailureRuns.length && actionableFailureGroups.length) {
+  warnings.push(
+    `Transient ingestion failure in the last ${sinceHours}h: ${actionableFailureGroups
       .map((group) => {
         const latestFailure = group.runs[0];
         const failedAt = latestFailure.finishedAt ?? latestFailure.startedAt;
