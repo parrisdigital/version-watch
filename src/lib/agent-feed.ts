@@ -108,11 +108,11 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
 
   if (limitRaw) {
     const parsed = Number(limitRaw);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      return { ok: false, error: "Invalid limit. Use a positive number." };
+    if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
+      return { ok: false, error: "Invalid limit. Use a positive integer." };
     }
 
-    limit = Math.trunc(parsed);
+    limit = parsed;
   }
 
   return {

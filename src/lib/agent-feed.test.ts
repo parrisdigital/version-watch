@@ -47,6 +47,15 @@ describe("agent update filters", () => {
     });
   });
 
+  it("rejects fractional limits before clamping", () => {
+    const parsed = parseUpdateFilters(new URLSearchParams({ limit: "0.5" }));
+
+    expect(parsed).toEqual({
+      ok: false,
+      error: "Invalid limit. Use a positive integer.",
+    });
+  });
+
   it("filters by vendor, severity, audience, and tag", () => {
     const parsed = parseUpdateFilters(
       new URLSearchParams({
