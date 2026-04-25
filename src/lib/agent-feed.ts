@@ -1,7 +1,7 @@
 import { scoreEvent } from "@/lib/classification/score";
 import type { ImportanceBand, MockEvent, VendorRecord } from "@/lib/mock-data";
 
-export const DEFAULT_PUBLIC_BASE_URL = "https://version-watch.vercel.app";
+export const DEFAULT_PUBLIC_BASE_URL = "https://versionwatch.dev";
 export const DEFAULT_UPDATE_LIMIT = 25;
 export const MAX_UPDATE_LIMIT = 100;
 export const MAX_FUTURE_SKEW_MS = 60 * 60 * 1000;
