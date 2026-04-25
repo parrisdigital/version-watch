@@ -4,21 +4,15 @@ import {
   filterEventsForPublicUpdates,
   getPublicBaseUrl,
   parseUpdateFilters,
+  PUBLIC_AGENT_HEADERS,
   serializePublicUpdates,
 } from "@/lib/agent-feed";
 import { getAllPublicEvents } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
-const publicHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Cache-Control": "public, max-age=60, s-maxage=300",
-};
-
 export function OPTIONS() {
-  return new Response(null, { headers: publicHeaders });
+  return new Response(null, { headers: PUBLIC_AGENT_HEADERS });
 }
 
 export async function GET(request: Request) {
@@ -26,7 +20,7 @@ export async function GET(request: Request) {
   const parsed = parseUpdateFilters(url.searchParams);
 
   if (!parsed.ok) {
-    return NextResponse.json({ error: parsed.error }, { status: 400, headers: publicHeaders });
+    return NextResponse.json({ error: parsed.error }, { status: 400, headers: PUBLIC_AGENT_HEADERS });
   }
 
   const events = await getAllPublicEvents();
@@ -47,6 +41,6 @@ export async function GET(request: Request) {
       },
       updates,
     },
-    { headers: publicHeaders },
+    { headers: PUBLIC_AGENT_HEADERS },
   );
 }
