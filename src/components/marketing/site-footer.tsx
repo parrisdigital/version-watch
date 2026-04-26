@@ -4,6 +4,7 @@ import { Separator } from "@/components/ui/separator";
 
 const FOOTER_LINKS = [
   { href: "/about", label: "About" },
+  { href: "/agent-access", label: "API docs" },
   { href: "/vendors", label: "Vendors" },
   { href: "/search", label: "Search" },
   { href: "/feedback", label: "Feedback" },
