@@ -1,0 +1,48 @@
+name: Convex Production Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "convex/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/convex-production.yml"
+
+concurrency:
+  group: convex-production-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Convex production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Skip when deploy key is not configured
+        if: ${{ env.CONVEX_DEPLOY_KEY == '' }}
+        run: |
+          echo "CONVEX_DEPLOY_KEY is not configured. Skipping Convex production deploy."
+          echo "Add a Convex production deploy key as a repository secret to enable GitHub-driven Convex deploys."
+
+      - name: Deploy Convex production
+        if: ${{ env.CONVEX_DEPLOY_KEY != '' }}
+        run: npx convex deploy --typecheck try

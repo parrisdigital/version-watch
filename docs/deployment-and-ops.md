@@ -88,6 +88,10 @@ The web app reads public API data from Convex snapshots. Updating Next.js on Ver
 Convex functions, schema changes, or cron definitions by itself. When a change touches `convex/`,
 production is not complete until the Convex production deployment has also been updated.
 
+GitHub can own Convex production deploys through `.github/workflows/convex-production.yml` once the
+repository has a `CONVEX_DEPLOY_KEY` secret. Without that secret, the workflow skips safely and production
+Convex must be deployed manually.
+
 ## Cron Ownership
 
 Cron jobs live in Convex, not Vercel.
@@ -147,6 +151,13 @@ GitHub Actions runs `.github/workflows/production-health.yml`:
 - after pushes to `main`, with a short wait for the production deploy window
 - manually through `workflow_dispatch`
 - on PRs that change the monitor, health script, package metadata, or production freshness query
+
+GitHub Actions also includes `.github/workflows/convex-production.yml`:
+
+- on pushes to `main` that touch `convex/**`, package metadata, or the workflow itself
+- manually through `workflow_dispatch`
+- deploys Convex production with `npx convex deploy --typecheck try` when `CONVEX_DEPLOY_KEY` is configured
+- skips without failing when `CONVEX_DEPLOY_KEY` is missing
 
 A failed run is the alert. It shows up in the GitHub Actions UI and in normal GitHub notification surfaces for
 the repository. The first response is to check whether production ingestion failed, whether a source is stale,
