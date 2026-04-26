@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   const parsed = parseUpdateFilters(url.searchParams);
 
   if (!parsed.ok) {
-    return NextResponse.json({ error: parsed.error }, { status: 400, headers: PUBLIC_AGENT_HEADERS });
+    return NextResponse.json(parsed.error, { status: 400, headers: PUBLIC_AGENT_HEADERS });
   }
 
   const baseUrl = getPublicBaseUrl(request.url);

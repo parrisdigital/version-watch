@@ -45,6 +45,20 @@ export type PublicVendor = {
   }>;
 };
 
+export type PublicApiErrorCode = "invalid_filter" | "invalid_cursor" | "not_found";
+
+export type PublicApiError = {
+  error: {
+    code: PublicApiErrorCode;
+    message: string;
+  };
+};
+
+export type UpdateCursor = {
+  publishedAt: string;
+  id: string;
+};
+
 export type UpdateFilters = {
   since?: string;
   sinceTimestamp?: number;
@@ -53,7 +67,7 @@ export type UpdateFilters = {
   audience?: string;
   tag?: string;
   cursor?: string;
-  cursorOffset: number;
+  cursorPosition?: UpdateCursor;
   limit: number;
 };
 
@@ -70,7 +84,16 @@ export type PublicTaxonomy = {
 
 type ParseResult =
   | { ok: true; filters: UpdateFilters }
-  | { ok: false; error: string };
+  | { ok: false; error: PublicApiError };
+
+export function publicApiError(code: PublicApiErrorCode, message: string): PublicApiError {
+  return {
+    error: {
+      code,
+      message,
+    },
+  };
+}
 
 function normalize(value: string | null | undefined) {
   return (value ?? "").trim().toLowerCase();
@@ -108,8 +131,8 @@ export function getPublicBaseUrl(requestUrl?: string) {
   );
 }
 
-export function encodeUpdateCursor(offset: number) {
-  return Buffer.from(JSON.stringify({ offset }), "utf8").toString("base64url");
+export function encodeUpdateCursor(cursor: UpdateCursor) {
+  return Buffer.from(JSON.stringify({ v: 2, ...cursor }), "utf8").toString("base64url");
 }
 
 export function decodeUpdateCursor(cursor: string) {
@@ -118,10 +141,16 @@ export function decodeUpdateCursor(cursor: string) {
     if (
       typeof parsed === "object" &&
       parsed !== null &&
-      Number.isInteger(parsed.offset) &&
-      parsed.offset >= 0
+      parsed.v === 2 &&
+      typeof parsed.publishedAt === "string" &&
+      Number.isFinite(Date.parse(parsed.publishedAt)) &&
+      typeof parsed.id === "string" &&
+      parsed.id.length > 0
     ) {
-      return parsed.offset as number;
+      return {
+        publishedAt: new Date(Date.parse(parsed.publishedAt)).toISOString(),
+        id: parsed.id,
+      } satisfies UpdateCursor;
     }
   } catch {
     return null;
@@ -138,7 +167,10 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
   if (sinceRaw) {
     const parsed = Date.parse(sinceRaw);
     if (!Number.isFinite(parsed)) {
-      return { ok: false, error: "Invalid since timestamp. Use an ISO 8601 timestamp." };
+      return {
+        ok: false,
+        error: publicApiError("invalid_filter", "Invalid since timestamp. Use an ISO 8601 timestamp."),
+      };
     }
 
     since = new Date(parsed).toISOString();
@@ -147,7 +179,10 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
 
   const severity = normalize(searchParams.get("severity"));
   if (severity && !severityBands.has(severity as ImportanceBand)) {
-    return { ok: false, error: "Invalid severity. Use critical, high, medium, or low." };
+    return {
+      ok: false,
+      error: publicApiError("invalid_filter", "Invalid severity. Use critical, high, medium, or low."),
+    };
   }
 
   const limitRaw = searchParams.get("limit")?.trim();
@@ -156,21 +191,21 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
   if (limitRaw) {
     const parsed = Number(limitRaw);
     if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
-      return { ok: false, error: "Invalid limit. Use a positive integer." };
+      return { ok: false, error: publicApiError("invalid_filter", "Invalid limit. Use a positive integer.") };
     }
 
     limit = parsed;
   }
 
   const cursor = searchParams.get("cursor")?.trim();
-  let cursorOffset = 0;
+  let cursorPosition: UpdateCursor | undefined;
 
   if (cursor) {
     const decoded = decodeUpdateCursor(cursor);
     if (decoded === null) {
-      return { ok: false, error: "Invalid cursor. Use a cursor returned by next_cursor." };
+      return { ok: false, error: publicApiError("invalid_cursor", "Invalid cursor. Use a cursor returned by next_cursor.") };
     }
-    cursorOffset = decoded;
+    cursorPosition = decoded;
   }
 
   return {
@@ -183,7 +218,7 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
       audience: normalize(searchParams.get("audience")) || undefined,
       tag: normalize(searchParams.get("tag")) || undefined,
       cursor: cursor || undefined,
-      cursorOffset,
+      cursorPosition,
       limit: Math.min(limit, MAX_UPDATE_LIMIT),
     },
   };
@@ -227,21 +262,43 @@ export function filterEventsForPublicUpdateMatches<T extends MockEvent>(
     });
 }
 
+function compareEventsForPublicPagination(a: MockEvent, b: MockEvent) {
+  const publishedDiff = Date.parse(b.publishedAt) - Date.parse(a.publishedAt);
+  if (publishedDiff !== 0) return publishedDiff;
+  return a.slug.localeCompare(b.slug);
+}
+
+function isEventAfterCursor(event: MockEvent, cursor: UpdateCursor) {
+  const publishedDiff = Date.parse(cursor.publishedAt) - Date.parse(event.publishedAt);
+  if (publishedDiff !== 0) return publishedDiff > 0;
+  return event.slug.localeCompare(cursor.id) > 0;
+}
+
+function cursorForEvent(event: MockEvent): UpdateCursor {
+  return {
+    publishedAt: new Date(Date.parse(event.publishedAt)).toISOString(),
+    id: event.slug,
+  };
+}
+
 export function paginateEventsForPublicUpdates<T extends MockEvent>(
   events: T[],
   filters: UpdateFilters,
   now = Date.now(),
 ) {
-  const matches = filterEventsForPublicUpdateMatches(events, filters, now);
-  const start = Math.min(filters.cursorOffset, matches.length);
-  const end = start + filters.limit;
-  const page = matches.slice(start, end);
-  const nextOffset = start + page.length;
+  const matches = filterEventsForPublicUpdateMatches(events, filters, now)
+    .slice()
+    .sort(compareEventsForPublicPagination);
+  const eligible = filters.cursorPosition
+    ? matches.filter((event) => isEventAfterCursor(event, filters.cursorPosition!))
+    : matches;
+  const page = eligible.slice(0, filters.limit);
+  const lastEvent = page[page.length - 1];
 
   return {
     events: page,
     total_count: matches.length,
-    next_cursor: nextOffset < matches.length ? encodeUpdateCursor(nextOffset) : null,
+    next_cursor: lastEvent && eligible.length > page.length ? encodeUpdateCursor(cursorForEvent(lastEvent)) : null,
   };
 }
 
@@ -420,8 +477,16 @@ function markdownLine(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-export function renderUpdatesMarkdown(updates: PublicUpdate[], generatedAt: string, baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+export function renderUpdatesMarkdown(
+  updates: PublicUpdate[],
+  generatedAt: string,
+  baseUrl = DEFAULT_PUBLIC_BASE_URL,
+  nextCursor: string | null = null,
+) {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const nextPageUrl = nextCursor
+    ? new URL(`/feed.md?cursor=${encodeURIComponent(nextCursor)}`, normalizedBaseUrl).toString()
+    : null;
   const lines = [
     "# Version Watch Feed",
     "",
@@ -431,6 +496,8 @@ export function renderUpdatesMarkdown(updates: PublicUpdate[], generatedAt: stri
     `API status: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}`,
     `JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}`,
     `Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}`,
+    ...(nextPageUrl ? [`Next page: ${nextPageUrl}`] : []),
+    "Cite the official Source URL when reporting an update.",
     "",
   ];
 

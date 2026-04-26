@@ -10,9 +10,11 @@ import { GET as getUpdates } from "@/app/api/v1/updates/route";
 import { GET as getSkill } from "@/app/skills/version-watch/SKILL.md/route";
 import {
   buildRecommendedAction,
+  decodeUpdateCursor,
   encodeUpdateCursor,
   filterEventsForPublicUpdates,
   getPublicBaseUrl,
+  paginateEventsForPublicUpdates,
   parseUpdateFilters,
   renderAgentsMarkdown,
   renderLlmsTxt,
@@ -54,7 +56,12 @@ describe("agent update filters", () => {
 
     expect(parsed).toEqual({
       ok: false,
-      error: "Invalid since timestamp. Use an ISO 8601 timestamp.",
+      error: {
+        error: {
+          code: "invalid_filter",
+          message: "Invalid since timestamp. Use an ISO 8601 timestamp.",
+        },
+      },
     });
   });
 
@@ -63,7 +70,12 @@ describe("agent update filters", () => {
 
     expect(parsed).toEqual({
       ok: false,
-      error: "Invalid limit. Use a positive integer.",
+      error: {
+        error: {
+          code: "invalid_filter",
+          message: "Invalid limit. Use a positive integer.",
+        },
+      },
     });
   });
 
@@ -72,19 +84,30 @@ describe("agent update filters", () => {
 
     expect(parsed).toEqual({
       ok: false,
-      error: "Invalid cursor. Use a cursor returned by next_cursor.",
+      error: {
+        error: {
+          code: "invalid_cursor",
+          message: "Invalid cursor. Use a cursor returned by next_cursor.",
+        },
+      },
     });
   });
 
   it("parses valid cursors", () => {
-    const cursor = encodeUpdateCursor(3);
+    const cursor = encodeUpdateCursor({
+      publishedAt: "2026-04-25T00:00:00.000Z",
+      id: "openai-2026-04-25-example",
+    });
     const parsed = parseUpdateFilters(new URLSearchParams({ cursor }));
 
     expect(parsed).toMatchObject({
       ok: true,
       filters: {
         cursor,
-        cursorOffset: 3,
+        cursorPosition: {
+          publishedAt: "2026-04-25T00:00:00.000Z",
+          id: "openai-2026-04-25-example",
+        },
       },
     });
   });
@@ -126,6 +149,37 @@ describe("agent update filters", () => {
     const result = filterEventsForPublicUpdates([future, current], parsed.filters, Date.parse("2026-04-25T12:00:00.000Z"));
 
     expect(result).toEqual([current]);
+  });
+
+  it("uses stable sort-key cursors when new updates arrive before the cursor", () => {
+    const parsed = parseUpdateFilters(new URLSearchParams({ limit: "1" }));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const base = events.slice(0, 3).map((event, index) => ({
+      ...event,
+      slug: `event-${index}`,
+      publishedAt: `2026-04-25T0${2 - index}:00:00.000Z`,
+    }));
+    const firstPage = paginateEventsForPublicUpdates(base, parsed.filters, Date.parse("2026-04-25T12:00:00.000Z"));
+    const cursor = firstPage.next_cursor!;
+    const cursorPosition = decodeUpdateCursor(cursor)!;
+    const withInsertedNewer = [
+      {
+        ...base[0]!,
+        slug: "newer-event",
+        publishedAt: "2026-04-25T03:00:00.000Z",
+      },
+      ...base,
+    ];
+    const nextPage = paginateEventsForPublicUpdates(
+      withInsertedNewer,
+      { ...parsed.filters, cursor, cursorPosition },
+      Date.parse("2026-04-25T12:00:00.000Z"),
+    );
+
+    expect(firstPage.events[0].slug).toBe("event-0");
+    expect(nextPage.events[0].slug).toBe("event-1");
   });
 });
 
@@ -176,6 +230,7 @@ describe("agent markdown feed", () => {
 
     expect(markdown).toContain("# Version Watch Feed");
     expect(markdown).toContain("API status:");
+    expect(markdown).toContain("Cite the official Source URL");
     expect(markdown).toContain("- Recommended action:");
     expect(markdown).toContain(update.source_url);
   });
@@ -401,7 +456,10 @@ describe("agent route handlers", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body.error).toContain("Invalid cursor");
+    expect(body.error).toMatchObject({
+      code: "invalid_cursor",
+      message: expect.stringContaining("Invalid cursor"),
+    });
   });
 
   it("returns 400 for invalid since filters", async () => {
@@ -411,7 +469,10 @@ describe("agent route handlers", () => {
     const body = await response.json();
 
     expect(response.status).toBe(400);
-    expect(body.error).toContain("Invalid since");
+    expect(body.error).toMatchObject({
+      code: "invalid_filter",
+      message: expect.stringContaining("Invalid since"),
+    });
   });
 
   it("clamps route limits", async () => {
@@ -432,7 +493,10 @@ describe("agent route handlers", () => {
     const body = await response.json();
 
     expect(response.status).toBe(404);
-    expect(body.error).toBe("Update not found.");
+    expect(body.error).toMatchObject({
+      code: "not_found",
+      message: "Update not found.",
+    });
   });
 
   it("serves taxonomy JSON", async () => {
@@ -467,6 +531,10 @@ describe("agent route handlers", () => {
     );
     expect(body.components.schemas.StatusResponse).toBeDefined();
     expect(body.components.schemas.UpdatesResponse.required).toContain("status_url");
+    expect(body.components.schemas.UpdatesResponse.properties.filters.$ref).toBe(
+      "#/components/schemas/UpdateFilters",
+    );
+    expect(body.components.schemas.ErrorResponse.properties.error.required).toEqual(["code", "message"]);
   });
 
   it("serves public API status JSON", async () => {
@@ -509,6 +577,7 @@ describe("agent route handlers", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/markdown");
     expect(body).toContain("# Version Watch Feed");
+    expect(body).toContain("Next page:");
     expect(body).toContain("- Recommended action:");
   });
 

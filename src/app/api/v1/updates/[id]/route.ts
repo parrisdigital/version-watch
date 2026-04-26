@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { getPublicBaseUrl, PUBLIC_API_SCHEMA_VERSION, PUBLIC_AGENT_HEADERS, serializePublicUpdate } from "@/lib/agent-feed";
+import {
+  getPublicBaseUrl,
+  publicApiError,
+  PUBLIC_API_SCHEMA_VERSION,
+  PUBLIC_AGENT_HEADERS,
+  serializePublicUpdate,
+} from "@/lib/agent-feed";
 import { getEventBySlug } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +24,10 @@ export async function GET(request: Request, context: RouteContext) {
   const event = await getEventBySlug(params.id);
 
   if (!event) {
-    return NextResponse.json({ error: "Update not found." }, { status: 404, headers: PUBLIC_AGENT_HEADERS });
+    return NextResponse.json(publicApiError("not_found", "Update not found."), {
+      status: 404,
+      headers: PUBLIC_AGENT_HEADERS,
+    });
   }
 
   return NextResponse.json(

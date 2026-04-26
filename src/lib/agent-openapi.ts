@@ -153,6 +153,26 @@ export function buildOpenApiDocument(baseUrl: string) {
         },
         UpdatesResponse: {
           type: "object",
+          examples: [
+            {
+              schema_version: PUBLIC_API_SCHEMA_VERSION,
+              generated_at: "2026-04-26T00:00:00.000Z",
+              status_url: `${baseUrl}/api/v1/status`,
+              count: 1,
+              total_count: 636,
+              next_cursor: "eyJ2IjoyLCJwdWJsaXNoZWRBdCI6IjIwMjYtMDQtMjVUMTk6Mzk6MDguMDAwWiIsImlkIjoiZXhhbXBsZSJ9",
+              filters: {
+                since: null,
+                vendor: "vercel",
+                severity: "high",
+                audience: null,
+                tag: "deployment",
+                cursor: null,
+                limit: 1,
+              },
+              updates: [],
+            },
+          ],
           required: [
             "schema_version",
             "generated_at",
@@ -170,12 +190,26 @@ export function buildOpenApiDocument(baseUrl: string) {
             count: { type: "integer" },
             total_count: { type: "integer" },
             next_cursor: { anyOf: [{ type: "string" }, { type: "null" }] },
-            filters: { type: "object" },
+            filters: { $ref: "#/components/schemas/UpdateFilters" },
             updates: { type: "array", items: { $ref: "#/components/schemas/PublicUpdate" } },
+          },
+        },
+        UpdateFilters: {
+          type: "object",
+          required: ["since", "vendor", "severity", "audience", "tag", "cursor", "limit"],
+          properties: {
+            since: { anyOf: [{ type: "string", format: "date-time" }, { type: "null" }] },
+            vendor: { anyOf: [{ type: "string" }, { type: "null" }] },
+            severity: { anyOf: [{ type: "string", enum: ["critical", "high", "medium", "low"] }, { type: "null" }] },
+            audience: { anyOf: [{ type: "string" }, { type: "null" }] },
+            tag: { anyOf: [{ type: "string" }, { type: "null" }] },
+            cursor: { anyOf: [{ type: "string" }, { type: "null" }] },
+            limit: { type: "integer", minimum: 1, maximum: MAX_UPDATE_LIMIT },
           },
         },
         UpdateResponse: {
           type: "object",
+          required: ["schema_version", "update"],
           properties: {
             schema_version: { type: "string" },
             update: { $ref: "#/components/schemas/PublicUpdate" },
@@ -183,6 +217,7 @@ export function buildOpenApiDocument(baseUrl: string) {
         },
         PublicVendor: {
           type: "object",
+          required: ["slug", "name", "description", "sources"],
           properties: {
             slug: { type: "string" },
             name: { type: "string" },
@@ -191,6 +226,7 @@ export function buildOpenApiDocument(baseUrl: string) {
               type: "array",
               items: {
                 type: "object",
+                required: ["name", "url", "type"],
                 properties: {
                   name: { type: "string" },
                   url: { type: "string", format: "uri" },
@@ -202,6 +238,22 @@ export function buildOpenApiDocument(baseUrl: string) {
         },
         VendorsResponse: {
           type: "object",
+          examples: [
+            {
+              schema_version: PUBLIC_API_SCHEMA_VERSION,
+              generated_at: "2026-04-26T00:00:00.000Z",
+              count: 1,
+              vendors: [
+                {
+                  slug: "vercel",
+                  name: "Vercel",
+                  description: "Hosting, runtime, AI SDK, and deployment changes.",
+                  sources: [{ name: "Vercel Changelog", url: "https://vercel.com/changelog", type: "changelog_page" }],
+                },
+              ],
+            },
+          ],
+          required: ["schema_version", "generated_at", "count", "vendors"],
           properties: {
             schema_version: { type: "string" },
             generated_at: { type: "string", format: "date-time" },
@@ -211,11 +263,26 @@ export function buildOpenApiDocument(baseUrl: string) {
         },
         TaxonomyResponse: {
           type: "object",
+          examples: [
+            {
+              schema_version: PUBLIC_API_SCHEMA_VERSION,
+              generated_at: "2026-04-26T00:00:00.000Z",
+              taxonomy: {
+                severities: ["critical", "high", "medium", "low"],
+                audiences: ["ai", "backend", "frontend", "infra"],
+                tags: ["api", "auth", "deployment", "sdk"],
+                source_types: ["changelog_page", "docs_page", "github_release", "rss"],
+                vendors: [{ slug: "vercel", name: "Vercel" }],
+              },
+            },
+          ],
+          required: ["schema_version", "generated_at", "taxonomy"],
           properties: {
             schema_version: { type: "string" },
             generated_at: { type: "string", format: "date-time" },
             taxonomy: {
               type: "object",
+              required: ["severities", "audiences", "tags", "source_types", "vendors"],
               properties: {
                 severities: { type: "array", items: { type: "string" } },
                 audiences: { type: "array", items: { type: "string" } },
@@ -225,6 +292,7 @@ export function buildOpenApiDocument(baseUrl: string) {
                   type: "array",
                   items: {
                     type: "object",
+                    required: ["slug", "name"],
                     properties: {
                       slug: { type: "string" },
                       name: { type: "string" },
@@ -295,6 +363,26 @@ export function buildOpenApiDocument(baseUrl: string) {
         },
         StatusResponse: {
           type: "object",
+          examples: [
+            {
+              schema_version: PUBLIC_API_SCHEMA_VERSION,
+              generated_at: "2026-04-26T00:00:00.000Z",
+              status: "healthy",
+              latest_refresh_at: "2026-04-26T00:00:00.000Z",
+              latest_refresh_age_minutes: 12,
+              latest_event_at: "2026-04-25T19:39:08.000Z",
+              active_source_count: 49,
+              degraded_source_count: 0,
+              failing_source_count: 0,
+              stale_source_count: 0,
+              recent_refresh_failures: 0,
+              coverage: {
+                active_vendors: 44,
+                paused_vendors: 0,
+                unsupported_vendors: 1,
+              },
+            },
+          ],
           required: [
             "schema_version",
             "generated_at",
@@ -334,8 +422,19 @@ export function buildOpenApiDocument(baseUrl: string) {
         },
         ErrorResponse: {
           type: "object",
+          required: ["error"],
           properties: {
-            error: { type: "string" },
+            error: {
+              type: "object",
+              required: ["code", "message"],
+              properties: {
+                code: {
+                  type: "string",
+                  enum: ["invalid_filter", "invalid_cursor", "not_found"],
+                },
+                message: { type: "string" },
+              },
+            },
           },
         },
       },
