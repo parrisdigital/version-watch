@@ -180,7 +180,7 @@ export function EventCard({ event, compact = false, eventHref }: EventCardProps)
             rel="noreferrer"
           >
             <LinkIcon />
-            Official source
+            Official detail
           </a>
           {event.githubUrl ? (
             <a

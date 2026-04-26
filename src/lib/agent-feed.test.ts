@@ -209,6 +209,10 @@ describe("agent update serialization", () => {
       vendor_slug: event.vendorSlug,
       published_at: event.publishedAt,
       severity: "critical",
+      source_detail_url: event.sourceUrl,
+      source_surface_url: event.sourceSurfaceUrl,
+      source_surface_name: event.sourceSurfaceName,
+      source_surface_type: event.sourceSurfaceType,
       source_url: event.sourceUrl,
       version_watch_url: `https://version-watch.example/events/${event.slug}`,
       release_class: "breaking",
@@ -246,9 +250,10 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("# Version Watch Feed");
     expect(markdown).toContain("API status:");
     expect(markdown).toContain("Freshness rule:");
-    expect(markdown).toContain("Cite the official Source URL");
+    expect(markdown).toContain("Cite the official detail URL");
     expect(markdown).toContain("- Recommended action:");
-    expect(markdown).toContain(update.source_url);
+    expect(markdown).toContain(update.source_detail_url);
+    expect(markdown).toContain("- Tracked source:");
   });
 
   it("renders agent guidance for integrations and de-duplication", () => {
@@ -267,6 +272,9 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Treat next_cursor as opaque");
     expect(markdown).toContain("/api/v1/status/vendors");
     expect(markdown).toContain("adaptive source freshness");
+    expect(markdown).toContain("read-only source of changelog intelligence");
+    expect(markdown).toContain("Do not modify code, update dependencies, deploy, create issues, post notifications, or submit relevance feedback unless the user explicitly asks");
+    expect(markdown).toContain("source_detail_url");
   });
 
   it("renders llms.txt with broad integration guidance", () => {
@@ -282,6 +290,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Convex-backed snapshots");
     expect(markdown).toContain("follow next_cursor as an opaque value");
     expect(markdown).toContain("/api/v1/status/vendors");
+    expect(markdown).toContain("Do not post, open issues, change code, or submit feedback unless the user explicitly asks");
   });
 
   it("renders the portable Version Watch skill", () => {
@@ -302,6 +311,9 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Handle error.code values invalid_filter, invalid_cursor, and not_found");
     expect(markdown).toContain("/api/v1/status/vendors/{slug}");
     expect(markdown).toContain("/api/v1/relevance");
+    expect(markdown).toContain("Read-Only Scope");
+    expect(markdown).toContain("Do not modify code, update dependencies, deploy, create issues, post notifications");
+    expect(markdown).toContain("source_detail_url");
   });
 });
 
@@ -571,7 +583,16 @@ describe("agent route handlers", () => {
     );
     expect(body.components.schemas.StatusResponse).toBeDefined();
     expect(body.components.schemas.PublicUpdate.required).toEqual(
-      expect.arrayContaining(["release_class", "impact_confidence", "signal_reasons", "score_version"]),
+      expect.arrayContaining([
+        "release_class",
+        "impact_confidence",
+        "signal_reasons",
+        "score_version",
+        "source_detail_url",
+        "source_surface_url",
+        "source_surface_name",
+        "source_surface_type",
+      ]),
     );
     expect(body.components.schemas.ClustersResponse).toBeDefined();
     expect(body.components.schemas.RelevanceSignalRequest.required).toEqual(["event_id", "signal", "area"]);

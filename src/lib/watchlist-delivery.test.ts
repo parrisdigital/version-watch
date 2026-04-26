@@ -32,6 +32,10 @@ const update: PublicUpdate = {
   summary: "OpenAI released GPT-5.5.",
   why_it_matters: "Run evals.",
   recommended_action: "Run model evals before rollout.",
+  source_detail_url: "https://platform.openai.com/docs/changelog",
+  source_surface_url: "https://platform.openai.com/docs/changelog",
+  source_surface_name: "API Changelog",
+  source_surface_type: "docs_page",
   source_url: "https://platform.openai.com/docs/changelog",
   github_url: null,
   version_watch_url: "https://versionwatch.dev/events/openai-gpt-5-5",
@@ -54,7 +58,7 @@ describe("buildWebhookPayload", () => {
 
     expect(payload.content).toContain("Critical AI changes");
     expect(payload.embeds[0].url).toBe(update.version_watch_url);
-    expect(JSON.stringify(payload)).toContain(update.source_url);
+    expect(JSON.stringify(payload)).toContain(update.source_detail_url);
   });
 
   it("builds generic payloads for custom tools", () => {

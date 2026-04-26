@@ -62,7 +62,7 @@ export function buildWebhookPayload(watchlist: WatchlistConfig, update: PublicUp
             { name: "Severity", value: update.severity, inline: true },
             { name: "Release class", value: update.release_class, inline: true },
             { name: "Signal", value: String(update.signal_score), inline: true },
-            { name: "Official source", value: update.source_url, inline: false },
+            { name: "Official detail", value: update.source_detail_url, inline: false },
           ],
         },
       ],
@@ -85,7 +85,7 @@ export function buildWebhookPayload(watchlist: WatchlistConfig, update: PublicUp
           elements: [
             {
               type: "mrkdwn",
-              text: `${update.severity} · ${update.release_class} · score ${update.signal_score} · <${update.version_watch_url}|Version Watch> · <${update.source_url}|Official source>`,
+              text: `${update.severity} · ${update.release_class} · score ${update.signal_score} · <${update.version_watch_url}|Version Watch> · <${update.source_detail_url}|Official detail>`,
             },
           ],
         },

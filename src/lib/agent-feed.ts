@@ -40,6 +40,10 @@ export type PublicUpdate = {
   summary: string;
   why_it_matters: string;
   recommended_action: string;
+  source_detail_url: string;
+  source_surface_url: string;
+  source_surface_name: string;
+  source_surface_type: SourceType;
   source_url: string;
   github_url: string | null;
   version_watch_url: string;
@@ -488,6 +492,9 @@ export function buildRecommendedAction(event: MockEvent) {
 export function serializePublicUpdate(event: MockEvent & { computedScore?: number }, baseUrl = DEFAULT_PUBLIC_BASE_URL): PublicUpdate {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
   const signal = getEventSignalMetadata(event);
+  const sourceSurfaceUrl = event.sourceSurfaceUrl ?? event.sourceUrl;
+  const sourceSurfaceName = event.sourceSurfaceName ?? event.sourceName ?? "Official source";
+  const sourceSurfaceType = event.sourceSurfaceType ?? event.sourceType;
 
   return {
     id: event.slug,
@@ -506,6 +513,11 @@ export function serializePublicUpdate(event: MockEvent & { computedScore?: numbe
     summary: event.summary,
     why_it_matters: buildActionableWhyItMatters(event),
     recommended_action: buildRecommendedAction(event),
+    source_detail_url: event.sourceUrl,
+    source_surface_url: sourceSurfaceUrl,
+    source_surface_name: sourceSurfaceName,
+    source_surface_type: sourceSurfaceType,
+    // Backward-compatible alias for the exact official entry/detail URL.
     source_url: event.sourceUrl,
     github_url: event.githubUrl ?? null,
     version_watch_url: new URL(`/events/${event.slug}`, normalizedBaseUrl).toString(),
@@ -580,7 +592,7 @@ export function renderUpdatesMarkdown(
     `Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}`,
     ...(nextPageUrl ? [`Next page: ${nextPageUrl}`] : []),
     "Freshness rule: check API status before release gates, incident reviews, or high-confidence summaries.",
-    "Cite the official Source URL when reporting an update.",
+    "Cite the official detail URL when reporting an update.",
     "",
   ];
 
@@ -600,7 +612,8 @@ export function renderUpdatesMarkdown(
       `- Summary: ${markdownLine(update.summary)}`,
       `- Why it matters: ${markdownLine(update.why_it_matters)}`,
       `- Recommended action: ${markdownLine(update.recommended_action)}`,
-      `- Source: ${update.source_url}`,
+      `- Source detail: ${update.source_detail_url}`,
+      `- Tracked source: ${update.source_surface_name} (${update.source_surface_type}) ${update.source_surface_url}`,
       "",
     );
   }
@@ -669,13 +682,17 @@ Each public update includes:
 - summary
 - why_it_matters
 - recommended_action
+- source_detail_url
+- source_surface_url
+- source_surface_name
+- source_surface_type
 - source_url
 - github_url
 - version_watch_url
 
 List responses also include schema_version, generated_at, status_url, count, total_count, filters, and next_cursor.
 
-The release_class field explains what kind of change this is, while severity is the operational urgency. The recommended_action field is the most useful field for agents. Treat it as an action hint, then cite source_url or version_watch_url for attribution.
+The release_class field explains what kind of change this is, while severity is the operational urgency. The recommended_action field is the most useful field for agents. Treat it as an action hint, then cite source_detail_url or version_watch_url for attribution. source_url is a backward-compatible alias for source_detail_url.
 
 Errors use a stable shape: error.code and error.message. Current public codes are invalid_filter, invalid_cursor, and not_found.
 
@@ -702,16 +719,16 @@ Agents should mention degraded or stale status when producing release gates, inc
 
 ## Use Cases
 
-Agents should use Version Watch to:
+Agents should use Version Watch as read-only changelog intelligence to:
 
 - Detect breaking platform changes before upgrades or deployments
 - Monitor APIs, SDKs, auth systems, billing systems, hosting providers, and AI platforms used by a project
 - Summarize relevant updates for engineering teams
-- Alert maintainers when a vendor ships a high-impact change
+- Prepare alerts for maintainers when a vendor ships a high-impact change
 - Enrich dependency, release, and migration reviews with current vendor context
 - Submit structured relevance signals only when a human or team explicitly confirms impact, review need, or no impact
-- Create tasks in Linear, Jira, GitHub Issues, or similar project systems when review is needed
-- Post filtered digests into Discord, Slack, Microsoft Teams, Telegram, or internal portals
+- Draft task text for Linear, Jira, GitHub Issues, or similar project systems when review is needed and the user asks for it
+- Format filtered digests for Discord, Slack, Microsoft Teams, Telegram, or internal portals without posting unless the user owns that workflow and explicitly asks
 - Feed internal dashboards, knowledge bases, data warehouses, and weekly engineering reports
 
 ## Agent Workflow
@@ -722,22 +739,25 @@ Agents should use Version Watch to:
 4. Call /api/v1/taxonomy if you need valid severities, audiences, tags, source types, and vendor slugs.
 5. Query /api/v1/updates with vendor, severity, audience, tag, since, limit, and cursor filters.
 6. Continue pagination while next_cursor is present and more results are needed.
-7. De-duplicate updates by id before notifying a user or posting to a channel.
+7. De-duplicate updates by id before reporting results or formatting notifications.
 8. Summarize only updates that match the user or project context.
 9. Include recommended_action when giving advice.
-10. Cite source_url for the official vendor source and version_watch_url for the Version Watch record.
+10. Cite source_detail_url for the exact official entry and version_watch_url for the Version Watch record.
+11. Do not modify code, update dependencies, deploy, create issues, post notifications, or submit relevance feedback unless the user explicitly asks for that action.
 
 ## Integration Guidance
 
-- Discord or Slack: poll filtered updates from a scheduled worker, then post vendor, title, summary, recommended_action, and version_watch_url.
+- Discord or Slack: a user-owned scheduled worker can poll filtered updates and post vendor, title, summary, recommended_action, and version_watch_url.
 - CI/CD: query high or critical updates before release and flag matching vendor, API, SDK, auth, hosting, infra, or billing changes.
 - Agents and IDEs: fetch context before suggesting dependency upgrades, migration plans, or code changes.
-- Issue trackers: create review tasks for critical or high updates that match a team's vendors or tags.
-- Data platforms: store update id, vendor_slug, severity, published_at, tags, recommended_action, source_url, and version_watch_url.
+- Issue trackers: draft review task content for critical or high updates that match a team's vendors or tags.
+- Data platforms: store update id, vendor_slug, severity, published_at, tags, recommended_action, source_detail_url, source_surface_url, and version_watch_url.
 
 ## Guardrails
 
-- Do not claim to have read the official source unless you actually open source_url.
+- Treat Version Watch as a read-only source of changelog intelligence unless the user explicitly authorizes an action.
+- Do not claim to have read the official source unless you actually open source_detail_url or source_url.
+- Do not modify code, update dependencies, deploy, create issues, post notifications, or submit relevance feedback unless the user explicitly asks for that action.
 - Do not notify repeatedly for the same id.
 - Prefer filtered queries over broad feeds for notifications.
 - For recurring polling, use a 15 to 60 minute interval unless the user asks for a different cadence.
@@ -788,12 +808,12 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 - Detect breaking, security, API, SDK, auth, billing, hosting, model, and infra updates
 - Distinguish release_class from severity so routine CLI patches do not look as urgent as model launches or breaking changes
 - Summarize relevant changes for developers
-- Route high-signal updates into Discord, Slack, Teams, issue trackers, CI/CD, dashboards, and knowledge bases
-- Use recommended_action as the next-step hint and source_url as the official citation
+- Prepare high-signal update summaries for Discord, Slack, Teams, issue trackers, CI/CD, dashboards, and knowledge bases
+- Use recommended_action as the next-step hint and source_detail_url as the exact official citation
 
 ## Integration Rule
 
-Fetch updates with the narrowest useful filters, check status_url for high-confidence work, follow next_cursor as an opaque value, de-duplicate by id, and cite source_url or version_watch_url when reporting results.
+Fetch updates with the narrowest useful filters, check status_url for high-confidence work, follow next_cursor as an opaque value, de-duplicate by id, and cite source_detail_url or version_watch_url when reporting results. Do not post, open issues, change code, or submit feedback unless the user explicitly asks.
 
 Only submit /api/v1/relevance when a human explicitly confirms whether an update impacted them, needs review, or had no impact.
 `;
@@ -816,6 +836,10 @@ The API reads from Convex-backed snapshots. It is not live scrape-on-request. Al
 Version Watch uses adaptive freshness: a 15-minute Convex scheduler fetches due sources based on freshness tier, source health, and backoff. A vendor-filtered API request can enqueue a background refresh when that vendor is due without blocking the response.
 
 Use this skill when a user asks about recent platform changes, release risk, dependency upgrades, API or SDK changes, vendor monitoring, or agent-readable changelog context.
+
+## Read-Only Scope
+
+This skill is for retrieving, filtering, citing, and summarizing changelog intelligence. Do not modify code, update dependencies, deploy, create issues, post notifications, submit relevance feedback, or call external tools with side effects unless the user explicitly asks for that action.
 
 ## Public Resources
 
@@ -840,11 +864,12 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 4. Query /api/v1/updates with the narrowest useful filters. Use /api/v1/clusters for digest-style views.
 5. Use severity, audience, tag, since, and vendor filters before broad queries.
 6. Follow next_cursor only when more matching results are needed.
-7. De-duplicate by update id before reporting or notifying.
+7. De-duplicate by update id before reporting results or formatting notifications.
 8. Use release_class, impact_confidence, signal_reasons, summary, why_it_matters, and recommended_action to explain the impact.
-9. Cite source_url for the official vendor source. Cite version_watch_url for the Version Watch record.
-10. Do not claim to have read the official source unless you opened source_url.
+9. Cite source_detail_url for the exact official entry. Cite source_surface_url when naming the tracked changelog surface. Cite version_watch_url for the Version Watch record.
+10. Do not claim to have read the official source unless you opened source_detail_url or source_url.
 11. Submit /api/v1/relevance only when the user explicitly says the update impacted them, needs review, or has no impact.
+12. Do not take external action from recommended_action without user confirmation; treat it as an advisory next-step hint.
 
 ## Freshness Handling
 
@@ -858,7 +883,7 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 
 - Follow next_cursor by passing it as cursor on the next request.
 - Treat cursor values as opaque; do not decode them or assume offset pagination.
-- Store delivered update ids so repeated polling does not notify twice.
+- Store delivered update ids so repeated polling does not repeat the same update.
 - Handle error.code values invalid_filter, invalid_cursor, and not_found. Show error.message to the user or log it.
 
 ## Query Patterns
@@ -877,7 +902,7 @@ Use this before a planned deploy or release.
 
     GET ${new URL("/api/v1/updates?severity=high&tag=api&limit=10", normalizedBaseUrl).toString()}
 
-Report only updates that match the project stack. Include recommended_action and cite source_url.
+Report only updates that match the project stack. Include recommended_action and cite source_detail_url.
 If /api/v1/status is degraded or stale, include that caveat in the risk report.
 
 ### Dependency Upgrade Review
@@ -922,10 +947,11 @@ Use this structure for Discord, Slack, Teams, email, or issue trackers.
     Impact confidence: {impact_confidence}
     Summary: {summary}
     Recommended action: {recommended_action}
-    Source: {source_url}
+    Source detail: {source_detail_url}
+    Tracked source: {source_surface_name} ({source_surface_type}) {source_surface_url}
     Version Watch: {version_watch_url}
 
-Send one message per update or one grouped digest. Store delivered ids to avoid repeats.
+Format one message per update or one grouped digest. Do not send it unless the user explicitly asks or the user-owned workflow is already configured to post. Store delivered ids to avoid repeats.
 
 ## Output Format
 
@@ -938,15 +964,18 @@ When summarizing updates for a user, include:
 - Summary
 - Why it matters
 - Recommended action
-- Official source URL
+- Official detail URL
+- Tracked source URL
 - Version Watch URL
 
 ## Guardrails
 
+- Treat this as read-only changelog context unless the user authorizes a follow-up action.
 - Prefer precise filters over broad feeds.
 - Do not notify repeatedly for the same update id.
+- Do not modify code, update dependencies, deploy, create issues, post notifications, or call external tools with side effects unless the user explicitly asks.
 - Do not submit community relevance signals by inference; require explicit human confirmation.
 - Do not invent migration details that are not present in the update or official source.
-- When confidence matters, tell the user to review source_url before changing production systems.
+- When confidence matters, tell the user to review source_detail_url before changing production systems.
 `;
 }

@@ -164,12 +164,12 @@ export default async function EventPage({
           ) : null}
 
           <div className="vw-panel mt-10 p-6 md:p-7">
-            <p className="vw-kicker vw-kicker-muted">Official source entry</p>
+            <p className="vw-kicker vw-kicker-muted">Official detail</p>
             <p className="vw-title mt-3 text-pretty text-lg">{event.sourceTitle ?? event.title}</p>
             <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
               From{" "}
               <span className="text-[var(--color-ink-soft)]">
-                {event.sourceName ?? "Official release surface"}
+                {event.sourceSurfaceName ?? event.sourceName ?? "Official release surface"}
               </span>
               . The simplified record can be checked against the original wording.
             </p>
@@ -180,8 +180,18 @@ export default async function EventPage({
                 target="_blank"
                 rel="noreferrer"
               >
-                Open official source
+                Open official detail
               </a>
+              {event.sourceSurfaceUrl && event.sourceSurfaceUrl !== event.sourceUrl ? (
+                <a
+                  href={event.sourceSurfaceUrl}
+                  className="vw-button vw-button-secondary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open tracked source
+                </a>
+              ) : null}
               {event.githubUrl ? (
                 <a
                   href={event.githubUrl}

@@ -626,7 +626,7 @@ export function SearchExplorer({ events, vendors, freshnessSummary, initialFilte
                     target="_blank"
                     rel="noreferrer"
                   >
-                    Official source
+                    Official detail
                   </a>
                   {featuredEvent.githubUrl ? (
                     <a

@@ -44,6 +44,9 @@ export type MockEvent = {
   sourceType: SourceType;
   importanceBand: ImportanceBand;
   sourceName?: string;
+  sourceSurfaceUrl?: string;
+  sourceSurfaceName?: string;
+  sourceSurfaceType?: SourceType;
   sourceTitle?: string;
   githubUrl?: string;
 };
@@ -357,6 +360,23 @@ const vendorNameBySlug = new Map(vendors.map((vendor) => [vendor.slug, vendor.na
 const vendorSourceNameByUrl = new Map(
   vendors.flatMap((vendor) => vendor.sources.map((source) => [source.url, source.name] as const)),
 );
+
+function normalizeUrlForPrefix(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+function findVendorSourceForEvent(event: Omit<MockEvent, "vendorName">) {
+  const vendor = vendors.find((item) => item.slug === event.vendorSlug);
+  if (!vendor) return null;
+
+  const eventUrl = normalizeUrlForPrefix(event.sourceUrl);
+  return (
+    vendor.sources.find((source) => {
+      const sourceUrl = normalizeUrlForPrefix(source.url);
+      return eventUrl === sourceUrl || eventUrl.startsWith(`${sourceUrl}/`);
+    }) ?? vendor.sources[0] ?? null
+  );
+}
 
 const eventSeeds: Array<Omit<MockEvent, "vendorName">> = [
   {
@@ -757,11 +777,18 @@ const eventSeeds: Array<Omit<MockEvent, "vendorName">> = [
   },
 ];
 
-export const events: MockEvent[] = eventSeeds.map((event) => ({
-  ...event,
-  vendorName: vendorNameBySlug.get(event.vendorSlug) ?? event.vendorSlug,
-  sourceName: event.sourceName ?? vendorSourceNameByUrl.get(event.sourceUrl),
-}));
+export const events: MockEvent[] = eventSeeds.map((event) => {
+  const source = findVendorSourceForEvent(event);
+
+  return {
+    ...event,
+    vendorName: vendorNameBySlug.get(event.vendorSlug) ?? event.vendorSlug,
+    sourceName: event.sourceName ?? vendorSourceNameByUrl.get(event.sourceUrl) ?? source?.name,
+    sourceSurfaceUrl: event.sourceSurfaceUrl ?? source?.url ?? event.sourceUrl,
+    sourceSurfaceName: event.sourceSurfaceName ?? source?.name ?? event.sourceName,
+    sourceSurfaceType: event.sourceSurfaceType ?? source?.type ?? event.sourceType,
+  };
+});
 
 export const reviewCandidates: ReviewCandidate[] = [
   {

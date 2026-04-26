@@ -290,7 +290,7 @@ const INTEGRATIONS = [
   {
     icon: MessageSquare,
     title: "Chat and community",
-    body: "Post high-signal updates into Discord, Slack, Microsoft Teams, Telegram, or community channels.",
+    body: "Use your own worker or bot to deliver high-signal updates into Discord, Slack, Microsoft Teams, Telegram, or community channels.",
   },
   {
     icon: Bot,
@@ -346,6 +346,10 @@ const RESPONSE_FIELDS = [
   "summary",
   "why_it_matters",
   "recommended_action",
+  "source_detail_url",
+  "source_surface_url",
+  "source_surface_name",
+  "source_surface_type",
   "source_url",
   "github_url",
   "version_watch_url",
@@ -532,7 +536,11 @@ export default async function AgentAccessPage() {
   "summary": "One-sentence explanation of what changed.",
   "why_it_matters": "Clear operational impact for affected teams.",
   "recommended_action": "Review affected integration paths before upgrading.",
-  "source_url": "https://...",
+  "source_detail_url": "https://github.com/orgs/supabase/discussions/...",
+  "source_surface_url": "https://supabase.com/changelog",
+  "source_surface_name": "Supabase Changelog",
+  "source_surface_type": "changelog_page",
+  "source_url": "https://github.com/orgs/supabase/discussions/...",
   "github_url": "https://...",
   "version_watch_url": "${baseUrl}/events/..."
 }`;
@@ -748,7 +756,7 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                     <SectionIntro
                       kicker="Response shape"
                       title="Stable snake_case fields for tools and agents"
-                      body="The important field is recommended_action. Agents should use it as an action hint, check status_url when freshness matters, then link back to the official source when details matter."
+                      body="The important field is recommended_action. Agents should use it as a read-only action hint, check status_url when freshness matters, then cite source_detail_url for the exact official entry. source_url remains a backward-compatible alias."
                     />
                     <div className="flex flex-wrap gap-2">
                       {RESPONSE_FIELDS.map((field) => (
@@ -782,7 +790,7 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                   <SectionIntro
                     kicker="Agent skill"
                     title="Give agents an operating procedure, not just endpoints"
-                    body="The skill explains when to use Version Watch, how to discover valid vendors and tags, how to filter updates, how to follow pagination, how to de-duplicate results, and how to cite official sources."
+                    body="The skill is read-only guidance for changelog intelligence: when to use Version Watch, how to discover valid vendors and tags, how to filter updates, how to follow pagination, how to de-duplicate results, and how to cite official sources."
                   />
                   <CodeBlock
                     title="Version Watch skill"
@@ -816,9 +824,9 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
                       <p>
-                        Poll every 15 to 60 minutes, store the last update id or timestamp, then post
-                        only new matching records. Start with high or critical severity and add vendor,
-                        audience, or tag filters before widening the feed.
+                        If you build a bot or worker, poll every 15 to 60 minutes, store the last update
+                        id or timestamp, then deliver only new matching records. Start with high or
+                        critical severity and add vendor, audience, or tag filters before widening the feed.
                       </p>
                       <p>
                         Check /api/v1/status before high-confidence agent reports or release gates.
@@ -834,7 +842,7 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                       </p>
                       <p>
                         For Discord and Slack, format the message around vendor, title, summary,
-                        recommended action, and the Version Watch URL.
+                        recommended action, source_detail_url, and the Version Watch URL.
                       </p>
                       <p>
                         For broader integrations, store update ids after delivery and route by
