@@ -22,7 +22,7 @@ function cleanText(value: string | null | undefined) {
 }
 
 const DEFAULT_INGESTION_USER_AGENT =
-  process.env.INGESTION_USER_AGENT ?? "VersionWatchBot/1.0 (+https://version-watch.vercel.app)";
+  process.env.INGESTION_USER_AGENT ?? "VersionWatchBot/1.0 (+https://versionwatch.dev)";
 const BROWSER_FALLBACK_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const BROWSER_RETRY_STATUSES = new Set([403, 406, 429]);

@@ -6,6 +6,7 @@ import { GET as getUpdates } from "@/app/api/v1/updates/route";
 import {
   buildRecommendedAction,
   filterEventsForPublicUpdates,
+  getPublicBaseUrl,
   parseUpdateFilters,
   renderUpdatesMarkdown,
   serializePublicUpdate,
@@ -97,6 +98,10 @@ describe("agent update filters", () => {
 });
 
 describe("agent update serialization", () => {
+  it("uses the custom domain as the canonical fallback URL", () => {
+    expect(getPublicBaseUrl()).toBe("https://versionwatch.dev");
+  });
+
   it("serializes the public API shape with stable snake_case fields", () => {
     const event = events.find((item) => item.vendorSlug === "stripe")!;
     const update = serializePublicUpdate(event, "https://version-watch.example");

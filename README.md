@@ -59,6 +59,7 @@ This folder currently holds the pre-build documentation package. The next phase 
 The implementation phase should assume these environment variables:
 
 - `NEXT_PUBLIC_CONVEX_URL`
+- `NEXT_PUBLIC_SITE_URL`
 - `CONVEX_DEPLOYMENT`
 - `ADMIN_SECRET`
 - `GITHUB_TOKEN`
