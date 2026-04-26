@@ -22,6 +22,11 @@ export type FreshnessSummary = {
   sourceCount: number;
 };
 
+export type ProductionFreshnessOptions = {
+  sinceHours?: number;
+  eventLimit?: number;
+};
+
 type ReviewQueueEntry = ReviewCandidate & {
   publishedDateLabel: string;
 };
@@ -92,12 +97,12 @@ export async function getVendors(): Promise<VendorRecord[]> {
   );
 }
 
-export async function getFreshnessSummary(): Promise<FreshnessSummary> {
-  const report = await readFromConvex<any>(
+export async function getProductionFreshnessReport(options: ProductionFreshnessOptions = {}): Promise<any> {
+  return await readFromConvex<any>(
     () =>
       fetchQuery(api.ops.productionFreshness, {
-        sinceHours: 8,
-        eventLimit: 1,
+        sinceHours: options.sinceHours ?? 8,
+        eventLimit: options.eventLimit ?? 24,
       }) as Promise<any>,
     () => ({
       checkedAt: new Date().toISOString(),
@@ -105,8 +110,16 @@ export async function getFreshnessSummary(): Promise<FreshnessSummary> {
       recentRuns: [],
       recentRefreshRuns: [],
       latestFeedRefresh: null,
+      latestEvents: fallbackEvents
+        .slice()
+        .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+        .slice(0, options.eventLimit ?? 24),
     }),
   );
+}
+
+export async function getFreshnessSummary(): Promise<FreshnessSummary> {
+  const report = await getProductionFreshnessReport({ sinceHours: 8, eventLimit: 1 });
 
   const latestRun =
     report.latestFeedRefresh ??
