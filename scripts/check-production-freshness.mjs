@@ -18,6 +18,7 @@ const knownBlockedSourceUrls = new Set([
   // Railway currently returns a Cloudflare managed challenge to server-side fetches and no official feed endpoint.
   "https://railway.com/changelog",
 ]);
+const nonMonitoredLifecycleStates = new Set(["paused", "unsupported"]);
 
 function readNumber(name, fallback) {
   const raw = process.env[name];
@@ -81,6 +82,18 @@ function isKnownBlockedSourceUrl(url) {
   return Boolean(url && knownBlockedSourceUrls.has(url));
 }
 
+function getLifecycleState(entry) {
+  return (
+    entry.sourceLifecycleState ??
+    entry.lifecycleState ??
+    (isKnownBlockedSourceUrl(entry.sourceUrl) ? "unsupported" : "active")
+  );
+}
+
+function isMonitoredSource(entry) {
+  return !nonMonitoredLifecycleStates.has(getLifecycleState(entry));
+}
+
 function groupFailureRuns(runs) {
   const groups = new Map();
 
@@ -124,8 +137,8 @@ const now = Date.now();
 const failures = [];
 const warnings = [];
 const latestEvents = report.latestEvents ?? [];
-const sources = report.sources ?? [];
-const recentRuns = report.recentRuns ?? [];
+const sources = (report.sources ?? []).filter(isMonitoredSource);
+const recentRuns = (report.recentRuns ?? []).filter(isMonitoredSource);
 const recentRefreshRuns = report.recentRefreshRuns ?? [];
 const latestFeedRefresh = report.latestFeedRefresh ?? null;
 
@@ -243,20 +256,7 @@ const staleSources = sources.filter((source) => {
 
   return hoursBetween(now, source.lastSuccessAt) > sourceLimitHours;
 });
-const knownBlockedStaleSources = staleSources.filter((source) => isKnownBlockedSourceUrl(source.sourceUrl));
-const actionableStaleSources = staleSources.filter((source) => !isKnownBlockedSourceUrl(source.sourceUrl));
-
-if (knownBlockedStaleSources.length) {
-  warnings.push(
-    `Known blocked source stale: ${knownBlockedStaleSources
-      .slice(0, 5)
-      .map((source) => {
-        const age = source.lastSuccessAt ? formatHours(hoursBetween(now, source.lastSuccessAt)) : "never";
-        return `${formatSource(source)} (${age}, upstream anti-bot challenge)`;
-      })
-      .join("; ")}.`,
-  );
-}
+const actionableStaleSources = staleSources;
 
 if (actionableStaleSources.length) {
   failures.push(
@@ -303,7 +303,7 @@ if (failedRefreshRuns.length) {
   );
 }
 
-if (partialRefreshRuns.length) {
+if (partialRefreshRuns.length && recentRuns.some((run) => run.status === "failure")) {
   warnings.push(
     `Partial refresh run in the last ${sinceHours}h: ${partialRefreshRuns
       .slice(0, 3)
@@ -314,23 +314,10 @@ if (partialRefreshRuns.length) {
 
 const recentFailureRuns = recentRuns.filter((run) => run.status === "failure");
 const recentFailureGroups = groupFailureRuns(recentFailureRuns);
-const knownBlockedFailureGroups = recentFailureGroups.filter((group) => {
-  return group.runs.some((run) => isKnownBlockedSourceUrl(run.sourceUrl));
-});
-const actionableFailureGroups = recentFailureGroups.filter((group) => {
-  return !group.runs.some((run) => isKnownBlockedSourceUrl(run.sourceUrl));
-});
+const actionableFailureGroups = recentFailureGroups;
 const actionableRepeatedFailureGroups = actionableFailureGroups.filter((group) => {
   return group.runs.length > maxRecentFailuresPerSource;
 });
-
-if (knownBlockedFailureGroups.length) {
-  warnings.push(
-    `Known blocked ingestion source in the last ${sinceHours}h: ${knownBlockedFailureGroups
-      .map((group) => `${group.label} (${group.runs.length} failures, upstream anti-bot challenge)`)
-      .join("; ")}.`,
-  );
-}
 
 if (actionableFailureGroups.length > maxRecentFailureSourceCount) {
   failures.push(

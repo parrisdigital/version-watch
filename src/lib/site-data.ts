@@ -107,6 +107,14 @@ export async function getProductionFreshnessReport(options: ProductionFreshnessO
     () => ({
       checkedAt: new Date().toISOString(),
       sources: sourceHealth,
+      coverage: {
+        activeVendorCount: fallbackVendors.length,
+        pausedVendorCount: 0,
+        unsupportedVendorCount: 0,
+        activeSourceCount: fallbackVendors.reduce((count, vendor) => count + vendor.sources.length, 0),
+        pausedSourceCount: 0,
+        unsupportedSourceCount: 0,
+      },
       recentRuns: [],
       recentRefreshRuns: [],
       latestFeedRefresh: null,

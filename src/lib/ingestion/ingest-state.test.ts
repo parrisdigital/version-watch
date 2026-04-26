@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { findSameSourceCandidateByTitle, hasMeaningfulTitle, shouldPollSource } from "../../../convex/ingestState";
+import { buildSourceRegistryPayload } from "../../../convex/seed";
+import {
+  getLifecycleStateAfterFailure,
+  getLifecycleStateAfterSuccess,
+  shouldPollLifecycleState,
+} from "../../../convex/sourceLifecycle";
 
 describe("hasMeaningfulTitle", () => {
   it("allows short semver release titles for GitHub release sources", () => {
@@ -93,5 +99,68 @@ describe("shouldPollSource", () => {
         false,
       ),
     ).toBe(false);
+  });
+});
+
+describe("source lifecycle state", () => {
+  it("does not poll paused or unsupported sources even during forced runs", () => {
+    expect(shouldPollLifecycleState({ lifecycleState: "active", isActive: true })).toBe(true);
+    expect(shouldPollLifecycleState({ lifecycleState: "degraded", isActive: true })).toBe(true);
+    expect(shouldPollLifecycleState({ lifecycleState: "paused", isActive: true })).toBe(false);
+    expect(shouldPollLifecycleState({ lifecycleState: "unsupported", isActive: true })).toBe(false);
+  });
+
+  it("moves monitored sources between active and degraded without changing paused coverage", () => {
+    expect(getLifecycleStateAfterFailure({ lifecycleState: "active" })).toBe("degraded");
+    expect(getLifecycleStateAfterSuccess({ lifecycleState: "degraded" })).toBe("active");
+    expect(getLifecycleStateAfterFailure({ lifecycleState: "unsupported" })).toBe("unsupported");
+    expect(getLifecycleStateAfterSuccess({ lifecycleState: "paused" })).toBe("paused");
+  });
+
+  it("preserves operational health fields during registry sync payload construction", () => {
+    const payload = buildSourceRegistryPayload({
+      existingSource: {
+        lifecycleState: "degraded",
+        consecutiveFailures: 2,
+        lastFailureAt: Date.UTC(2026, 3, 25, 12),
+        lastSuccessAt: Date.UTC(2026, 3, 25, 8),
+      },
+      vendorId: "vendor_123",
+      vendorSlug: "vercel",
+      source: {
+        name: "Vercel Changelog",
+        type: "changelog_page",
+        url: "https://vercel.com/changelog",
+      },
+      isPrimary: true,
+      now: Date.UTC(2026, 3, 25, 16),
+    });
+
+    expect(payload.lifecycleState).toBe("degraded");
+    expect(payload).not.toHaveProperty("consecutiveFailures");
+    expect(payload).not.toHaveProperty("lastFailureAt");
+    expect(payload).not.toHaveProperty("lastSuccessAt");
+  });
+
+  it("marks Railway as unsupported during registry sync", () => {
+    const payload = buildSourceRegistryPayload({
+      existingSource: {
+        isActive: true,
+        consecutiveFailures: 1,
+      },
+      vendorId: "vendor_railway",
+      vendorSlug: "railway",
+      source: {
+        name: "Railway Changelog",
+        type: "changelog_page",
+        url: "https://railway.com/changelog",
+      },
+      isPrimary: true,
+      now: Date.UTC(2026, 3, 25, 16),
+    });
+
+    expect(payload.lifecycleState).toBe("unsupported");
+    expect(payload.isActive).toBe(true);
+    expect(payload).not.toHaveProperty("consecutiveFailures");
   });
 });

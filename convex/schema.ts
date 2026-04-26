@@ -31,6 +31,9 @@ export default defineSchema({
     pollIntervalMinutes: v.number(),
     parserKey: v.string(),
     isActive: v.boolean(),
+    lifecycleState: v.optional(
+      v.union(v.literal("active"), v.literal("degraded"), v.literal("paused"), v.literal("unsupported")),
+    ),
     lastSuccessAt: v.optional(v.number()),
     lastFailureAt: v.optional(v.number()),
     consecutiveFailures: v.number(),

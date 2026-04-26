@@ -17,6 +17,7 @@ export type PublicApiStatus = {
 
 export const MAX_EXPECTED_REFRESH_AGE_MINUTES = 5 * 60;
 const STALE_SOURCE_GRACE_MINUTES = 60;
+const unsupportedSourceUrls = new Set(["https://railway.com/changelog"]);
 
 function minutesBetween(now: number, isoTimestamp: string | null | undefined) {
   if (!isoTimestamp) return null;
@@ -44,8 +45,17 @@ function getSourceLagLimitMinutes(source: any) {
   return Math.max(MAX_EXPECTED_REFRESH_AGE_MINUTES, pollInterval + STALE_SOURCE_GRACE_MINUTES);
 }
 
+function isMonitoredSource(source: any) {
+  const state = source.lifecycleState ?? source.lifecycle_state;
+  const sourceUrl = source.sourceUrl ?? source.source_url;
+  return state !== "paused" && state !== "unsupported" && !unsupportedSourceUrls.has(sourceUrl);
+}
+
 export function buildPublicApiStatus(report: any, now = Date.now()): PublicApiStatus {
-  const sources = report.sources ?? [];
+  const sources = (report.sources ?? []).filter(isMonitoredSource);
+  const fallbackActiveVendorCount = new Set(
+    sources.map((source: any) => source.vendorSlug ?? source.vendor_slug ?? source.vendorName).filter(Boolean),
+  ).size;
   const latestRefresh = getLatestRefresh(report);
   const latestRefreshAt = latestRefresh?.finishedAt ?? latestRefresh?.startedAt ?? null;
   const latestRefreshAgeMinutes = minutesBetween(now, latestRefreshAt);
@@ -56,8 +66,16 @@ export function buildPublicApiStatus(report: any, now = Date.now()): PublicApiSt
     const ageMinutes = minutesBetween(now, source.lastSuccessAt);
     return ageMinutes === null || ageMinutes > getSourceLagLimitMinutes(source);
   });
+  const recentMonitoredSourceFailures = (report.recentRuns ?? []).filter((run: any) => {
+    return run.status === "failure" && isMonitoredSource(run);
+  });
+  const hasMonitoredSourceDebt =
+    recentMonitoredSourceFailures.length > 0 ||
+    degradedSources.length > 0 ||
+    failingSources.length > 0 ||
+    staleSources.length > 0;
   const recentRefreshFailures = (report.recentRefreshRuns ?? []).filter((run: any) => {
-    return run.status === "failure" || run.status === "partial_failure";
+    return run.status === "failure" || (run.status === "partial_failure" && hasMonitoredSourceDebt);
   }).length;
 
   let status: PublicApiStatus["status"] = "healthy";
@@ -78,9 +96,13 @@ export function buildPublicApiStatus(report: any, now = Date.now()): PublicApiSt
     stale_source_count: staleSources.length,
     recent_refresh_failures: recentRefreshFailures,
     coverage: {
-      active_vendors: report.activeVendorCount ?? report.activeVendors ?? 0,
-      paused_vendors: report.pausedVendorCount ?? 0,
-      unsupported_vendors: report.unsupportedVendorCount ?? 0,
+      active_vendors:
+        report.coverage?.activeVendorCount ??
+        report.activeVendorCount ??
+        report.activeVendors ??
+        fallbackActiveVendorCount,
+      paused_vendors: report.coverage?.pausedVendorCount ?? report.pausedVendorCount ?? 0,
+      unsupported_vendors: report.coverage?.unsupportedVendorCount ?? report.unsupportedVendorCount ?? 0,
     },
   };
 }
