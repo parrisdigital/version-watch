@@ -6,6 +6,12 @@ import { internal } from "./_generated/api";
 import { v } from "convex/values";
 
 import {
+  classifyHttpStatus,
+  classifyThrownError,
+  getIngestionErrorMessage,
+  SourceIngestionError,
+} from "./ingestionErrors";
+import {
   discoverFeedUrl,
   normalizeParsedEntry,
   parseHtmlEntries,
@@ -26,6 +32,7 @@ const DEFAULT_INGESTION_USER_AGENT =
 const BROWSER_FALLBACK_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 const BROWSER_RETRY_STATUSES = new Set([403, 406, 429]);
+const FETCH_TIMEOUT_MS = 30 * 1000;
 const WATCHDOG_STALE_AFTER_MS = 270 * 60 * 1000;
 const WATCHDOG_RUNNING_GRACE_MS = 30 * 60 * 1000;
 
@@ -40,12 +47,18 @@ function buildFetchHeaders(userAgent: string) {
 }
 
 async function fetchTextOnce(url: string, userAgent: string) {
-  return await fetch(url, {
-    headers: {
-      ...buildFetchHeaders(userAgent),
-    },
-    redirect: "follow",
-  });
+  try {
+    return await fetch(url, {
+      headers: {
+        ...buildFetchHeaders(userAgent),
+      },
+      redirect: "follow",
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch (error) {
+    const code = classifyThrownError(error);
+    throw new SourceIngestionError(code, getIngestionErrorMessage(error));
+  }
 }
 
 async function fetchText(url: string) {
@@ -96,10 +109,11 @@ const FEED_PARSER_KEYS = new Set([
   "workos:github_release",
 ]);
 
-function parseFeedEntries(feedXml: string, fallbackUrl: string) {
+async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
   const parser = new Parser();
 
-  return parser.parseString(feedXml).then((feed) => {
+  try {
+    const feed = await parser.parseString(feedXml);
     return (feed.items ?? [])
       .map((item) => {
         const publishedAt = Date.parse(item.isoDate ?? item.pubDate ?? "");
@@ -126,7 +140,9 @@ function parseFeedEntries(feedXml: string, fallbackUrl: string) {
       })
       .filter(Boolean)
       .slice(0, 12) as ParsedSourceEntry[];
-  });
+  } catch (error) {
+    throw new SourceIngestionError("parse_error", getIngestionErrorMessage(error));
+  }
 }
 
 function buildPostHogPageDataUrl(sourceUrl: string) {
@@ -138,13 +154,28 @@ function buildPostHogPageDataUrl(sourceUrl: string) {
   return url.toString();
 }
 
+function parseSourceEntries(args: { parserKey: string; sourceUrl: string; body: string }) {
+  try {
+    return parseHtmlEntries({
+      parserKey: args.parserKey,
+      sourceUrl: args.sourceUrl,
+      html: args.body,
+    });
+  } catch (error) {
+    throw new SourceIngestionError("parse_error", getIngestionErrorMessage(error));
+  }
+}
+
 async function ingestSource(ctx: any, source: any, runType: RunType) {
   const startedAt = Date.now();
 
   try {
     const sourceResponse = await fetchText(source.url);
     if (!sourceResponse.ok) {
-      throw new Error(`Fetch failed with status ${sourceResponse.status} for ${source.url}`);
+      throw new SourceIngestionError(
+        classifyHttpStatus(sourceResponse.status),
+        `Fetch failed with status ${sourceResponse.status} for ${source.url}`,
+      );
     }
 
     let parsedEntries: ParsedSourceEntry[] = [];
@@ -179,10 +210,10 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
     }
 
     if (parsedEntries.length === 0) {
-      parsedEntries = parseHtmlEntries({
+      parsedEntries = parseSourceEntries({
         parserKey: source.parserKey,
         sourceUrl: sourceResponse.url,
-        html: sourceResponse.body,
+        body: sourceResponse.body,
       });
     }
 
@@ -214,6 +245,10 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
       })
       .filter((item) => item.title && item.publishedAt);
 
+    if (items.length === 0) {
+      throw new SourceIngestionError("empty_result", `No parseable entries found for ${source.url}`);
+    }
+
     return await ctx.runMutation(internal.ingestState.persistSourceEntries, {
       sourceId: source.sourceId,
       vendorId: source.vendorId,
@@ -227,7 +262,8 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
       vendorId: source.vendorId,
       startedAt,
       runType,
-      errorMessage: error instanceof Error ? error.message : "Unknown ingestion error",
+      errorCode: classifyThrownError(error),
+      errorMessage: getIngestionErrorMessage(error),
     });
   }
 }

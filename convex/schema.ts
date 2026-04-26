@@ -1,6 +1,8 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+import { sourceErrorCodeValidator } from "./ingestionErrors";
+
 export default defineSchema({
   vendors: defineTable({
     slug: v.string(),
@@ -34,8 +36,11 @@ export default defineSchema({
     lifecycleState: v.optional(
       v.union(v.literal("active"), v.literal("degraded"), v.literal("paused"), v.literal("unsupported")),
     ),
+    lastAttemptAt: v.optional(v.number()),
     lastSuccessAt: v.optional(v.number()),
     lastFailureAt: v.optional(v.number()),
+    lastErrorCode: v.optional(sourceErrorCodeValidator),
+    lastErrorMessage: v.optional(v.string()),
     consecutiveFailures: v.number(),
     notes: v.optional(v.string()),
     createdAt: v.number(),
@@ -133,6 +138,7 @@ export default defineSchema({
     itemsFetched: v.number(),
     itemsCreated: v.number(),
     itemsDeduped: v.number(),
+    errorCode: v.optional(sourceErrorCodeValidator),
     errorMessage: v.optional(v.string()),
     runType: v.union(v.literal("scheduled"), v.literal("manual"), v.literal("deep_diff"), v.literal("watchdog")),
   }).index("by_source_and_start", ["sourceId", "startedAt"]),

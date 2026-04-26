@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  classifyHttpStatus,
+  classifyThrownError,
+  SourceIngestionError,
+} from "../../../convex/ingestionErrors";
 import { findSameSourceCandidateByTitle, hasMeaningfulTitle, shouldPollSource } from "../../../convex/ingestState";
 import { buildSourceRegistryPayload } from "../../../convex/seed";
 import {
@@ -162,5 +167,21 @@ describe("source lifecycle state", () => {
     expect(payload.lifecycleState).toBe("unsupported");
     expect(payload.isActive).toBe(true);
     expect(payload).not.toHaveProperty("consecutiveFailures");
+  });
+});
+
+describe("source error classification", () => {
+  it("classifies blocked and generic HTTP failures separately", () => {
+    expect(classifyHttpStatus(403)).toBe("fetch_blocked");
+    expect(classifyHttpStatus(429)).toBe("fetch_blocked");
+    expect(classifyHttpStatus(500)).toBe("http_error");
+  });
+
+  it("preserves explicit source ingestion error codes", () => {
+    expect(classifyThrownError(new SourceIngestionError("parse_error", "Could not parse page"))).toBe(
+      "parse_error",
+    );
+    expect(classifyThrownError(new Error("Request timeout after 30s"))).toBe("fetch_timeout");
+    expect(classifyThrownError(new Error("Unexpected parser issue"))).toBe("unknown_error");
   });
 });

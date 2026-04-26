@@ -296,8 +296,9 @@ if (failedRefreshRuns.length) {
       .slice(0, 3)
       .map((run) => {
         const runAt = run.finishedAt ?? run.startedAt;
+        const code = run.errorCode ? ` [${run.errorCode}]` : "";
         const message = run.errorMessage ? `: ${run.errorMessage}` : "";
-        return `${run.runType} at ${runAt}${message}`;
+        return `${run.runType} at ${runAt}${code}${message}`;
       })
       .join("; ")}.`,
   );
@@ -339,8 +340,9 @@ if (actionableFailureGroups.length > maxRecentFailureSourceCount) {
       .map((group) => {
         const latestFailure = group.runs[0];
         const failedAt = latestFailure.finishedAt ?? latestFailure.startedAt;
+        const code = latestFailure.errorCode ? ` [${latestFailure.errorCode}]` : "";
         const message = latestFailure.errorMessage ? `: ${latestFailure.errorMessage}` : "";
-        return `${group.label} at ${failedAt}${message}`;
+        return `${group.label} at ${failedAt}${code}${message}`;
       })
       .join("; ")}.`,
   );

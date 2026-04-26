@@ -1,6 +1,7 @@
 import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
+import { sourceErrorCodeValidator } from "./ingestionErrors";
 import { publishRawCandidate } from "./lib/publish";
 import {
   getLifecycleStateAfterFailure,
@@ -604,8 +605,11 @@ export const persistSourceEntries = internalMutation({
     }
 
     await ctx.db.patch(args.sourceId, {
+      lastAttemptAt: args.startedAt,
       lastSuccessAt: now,
       lifecycleState: getLifecycleStateAfterSuccess(source ?? {}),
+      lastErrorCode: undefined,
+      lastErrorMessage: undefined,
       consecutiveFailures: 0,
       updatedAt: now,
     });
@@ -638,6 +642,7 @@ export const persistSourceFailure = internalMutation({
     vendorId: v.id("vendors"),
     startedAt: v.number(),
     runType: runTypeValidator,
+    errorCode: sourceErrorCodeValidator,
     errorMessage: v.string(),
   },
   returns: v.object({
@@ -653,8 +658,11 @@ export const persistSourceFailure = internalMutation({
     const now = Date.now();
 
     await ctx.db.patch(args.sourceId, {
+      lastAttemptAt: args.startedAt,
       lastFailureAt: now,
       lifecycleState: getLifecycleStateAfterFailure(source ?? {}),
+      lastErrorCode: args.errorCode,
+      lastErrorMessage: args.errorMessage,
       consecutiveFailures: (source?.consecutiveFailures ?? 0) + 1,
       updatedAt: now,
     });
@@ -668,6 +676,7 @@ export const persistSourceFailure = internalMutation({
       itemsFetched: 0,
       itemsCreated: 0,
       itemsDeduped: 0,
+      errorCode: args.errorCode,
       errorMessage: args.errorMessage,
       runType: args.runType,
     });

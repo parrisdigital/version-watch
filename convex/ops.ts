@@ -92,8 +92,11 @@ async function formatSourceHealth(ctx: any, source: any) {
     sourceUrl: source.url,
     lifecycleState: getEffectiveLifecycleState(source),
     status: getStatusForSource(source),
+    lastAttemptAt: source.lastAttemptAt ? new Date(source.lastAttemptAt).toISOString() : null,
     lastSuccessAt: source.lastSuccessAt ? new Date(source.lastSuccessAt).toISOString() : null,
     lastFailureAt: source.lastFailureAt ? new Date(source.lastFailureAt).toISOString() : null,
+    lastErrorCode: source.lastErrorCode ?? null,
+    lastErrorMessage: source.lastErrorMessage ?? null,
     pollIntervalMinutes: source.pollIntervalMinutes,
     consecutiveFailures: source.consecutiveFailures ?? 0,
   };
@@ -185,6 +188,7 @@ export const productionFreshness = query({
           itemsFetched: run.itemsFetched,
           itemsCreated: run.itemsCreated,
           itemsDeduped: run.itemsDeduped,
+          errorCode: run.errorCode ?? null,
           errorMessage: run.errorMessage ?? null,
         };
       });
