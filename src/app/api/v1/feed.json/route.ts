@@ -34,6 +34,7 @@ export async function GET(request: Request) {
       schema_version: PUBLIC_API_SCHEMA_VERSION,
       generated_at: new Date().toISOString(),
       feed_url: new URL("/api/v1/feed.json", baseUrl).toString(),
+      status_url: new URL("/api/v1/status", baseUrl).toString(),
       count: updates.length,
       total_count: page.total_count,
       next_cursor: page.next_cursor,

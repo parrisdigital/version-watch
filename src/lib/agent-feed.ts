@@ -428,6 +428,7 @@ export function renderUpdatesMarkdown(updates: PublicUpdate[], generatedAt: stri
     "Official platform changes ranked for humans and readable by agents.",
     "",
     `Generated: ${generatedAt}`,
+    `API status: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}`,
     `JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}`,
     `Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}`,
     "",
@@ -469,6 +470,7 @@ Base URL: ${normalizedBaseUrl}
 - High-signal updates: ${new URL("/api/v1/updates?severity=high&limit=25", normalizedBaseUrl).toString()}
 - Critical updates: ${new URL("/api/v1/updates?severity=critical&limit=25", normalizedBaseUrl).toString()}
 - Vendor list: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
+- API status: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
 - Taxonomy: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
@@ -529,14 +531,15 @@ Agents should use Version Watch to:
 ## Agent Workflow
 
 1. Determine the project stack or vendor list.
-2. Call /api/v1/vendors if you need valid vendor slugs.
-3. Call /api/v1/taxonomy if you need valid severities, audiences, tags, source types, and vendor slugs.
-4. Query /api/v1/updates with vendor, severity, audience, tag, since, limit, and cursor filters.
-5. Continue pagination while next_cursor is present and more results are needed.
-6. De-duplicate updates by id before notifying a user or posting to a channel.
-7. Summarize only updates that match the user or project context.
-8. Include recommended_action when giving advice.
-9. Cite source_url for the official vendor source and version_watch_url for the Version Watch record.
+2. Call /api/v1/status when freshness or operational confidence matters.
+3. Call /api/v1/vendors if you need valid vendor slugs.
+4. Call /api/v1/taxonomy if you need valid severities, audiences, tags, source types, and vendor slugs.
+5. Query /api/v1/updates with vendor, severity, audience, tag, since, limit, and cursor filters.
+6. Continue pagination while next_cursor is present and more results are needed.
+7. De-duplicate updates by id before notifying a user or posting to a channel.
+8. Summarize only updates that match the user or project context.
+9. Include recommended_action when giving advice.
+10. Cite source_url for the official vendor source and version_watch_url for the Version Watch record.
 
 ## Integration Guidance
 
@@ -571,6 +574,7 @@ Version Watch turns official developer platform changelogs, release notes, docs 
 - Version Watch skill: ${new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString()}
 - Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
 - Vendors API: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
+- Status API: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
 - Taxonomy API: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
@@ -616,6 +620,7 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 - API docs: ${new URL("/agent-access", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - Taxonomy: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
+- Status: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
 - Vendors: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
 - Updates: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
@@ -625,14 +630,15 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 ## Operating Procedure
 
 1. Identify the user's project stack, vendors, or platform areas.
-2. If vendor slugs or valid tags are uncertain, call /api/v1/vendors and /api/v1/taxonomy.
-3. Query /api/v1/updates with the narrowest useful filters.
-4. Use severity, audience, tag, since, and vendor filters before broad queries.
-5. Follow next_cursor only when more matching results are needed.
-6. De-duplicate by update id before reporting or notifying.
-7. Use summary, why_it_matters, and recommended_action to explain the impact.
-8. Cite source_url for the official vendor source. Cite version_watch_url for the Version Watch record.
-9. Do not claim to have read the official source unless you opened source_url.
+2. If freshness matters, call /api/v1/status and tell the user if the feed is degraded or stale.
+3. If vendor slugs or valid tags are uncertain, call /api/v1/vendors and /api/v1/taxonomy.
+4. Query /api/v1/updates with the narrowest useful filters.
+5. Use severity, audience, tag, since, and vendor filters before broad queries.
+6. Follow next_cursor only when more matching results are needed.
+7. De-duplicate by update id before reporting or notifying.
+8. Use summary, why_it_matters, and recommended_action to explain the impact.
+9. Cite source_url for the official vendor source. Cite version_watch_url for the Version Watch record.
+10. Do not claim to have read the official source unless you opened source_url.
 
 ## Query Patterns
 

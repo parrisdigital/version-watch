@@ -68,6 +68,12 @@ const ENDPOINTS = [
   },
   {
     method: "GET",
+    path: "/api/v1/status",
+    title: "Read API freshness",
+    description: "Current ingestion health, latest refresh time, source counts, and degraded or stale status.",
+  },
+  {
+    method: "GET",
     path: "/api/v1/taxonomy",
     title: "Read filter taxonomy",
     description: "Valid severities, audiences, tags, source types, and vendor slugs for agent filters.",
@@ -199,6 +205,11 @@ const MACHINE_READABLE_SURFACES = [
     body: "Best for OpenAPI-aware agents, custom tools, SDK generators, and contract tests.",
   },
   {
+    label: "Freshness status",
+    status: "Live",
+    body: "Best for checking whether the Convex-backed snapshot is healthy, degraded, or stale before acting.",
+  },
+  {
     label: "Version Watch skill",
     status: "Live",
     body: "Best for teaching agents when to use the API, how to filter, and how to cite sources.",
@@ -279,6 +290,7 @@ const RESPONSE_FIELDS = [
 const WRAPPER_FIELDS = [
   "schema_version",
   "generated_at",
+  "status_url",
   "count",
   "total_count",
   "next_cursor",
@@ -400,6 +412,7 @@ export default async function AgentAccessPage() {
 
   const filteredUrl = `${baseUrl}/api/v1/updates?vendor=vercel&severity=high&audience=frontend&tag=deployment&limit=10`;
   const latestUrl = `${baseUrl}/api/v1/updates?limit=5`;
+  const statusUrl = `${baseUrl}/api/v1/status`;
   const skillUrl = `${baseUrl}/skills/version-watch/SKILL.md`;
 
   const jsonExample = `{
@@ -541,7 +554,7 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                 <SectionIntro
                   kicker="Overview"
                   title="What the API lets developers build"
-                  body="The API is a read-only change intelligence layer. It does not replace vendor sources. It gives tools and agents a consistent way to discover what changed, who is affected, how urgent it is, what action should happen next, and where the official source lives."
+                  body="The API is a read-only change intelligence layer backed by Convex snapshots. It does not replace vendor sources or scrape them on every request. It gives tools and agents a consistent way to discover what changed, who is affected, how urgent it is, what action should happen next, and whether the feed is currently healthy."
                 />
                 <div className="mt-8 grid gap-4 md:grid-cols-2">
                   {CAPABILITIES.map((item) => (
@@ -603,7 +616,7 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                     <SectionIntro
                       kicker="Response shape"
                       title="Stable snake_case fields for tools and agents"
-                      body="The important field is recommended_action. Agents should use it as an action hint, then link back to the official source when details matter."
+                      body="The important field is recommended_action. Agents should use it as an action hint, check status_url when freshness matters, then link back to the official source when details matter."
                     />
                     <div className="flex flex-wrap gap-2">
                       {RESPONSE_FIELDS.map((field) => (
@@ -636,6 +649,7 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                     language="bash"
                     code={`curl "${skillUrl}"`}
                   />
+                  <CodeBlock title="Freshness status" language="bash" code={`curl "${statusUrl}"`} />
                 </div>
               </section>
 
@@ -664,6 +678,10 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                         Poll every 15 to 60 minutes, store the last update id or timestamp, then post
                         only new matching records. Start with high or critical severity and add vendor,
                         audience, or tag filters before widening the feed.
+                      </p>
+                      <p>
+                        Check /api/v1/status before high-confidence agent reports or release gates.
+                        Treat degraded or stale status as a signal to mention possible incomplete coverage.
                       </p>
                       <p>
                         For Discord and Slack, format the message around vendor, title, summary,

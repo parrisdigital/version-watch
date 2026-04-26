@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { GET as getFeedJson } from "@/app/api/v1/feed.json/route";
 import { GET as getFeedMarkdown } from "@/app/api/v1/feed.md/route";
 import { GET as getOpenApi } from "@/app/api/v1/openapi.json/route";
+import { GET as getStatus } from "@/app/api/v1/status/route";
 import { GET as getTaxonomy } from "@/app/api/v1/taxonomy/route";
 import { GET as getUpdateById } from "@/app/api/v1/updates/[id]/route";
 import { GET as getUpdates } from "@/app/api/v1/updates/route";
@@ -18,6 +20,7 @@ import {
   renderVersionWatchSkillMarkdown,
   serializePublicUpdate,
 } from "@/lib/agent-feed";
+import { buildPublicApiStatus } from "@/lib/agent-status";
 import { events } from "@/lib/mock-data";
 
 describe("agent update filters", () => {
@@ -172,6 +175,7 @@ describe("agent markdown feed", () => {
     const markdown = renderUpdatesMarkdown([update], "2026-04-25T00:00:00.000Z", "https://version-watch.example");
 
     expect(markdown).toContain("# Version Watch Feed");
+    expect(markdown).toContain("API status:");
     expect(markdown).toContain("- Recommended action:");
     expect(markdown).toContain(update.source_url);
   });
@@ -180,6 +184,7 @@ describe("agent markdown feed", () => {
     const markdown = renderAgentsMarkdown("https://version-watch.example");
 
     expect(markdown).toContain("/api/v1/updates");
+    expect(markdown).toContain("/api/v1/status");
     expect(markdown).toContain("recommended_action");
     expect(markdown).toContain("De-duplicate updates by id");
     expect(markdown).toContain("/api/v1/taxonomy");
@@ -194,6 +199,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("issue trackers");
     expect(markdown).toContain("de-duplicate by id");
     expect(markdown).toContain("/api/v1/openapi.json");
+    expect(markdown).toContain("/api/v1/status");
   });
 
   it("renders the portable Version Watch skill", () => {
@@ -202,12 +208,97 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("name: version-watch");
     expect(markdown).toContain("Operating Procedure");
     expect(markdown).toContain("/api/v1/taxonomy");
+    expect(markdown).toContain("/api/v1/status");
     expect(markdown).toContain("De-duplicate by update id");
     expect(markdown).toContain("Release Risk Check");
     expect(markdown).toContain("Dependency Upgrade Review");
     expect(markdown).toContain("Vendor Watch Digest");
     expect(markdown).toContain("CI Preflight");
     expect(markdown).toContain("Team Notification Formatting");
+  });
+});
+
+describe("agent API status", () => {
+  const now = Date.parse("2026-04-26T00:00:00.000Z");
+
+  it("reports healthy status for recent clean refreshes", () => {
+    const status = buildPublicApiStatus(
+      {
+        latestFeedRefresh: {
+          status: "success",
+          startedAt: "2026-04-25T23:40:00.000Z",
+          finishedAt: "2026-04-25T23:45:00.000Z",
+        },
+        latestEvents: [{ publishedAt: "2026-04-25T22:00:00.000Z" }],
+        recentRefreshRuns: [],
+        sources: [
+          {
+            status: "healthy",
+            lastSuccessAt: "2026-04-25T23:45:00.000Z",
+            pollIntervalMinutes: 240,
+          },
+        ],
+      },
+      now,
+    );
+
+    expect(status).toMatchObject({
+      status: "healthy",
+      latest_refresh_age_minutes: 15,
+      active_source_count: 1,
+      degraded_source_count: 0,
+      failing_source_count: 0,
+      stale_source_count: 0,
+    });
+  });
+
+  it("reports degraded status for partial or failing source coverage", () => {
+    const status = buildPublicApiStatus(
+      {
+        latestFeedRefresh: {
+          status: "partial_failure",
+          startedAt: "2026-04-25T23:40:00.000Z",
+          finishedAt: "2026-04-25T23:45:00.000Z",
+        },
+        recentRefreshRuns: [
+          {
+            status: "partial_failure",
+            startedAt: "2026-04-25T23:40:00.000Z",
+            finishedAt: "2026-04-25T23:45:00.000Z",
+          },
+        ],
+        sources: [
+          {
+            status: "failing",
+            lastSuccessAt: "2026-04-25T23:00:00.000Z",
+            pollIntervalMinutes: 240,
+          },
+        ],
+      },
+      now,
+    );
+
+    expect(status.status).toBe("degraded");
+    expect(status.failing_source_count).toBe(1);
+    expect(status.recent_refresh_failures).toBe(1);
+  });
+
+  it("reports stale status when the latest refresh is beyond the public window", () => {
+    const status = buildPublicApiStatus(
+      {
+        latestFeedRefresh: {
+          status: "success",
+          startedAt: "2026-04-25T18:00:00.000Z",
+          finishedAt: "2026-04-25T18:30:00.000Z",
+        },
+        recentRefreshRuns: [],
+        sources: [],
+      },
+      now,
+    );
+
+    expect(status.status).toBe("stale");
+    expect(status.latest_refresh_age_minutes).toBe(330);
   });
 });
 
@@ -220,6 +311,7 @@ describe("agent route handlers", () => {
 
     expect(response.status).toBe(200);
     expect(body.schema_version).toBe("2026-04-26");
+    expect(body.status_url).toBe("https://version-watch.example/api/v1/status");
     expect(body.count).toBe(1);
     expect(body.total_count).toBeGreaterThanOrEqual(1);
     expect(body.filters.limit).toBe(1);
@@ -306,6 +398,7 @@ describe("agent route handlers", () => {
     expect(response.status).toBe(200);
     expect(body.openapi).toBe("3.1.0");
     expect(body.paths["/api/v1/updates"]).toBeDefined();
+    expect(body.paths["/api/v1/status"]).toBeDefined();
     expect(body.paths["/api/v1/taxonomy"]).toBeDefined();
     expect(body.paths["/skills/version-watch/SKILL.md"]).toBeDefined();
     expect(body.paths["/api/v1/updates"].get.parameters).toEqual(
@@ -314,6 +407,29 @@ describe("agent route handlers", () => {
     expect(body.paths["/api/v1/feed.json"].get.parameters).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "limit" })]),
     );
+    expect(body.components.schemas.StatusResponse).toBeDefined();
+    expect(body.components.schemas.UpdatesResponse.required).toContain("status_url");
+  });
+
+  it("serves public API status JSON", async () => {
+    const response = await getStatus(new Request("https://version-watch.example/api/v1/status"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.schema_version).toBe("2026-04-26");
+    expect(["healthy", "degraded", "stale"]).toContain(body.status);
+    expect(body).toMatchObject({
+      active_source_count: expect.any(Number),
+      degraded_source_count: expect.any(Number),
+      failing_source_count: expect.any(Number),
+      stale_source_count: expect.any(Number),
+      recent_refresh_failures: expect.any(Number),
+      coverage: expect.objectContaining({
+        active_vendors: expect.any(Number),
+        paused_vendors: expect.any(Number),
+        unsupported_vendors: expect.any(Number),
+      }),
+    });
   });
 
   it("serves the Version Watch skill Markdown route", async () => {
@@ -336,5 +452,16 @@ describe("agent route handlers", () => {
     expect(response.headers.get("content-type")).toContain("text/markdown");
     expect(body).toContain("# Version Watch Feed");
     expect(body).toContain("- Recommended action:");
+  });
+
+  it("serves JSON feed responses with status discovery", async () => {
+    const response = await getFeedJson(
+      new Request("https://version-watch.example/api/v1/feed.json?limit=1"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.status_url).toBe("https://version-watch.example/api/v1/status");
+    expect(body.updates).toHaveLength(1);
   });
 });

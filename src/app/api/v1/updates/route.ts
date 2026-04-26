@@ -24,14 +24,16 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: parsed.error }, { status: 400, headers: PUBLIC_AGENT_HEADERS });
   }
 
+  const baseUrl = getPublicBaseUrl(request.url);
   const events = await getAllPublicEvents();
   const page = paginateEventsForPublicUpdates(events, parsed.filters);
-  const updates = serializePublicUpdates(page.events, getPublicBaseUrl(request.url));
+  const updates = serializePublicUpdates(page.events, baseUrl);
 
   return NextResponse.json(
     {
       schema_version: PUBLIC_API_SCHEMA_VERSION,
       generated_at: new Date().toISOString(),
+      status_url: new URL("/api/v1/status", baseUrl).toString(),
       count: updates.length,
       total_count: page.total_count,
       next_cursor: page.next_cursor,
