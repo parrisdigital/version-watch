@@ -43,6 +43,7 @@ describe("agent update filters", () => {
         since: "2026-04-24T00:00:00Z",
         vendor: "Stripe",
         severity: "high",
+        release_class: "pricing",
         audience: "backend",
         tag: "api",
         limit: "250",
@@ -55,6 +56,7 @@ describe("agent update filters", () => {
         since: "2026-04-24T00:00:00.000Z",
         vendor: "stripe",
         severity: "high",
+        releaseClass: "pricing",
         audience: "backend",
         tag: "api",
         limit: 100,
@@ -71,6 +73,20 @@ describe("agent update filters", () => {
         error: {
           code: "invalid_filter",
           message: "Invalid since timestamp. Use an ISO 8601 timestamp.",
+        },
+      },
+    });
+  });
+
+  it("rejects invalid release_class filters", () => {
+    const parsed = parseUpdateFilters(new URLSearchParams({ release_class: "major-news" }));
+
+    expect(parsed).toEqual({
+      ok: false,
+      error: {
+        error: {
+          code: "invalid_filter",
+          message: "Invalid release_class. Use a value returned by /api/v1/taxonomy.",
         },
       },
     });
@@ -291,6 +307,10 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Do not modify code, update dependencies, deploy, create issues, post notifications, or submit relevance feedback unless the user explicitly asks");
     expect(markdown).toContain("source_detail_url");
     expect(markdown).toContain("Build Your Own Read-Only Changelog System");
+    expect(markdown).toContain("Watchlist Filter Model");
+    expect(markdown).toContain("Notification Worker Pattern");
+    expect(markdown).toContain("Query /api/v1/clusters");
+    expect(markdown).toContain("Native Integration Roadmap");
   });
 
   it("renders llms.txt with broad integration guidance", () => {
@@ -308,6 +328,8 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("/api/v1/status/vendors");
     expect(markdown).toContain("Do not post, open issues, change code, or submit feedback unless the user explicitly asks");
     expect(markdown).toContain("read-only changelog dashboards");
+    expect(markdown).toContain("prefer /api/v1/clusters");
+    expect(markdown).toContain("Discord webhook first");
   });
 
   it("renders the portable Version Watch skill", () => {
@@ -332,6 +354,9 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Do not modify code, update dependencies, deploy, create issues, post notifications");
     expect(markdown).toContain("source_detail_url");
     expect(markdown).toContain("Read-Only Changelog Dashboard");
+    expect(markdown).toContain("Cluster-First Notification Worker");
+    expect(markdown).toContain("Store every delivered update id");
+    expect(markdown).toContain("Discord webhook first");
   });
 });
 
@@ -490,6 +515,7 @@ describe("agent route handlers", () => {
     expect(body.count).toBe(1);
     expect(body.total_count).toBeGreaterThanOrEqual(1);
     expect(body.filters.limit).toBe(1);
+    expect(body.filters.release_class).toBeNull();
     expect(body.updates[0].vendor_slug).toBe("stripe");
   });
 
@@ -594,7 +620,10 @@ describe("agent route handlers", () => {
     expect(body.paths["/api/v1/relevance"]).toBeDefined();
     expect(body.paths["/skills/version-watch/SKILL.md"]).toBeDefined();
     expect(body.paths["/api/v1/updates"].get.parameters).toEqual(
-      expect.arrayContaining([expect.objectContaining({ name: "cursor" })]),
+      expect.arrayContaining([
+        expect.objectContaining({ name: "cursor" }),
+        expect.objectContaining({ name: "release_class" }),
+      ]),
     );
     expect(body.paths["/api/v1/feed.json"].get.parameters).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "limit" })]),
@@ -620,6 +649,7 @@ describe("agent route handlers", () => {
     expect(body.components.schemas.UpdatesResponse.properties.filters.$ref).toBe(
       "#/components/schemas/UpdateFilters",
     );
+    expect(body.components.schemas.UpdateFilters.required).toContain("release_class");
     expect(body.components.schemas.ErrorResponse.properties.error.required).toEqual(["code", "message"]);
   });
 
@@ -633,6 +663,7 @@ describe("agent route handlers", () => {
     expect(body.schema_version).toBe("2026-04-26");
     expect(body.status_url).toBe("https://version-watch.example/api/v1/status");
     expect(body.count).toBeGreaterThan(0);
+    expect(body.filters.release_class).toBeNull();
     expect(body.clusters[0]).toMatchObject({
       id: expect.any(String),
       kind: expect.stringMatching(/single|cluster/),

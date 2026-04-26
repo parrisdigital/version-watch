@@ -164,6 +164,11 @@ const FILTERS = [
     behavior: "Maps to importance bands: critical, high, medium, or low.",
   },
   {
+    name: "release_class",
+    example: "model_launch",
+    behavior: "Matches the change type, such as breaking, security, model_launch, api_change, sdk_release, cli_patch, or beta_release.",
+  },
+  {
     name: "audience",
     example: "backend",
     behavior: "Matches whoShouldCare values such as frontend, backend, infra, AI, or product.",
@@ -276,9 +281,14 @@ const MACHINE_READABLE_SURFACES = [
     body: "Best for collecting impacted, needs-review, and no-impact feedback without turning records into an open comment thread.",
   },
   {
-    label: "RSS and generic webhooks",
+    label: "Notification worker recipes",
+    status: "Live",
+    body: "Best for building user-owned polling workers that post grouped updates into chat, CI, issue trackers, dashboards, and agents.",
+  },
+  {
+    label: "Native webhooks and RSS",
     status: "Next",
-    body: "Would support feed readers, automation tools, and push-based team notifications.",
+    body: "Self-serve push delivery comes after the public API, freshness model, and alert payload contract keep proving reliable.",
   },
   {
     label: "MCP server",
@@ -546,43 +556,93 @@ export default async function AgentAccessPage() {
   "version_watch_url": "${baseUrl}/events/..."
 }`;
 
-  const discordExample = `const updates = await fetch(
-  "${baseUrl}/api/v1/updates?severity=high&limit=10"
+  const discordExample = `const status = await fetch("${baseUrl}/api/v1/status")
+  .then((response) => response.json());
+const page = await fetch(
+  "${baseUrl}/api/v1/clusters?severity=high&limit=10"
 ).then((response) => response.json());
 
-for (const update of updates.updates) {
+for (const cluster of page.clusters) {
+  if (cluster.updates.every((update) => deliveredIds.has(update.id))) continue;
+  const primary = cluster.updates[0];
+
   await fetch(process.env.DISCORD_WEBHOOK_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       content:
-        "**" + update.vendor + ": " + update.title + "**\\n" +
-        update.summary + "\\n" +
-        "Action: " + update.recommended_action + "\\n" +
-        "Source: " + update.source_detail_url + "\\n" +
-        update.version_watch_url,
+        "**" + cluster.title + "**\\n" +
+        cluster.summary + "\\n" +
+        "Action: " + cluster.recommended_action + "\\n" +
+        "Source: " + primary.source_detail_url + "\\n" +
+        "Version Watch: " + primary.version_watch_url + "\\n" +
+        (status.status === "healthy" ? "" : "Freshness: " + status.status),
     }),
   });
+
+  for (const update of cluster.updates) deliveredIds.add(update.id);
 }`;
 
-  const slackExample = `const updates = await fetch(
-  "${baseUrl}/api/v1/updates?vendor=stripe&severity=high&limit=5"
+  const slackExample = `const page = await fetch(
+  "${baseUrl}/api/v1/clusters?vendor=stripe&severity=high&limit=5"
 ).then((response) => response.json());
 
 await fetch(process.env.SLACK_WEBHOOK_URL, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
-    text: updates.updates
-      .map((update) =>
-        "*" + update.vendor + ": " + update.title + "*\\n" +
-        update.recommended_action + "\\n" +
-        update.source_detail_url + "\\n" +
-        update.version_watch_url
+    text: page.clusters
+      .filter((cluster) =>
+        !cluster.updates.every((update) => deliveredIds.has(update.id))
+      )
+      .map((cluster) =>
+        "*" + cluster.title + "*\\n" +
+        cluster.recommended_action + "\\n" +
+        cluster.updates[0].source_detail_url + "\\n" +
+        cluster.updates[0].version_watch_url
       )
       .join("\\n\\n"),
   }),
 });`;
+
+  const notificationWorkerExample = `const watchlist = {
+  vendor: "openai",
+  severity: "high",
+  audience: "ai",
+  tag: "api",
+  release_class: "model_launch"
+};
+
+const status = await fetch("${baseUrl}/api/v1/status").then((r) => r.json());
+const url = new URL("${baseUrl}/api/v1/clusters");
+url.searchParams.set("vendor", watchlist.vendor);
+url.searchParams.set("severity", watchlist.severity);
+url.searchParams.set("audience", watchlist.audience);
+url.searchParams.set("tag", watchlist.tag);
+url.searchParams.set("release_class", watchlist.release_class);
+url.searchParams.set("limit", "25");
+
+const page = await fetch(url).then((r) => r.json());
+
+for (const cluster of page.clusters) {
+  const alreadySent = cluster.updates.every((update) =>
+    deliveredIds.has(update.id)
+  );
+  if (alreadySent) continue;
+
+  const primary = cluster.updates[0];
+  await postToYourDestination({
+    title: cluster.title,
+    severity: cluster.severity,
+    release_class: cluster.release_class,
+    recommended_action: cluster.recommended_action,
+    source_detail_url: primary.source_detail_url,
+    version_watch_url: primary.version_watch_url,
+    freshness: status.status,
+  });
+
+  for (const update of cluster.updates) deliveredIds.add(update.id);
+}`;
 
   const syncExample = `let cursor = "";
 const seen = new Set(await loadDeliveredUpdateIds());
@@ -903,6 +963,7 @@ renderDashboard({
                 </div>
                 <div className="mt-8 grid gap-4 xl:grid-cols-2">
                   <CodeBlock title="Latest updates" language="bash" code={`curl "${latestUrl}"`} />
+                  <CodeBlock title="Cluster-first notification worker" language="ts" code={notificationWorkerExample} />
                   <CodeBlock title="Discord webhook worker" language="ts" code={discordExample} />
                   <CodeBlock title="Slack incoming webhook" language="ts" code={slackExample} />
                   <CodeBlock title="Structured relevance signal" language="ts" code={relevanceExample} />
@@ -913,13 +974,17 @@ renderDashboard({
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
                       <p>
-                        If you build a bot or worker, poll every 15 to 60 minutes, store the last update
-                        id or timestamp, then deliver only new matching records. Start with high or
-                        critical severity and add vendor, audience, or tag filters before widening the feed.
+                        If you build a bot or worker, poll every 15 to 60 minutes, store delivered
+                        update ids, then deliver only new matching records. Start with high or
+                        critical severity and add vendor, audience, tag, or release class filters before widening the feed.
                       </p>
                       <p>
                         Check /api/v1/status before high-confidence agent reports or release gates.
                         Treat degraded or stale status as a signal to mention possible incomplete coverage.
+                      </p>
+                      <p>
+                        Use /api/v1/clusters by default for alerts. It collapses same-vendor release
+                        bursts into one digest item while keeping every raw update available inside the cluster.
                       </p>
                       <p>
                         For vendor-specific workflows, call /api/v1/status/vendors/[slug] to see freshness
@@ -986,8 +1051,9 @@ renderDashboard({
                       The API, Markdown feeds, signal v2, and structured feedback are live.
                     </h2>
                     <p className="vw-copy max-w-3xl text-base">
-                      The next product step is self-serve watchlists, public webhook configuration,
-                      RSS, email, and MCP once the freshness and signal foundations keep proving reliable.
+                      The next product step is self-serve watchlists and native delivery after the
+                      BYO polling contract keeps proving reliable: Discord webhook first, Slack
+                      second, email and RSS after that, then MCP once API and alert behavior are stable.
                     </p>
                   </div>
                   <Button asChild variant="outline">

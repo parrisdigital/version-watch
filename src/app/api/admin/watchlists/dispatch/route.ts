@@ -3,8 +3,20 @@ import { NextResponse } from "next/server";
 
 import { api } from "../../../../../../convex/_generated/api";
 import { getPublicBaseUrl, serializePublicUpdate } from "@/lib/agent-feed";
+import { clusterChangeEvents } from "@/lib/change-clusters";
+import { comparePublicClusters, serializePublicCluster } from "@/lib/public-clusters";
 import { getAllPublicEvents } from "@/lib/site-data";
-import { buildWebhookPayload, watchlistMatchesUpdate, type WatchlistConfig } from "@/lib/watchlist-delivery";
+import {
+  buildCanonicalNotificationPayload,
+  getWatchlistDeliveryMode,
+  notificationAlreadyDelivered,
+  renderNotificationPayload,
+  undeliveredNotificationRecordIds,
+  watchlistDeliveryKey,
+  watchlistMatchesUpdate,
+  type NotificationSubject,
+  type WatchlistConfig,
+} from "@/lib/watchlist-delivery";
 
 const convexApi = api as any;
 
@@ -64,6 +76,12 @@ export async function POST(request: Request) {
   const dryRun = payload.dry_run === true || payload.dryRun === true;
   const limit = Math.max(1, Math.min(typeof payload.limit === "number" ? Math.trunc(payload.limit) : 10, 50));
   const watchlistId = typeof payload.watchlist_id === "string" ? payload.watchlist_id : undefined;
+  const deliveryModeOverride =
+    payload.delivery_mode === "raw" || payload.deliveryMode === "raw"
+      ? "raw"
+      : payload.delivery_mode === "clustered" || payload.deliveryMode === "clustered"
+        ? "clustered"
+        : undefined;
   const adminSecret = process.env.ADMIN_SECRET!;
 
   try {
@@ -75,43 +93,76 @@ export async function POST(request: Request) {
       getAllPublicEvents(),
     ]);
     const baseUrl = getPublicBaseUrl(request.url);
-    const updates = events.map((event) => serializePublicUpdate(event, baseUrl));
-    const delivered = new Set(
+    const delivered = new Set<string>(
       state.deliveries.map((delivery: any) => `${String(delivery.watchlist_id)}:${delivery.event_slug}`),
     );
     const results = [];
 
     for (const watchlist of state.watchlists as WatchlistConfig[]) {
-      for (const update of updates) {
-        if (results.length >= limit) break;
-        if (delivered.has(`${watchlist.id}:${update.id}`)) continue;
-        if (!watchlistMatchesUpdate(watchlist, update)) continue;
+      const configuredWatchlist = {
+        ...watchlist,
+        delivery_mode: deliveryModeOverride ?? getWatchlistDeliveryMode(watchlist),
+      } satisfies WatchlistConfig;
+      const deliveryMode = getWatchlistDeliveryMode(configuredWatchlist);
+      const matchingEvents = events.filter((event) => {
+        return watchlistMatchesUpdate(configuredWatchlist, serializePublicUpdate(event, baseUrl));
+      });
+      const subjects: NotificationSubject[] =
+        deliveryMode === "raw"
+          ? matchingEvents.map((event) => ({ kind: "update", update: serializePublicUpdate(event, baseUrl) }))
+          : clusterChangeEvents(matchingEvents, { minClusterSize: 2, windowHours: 24 })
+              .sort(comparePublicClusters)
+              .map((cluster) => ({ kind: "cluster", cluster: serializePublicCluster(cluster, baseUrl) }));
 
-        const webhookPayload = buildWebhookPayload(watchlist, update);
+      for (const subject of subjects) {
+        if (results.length >= limit) break;
+        const notification = buildCanonicalNotificationPayload(configuredWatchlist, subject, {
+          statusUrl: new URL("/api/v1/status", baseUrl).toString(),
+        });
+        if (notificationAlreadyDelivered(configuredWatchlist.id, notification, delivered)) continue;
+
+        const webhookPayload = renderNotificationPayload(configuredWatchlist.webhook_type, notification);
         if (dryRun) {
           results.push({
-            watchlist_id: watchlist.id,
-            watchlist: watchlist.name,
-            update_id: update.id,
+            watchlist_id: configuredWatchlist.id,
+            watchlist: configuredWatchlist.name,
+            notification_id: notification.notification_id,
+            notification_kind: notification.kind,
+            update_ids: notification.updates.map((update) => update.id),
+            delivery_mode: deliveryMode,
             dry_run: true,
             matched: true,
           });
           continue;
         }
 
-        const response = await postWebhook(watchlist, webhookPayload);
-        await fetchMutation(convexApi.watchlists.recordDelivery, {
-          adminSecret,
-          watchlistId: watchlist.id,
-          eventSlug: update.id,
-          status: response.ok ? "sent" : "failure",
-          responseStatus: response.status,
-          errorMessage: response.error,
-        });
+        const response = await postWebhook(configuredWatchlist, webhookPayload);
+        const idsToRecord = response.ok
+          ? undeliveredNotificationRecordIds(configuredWatchlist.id, notification, delivered)
+          : [notification.dedupe_key];
+
+        for (const eventSlug of idsToRecord) {
+          await fetchMutation(convexApi.watchlists.recordDelivery, {
+            adminSecret,
+            watchlistId: configuredWatchlist.id,
+            eventSlug,
+            status: response.ok ? "sent" : "failure",
+            responseStatus: response.status,
+            errorMessage: response.error,
+          });
+
+          if (response.ok) {
+            delivered.add(watchlistDeliveryKey(configuredWatchlist.id, eventSlug));
+          }
+        }
+
         results.push({
-          watchlist_id: watchlist.id,
-          watchlist: watchlist.name,
-          update_id: update.id,
+          watchlist_id: configuredWatchlist.id,
+          watchlist: configuredWatchlist.name,
+          notification_id: notification.notification_id,
+          notification_kind: notification.kind,
+          update_ids: notification.updates.map((update) => update.id),
+          delivery_mode: deliveryMode,
           sent: response.ok,
           response_status: response.status,
           error: response.error ?? null,

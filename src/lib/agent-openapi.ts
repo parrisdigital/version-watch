@@ -1,4 +1,5 @@
 import { DEFAULT_UPDATE_LIMIT, MAX_UPDATE_LIMIT, PUBLIC_API_SCHEMA_VERSION } from "@/lib/agent-feed";
+import { RELEASE_CLASSES } from "@/lib/classification/signal";
 
 export function buildOpenApiDocument(baseUrl: string) {
   return {
@@ -285,6 +286,7 @@ export function buildOpenApiDocument(baseUrl: string) {
                 since: null,
                 vendor: "vercel",
                 severity: "high",
+                release_class: "api_change",
                 audience: null,
                 tag: "deployment",
                 cursor: null,
@@ -316,11 +318,14 @@ export function buildOpenApiDocument(baseUrl: string) {
         },
         UpdateFilters: {
           type: "object",
-          required: ["since", "vendor", "severity", "audience", "tag", "cursor", "limit"],
+          required: ["since", "vendor", "severity", "release_class", "audience", "tag", "cursor", "limit"],
           properties: {
             since: { anyOf: [{ type: "string", format: "date-time" }, { type: "null" }] },
             vendor: { anyOf: [{ type: "string" }, { type: "null" }] },
             severity: { anyOf: [{ type: "string", enum: ["critical", "high", "medium", "low"] }, { type: "null" }] },
+            release_class: {
+              anyOf: [{ type: "string", enum: [...RELEASE_CLASSES] }, { type: "null" }],
+            },
             audience: { anyOf: [{ type: "string" }, { type: "null" }] },
             tag: { anyOf: [{ type: "string" }, { type: "null" }] },
             cursor: { anyOf: [{ type: "string" }, { type: "null" }] },
@@ -763,6 +768,7 @@ function updateFilterParameters() {
     parameter("since", "ISO 8601 timestamp. Returns updates published at or after this time.", "string", "date-time"),
     parameter("vendor", "Vendor slug such as openai, stripe, vercel, github, or cloudflare."),
     parameter("severity", "Importance band.", "string", undefined, ["critical", "high", "medium", "low"]),
+    parameter("release_class", "Change type such as breaking, security, model_launch, api_change, sdk_release, cli_patch, beta_release, docs_update, or routine_release.", "string", undefined, [...RELEASE_CLASSES]),
     parameter("audience", "Audience label such as frontend, backend, infra, ai, product, security, or compliance."),
     parameter("tag", "Category or affected stack tag such as api, auth, billing, sdk, agents, hosting, or deployments."),
     parameter("limit", `Positive integer. Defaults to ${DEFAULT_UPDATE_LIMIT} and clamps at ${MAX_UPDATE_LIMIT}.`, "integer"),

@@ -45,6 +45,7 @@ export async function GET(request: Request) {
         since: parsed.filters.since ?? null,
         vendor: parsed.filters.vendor ?? null,
         severity: parsed.filters.severity ?? null,
+        release_class: parsed.filters.releaseClass ?? null,
         audience: parsed.filters.audience ?? null,
         tag: parsed.filters.tag ?? null,
         cursor: parsed.filters.cursor ?? null,

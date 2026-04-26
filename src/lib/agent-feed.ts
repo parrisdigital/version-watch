@@ -22,6 +22,7 @@ export const PUBLIC_AGENT_HEADERS = {
 
 export const PUBLIC_SEVERITIES = ["critical", "high", "medium", "low"] as const satisfies readonly ImportanceBand[];
 const severityBands = new Set<ImportanceBand>(PUBLIC_SEVERITIES);
+const releaseClassValues = new Set<ReleaseClass>(RELEASE_CLASSES);
 
 export type PublicUpdate = {
   id: string;
@@ -79,6 +80,7 @@ export type UpdateFilters = {
   sinceTimestamp?: number;
   vendor?: string;
   severity?: ImportanceBand;
+  releaseClass?: ReleaseClass;
   audience?: string;
   tag?: string;
   cursor?: string;
@@ -202,6 +204,14 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
     };
   }
 
+  const releaseClass = normalize(searchParams.get("release_class") ?? searchParams.get("releaseClass"));
+  if (releaseClass && !releaseClassValues.has(releaseClass as ReleaseClass)) {
+    return {
+      ok: false,
+      error: publicApiError("invalid_filter", "Invalid release_class. Use a value returned by /api/v1/taxonomy."),
+    };
+  }
+
   const limitRaw = searchParams.get("limit")?.trim();
   let limit = DEFAULT_UPDATE_LIMIT;
 
@@ -232,6 +242,7 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
       sinceTimestamp,
       vendor: normalize(searchParams.get("vendor")) || undefined,
       severity: severity ? (severity as ImportanceBand) : undefined,
+      releaseClass: releaseClass ? (releaseClass as ReleaseClass) : undefined,
       audience: normalize(searchParams.get("audience")) || undefined,
       tag: normalize(searchParams.get("tag")) || undefined,
       cursor: cursor || undefined,
@@ -261,6 +272,10 @@ export function filterEventsForPublicUpdateMatches<T extends MockEvent>(
       }
 
       if (filters.severity && getEventSignalMetadata(event).importanceBand !== filters.severity) {
+        return false;
+      }
+
+      if (filters.releaseClass && getEventSignalMetadata(event).releaseClass !== filters.releaseClass) {
         return false;
       }
 
@@ -671,6 +686,7 @@ Use query parameters on /api/v1/updates, /api/v1/clusters, /api/v1/feed.json, /a
 - since: ISO 8601 timestamp, for example 2026-04-24T00:00:00Z
 - vendor: vendor slug, for example openai, stripe, vercel, github, cloudflare, convex
 - severity: critical, high, medium, or low
+- release_class: breaking, security, model_launch, pricing, policy, api_change, sdk_release, cli_patch, beta_release, docs_update, or routine_release
 - audience: frontend, backend, infra, ai, product, security, compliance, or related audience labels
 - tag: matches categories, topic tags, or affected stack tags such as api, auth, sdk, frontier-model, cli-release, agents, hosting, deployments
 - limit: defaults to 25 and clamps at 100
@@ -731,6 +747,34 @@ Agents should mention degraded or stale status when producing release gates, inc
 - Do not decode it or build offset assumptions around it.
 - Store delivered update ids and de-duplicate by id before posting alerts or creating tasks.
 
+## Watchlist Filter Model
+
+Use this shape for user-owned notification workers, dashboards, and release checks:
+
+- vendors: vendor slugs such as openai, vercel, stripe, github, supabase, convex
+- severities: critical, high, medium, low
+- audiences: frontend, backend, infra, ai, product, security, compliance
+- tags: api, auth, billing, hosting, deployments, sdk, frontier-model, deprecation, pricing-change
+- release_classes: breaking, security, model_launch, pricing, policy, api_change, sdk_release, cli_patch, beta_release, docs_update, routine_release
+
+Start narrow. Good alert quality usually means a vendor filter plus severity, release_class, audience, or tag. Store delivered update ids and never alert twice for the same id.
+
+## Notification Worker Pattern
+
+Version Watch does not require native integrations for users to get value. Any user-owned worker can poll the public API and post into Discord, Slack, Microsoft Teams, Telegram, CI/CD, issue trackers, dashboards, or knowledge bases.
+
+Recommended worker behavior:
+
+1. Poll /api/v1/status first when freshness matters.
+2. Query /api/v1/clusters, not raw /api/v1/updates, for alert digests.
+3. Use watchlist filters: vendor, severity, audience, tag, release_class, and limit.
+4. De-duplicate by every update id inside each cluster before posting.
+5. Include vendor, title, severity, release_class, recommended_action, source_detail_url, and version_watch_url in the message.
+6. Include a degraded or stale freshness caveat when /api/v1/status is not healthy.
+7. Use raw /api/v1/updates only when a workflow truly needs individual records.
+
+Cluster-first alerting prevents noisy vendors from flooding channels when several patch, beta, or GitHub releases land close together.
+
 ## Use Cases
 
 Agents should use Version Watch as read-only changelog intelligence to:
@@ -751,7 +795,7 @@ Agents should use Version Watch as read-only changelog intelligence to:
 2. Call /api/v1/status when freshness or operational confidence matters.
 3. Call /api/v1/vendors if you need valid vendor slugs.
 4. Call /api/v1/taxonomy if you need valid severities, audiences, tags, source types, and vendor slugs.
-5. Query /api/v1/updates with vendor, severity, audience, tag, since, limit, and cursor filters.
+5. Query /api/v1/updates with vendor, severity, release_class, audience, tag, since, limit, and cursor filters.
 6. Continue pagination while next_cursor is present and more results are needed.
 7. De-duplicate updates by id before reporting results or formatting notifications.
 8. Summarize only updates that match the user or project context.
@@ -762,10 +806,15 @@ Agents should use Version Watch as read-only changelog intelligence to:
 ## Integration Guidance
 
 - Discord or Slack: a user-owned scheduled worker can poll filtered updates and post vendor, title, summary, recommended_action, source_detail_url, and version_watch_url.
+- Notification workers: use /api/v1/clusters by default, de-duplicate by update ids, and post a grouped payload into any user-owned destination.
 - CI/CD: query high or critical updates before release and flag matching vendor, API, SDK, auth, hosting, infra, or billing changes.
 - Agents and IDEs: fetch context before suggesting dependency upgrades, migration plans, or code changes.
 - Issue trackers: draft review task content for critical or high updates that match a team's vendors or tags.
 - Data platforms: store update id, vendor_slug, severity, published_at, tags, recommended_action, source_detail_url, source_surface_url, and version_watch_url.
+
+## Native Integration Roadmap
+
+Native integrations come after the BYO polling and alert payload contract is reliable. The intended order is Discord webhook first, Slack second, email and RSS after that, then MCP after the API and alerting behavior are proven.
 
 ## Build Your Own Read-Only Changelog System
 
@@ -783,7 +832,7 @@ Developers can use Version Watch as a public changelog data layer for their own 
 - Do not claim to have read the official source unless you actually open source_detail_url or source_url.
 - Do not modify code, update dependencies, deploy, create issues, post notifications, or submit relevance feedback unless the user explicitly asks for that action.
 - Do not notify repeatedly for the same id.
-- Prefer filtered queries over broad feeds for notifications.
+- Prefer /api/v1/clusters plus filtered queries over broad raw feeds for notifications.
 - For recurring polling, use a 15 to 60 minute interval unless the user asks for a different cadence.
 - If /api/v1/status is degraded or stale, include that caveat in summaries and avoid claiming complete coverage.
 - Do not submit /api/v1/relevance feedback unless the user explicitly provides that signal.
@@ -842,6 +891,10 @@ Fetch updates with the narrowest useful filters, check status_url for high-confi
 
 For user-owned systems, sync /api/v1/updates into your own database by storing id, vendor_slug, published_at, severity, release_class, recommended_action, source_detail_url, source_surface_url, and version_watch_url.
 
+For notification workers, prefer /api/v1/clusters over /api/v1/updates so related same-vendor release bursts become one digest item. De-duplicate by every update id inside a cluster before posting to Discord, Slack, Teams, CI/CD, issue trackers, dashboards, or internal agents.
+
+Native integrations should wait until the BYO alert contract keeps proving reliable. The intended order is Discord webhook first, Slack second, email and RSS after that, then MCP.
+
 Only submit /api/v1/relevance when a human explicitly confirms whether an update impacted them, needs review, or had no impact.
 `;
 }
@@ -889,7 +942,7 @@ This skill is for retrieving, filtering, citing, and summarizing changelog intel
 2. If freshness matters, call /api/v1/status and tell the user if the feed is degraded or stale.
 3. If vendor slugs or valid tags are uncertain, call /api/v1/vendors and /api/v1/taxonomy.
 4. Query /api/v1/updates with the narrowest useful filters. Use /api/v1/clusters for digest-style views.
-5. Use severity, audience, tag, since, and vendor filters before broad queries.
+5. Use vendor, severity, release_class, audience, tag, and since filters before broad queries.
 6. Follow next_cursor only when more matching results are needed.
 7. De-duplicate by update id before reporting results or formatting notifications.
 8. Use release_class, impact_confidence, signal_reasons, summary, why_it_matters, and recommended_action to explain the impact.
@@ -917,6 +970,7 @@ This skill is for retrieving, filtering, citing, and summarizing changelog intel
 
 - Latest high-signal changes: ${new URL("/api/v1/updates?severity=high&limit=10", normalizedBaseUrl).toString()}
 - Critical changes: ${new URL("/api/v1/updates?severity=critical&limit=10", normalizedBaseUrl).toString()}
+- Model launches: ${new URL("/api/v1/updates?release_class=model_launch&limit=10", normalizedBaseUrl).toString()}
 - Vendor-specific changes: ${new URL("/api/v1/updates?vendor=openai&limit=10", normalizedBaseUrl).toString()}
 - Stack-tag changes: ${new URL("/api/v1/updates?tag=auth&limit=10", normalizedBaseUrl).toString()}
 - Recent backend changes: ${new URL("/api/v1/updates?audience=backend&since=2026-04-24T00:00:00Z&limit=10", normalizedBaseUrl).toString()}
@@ -967,6 +1021,8 @@ Fail softly when status is degraded or stale: report the matching updates but te
 
 Use this structure for Discord, Slack, Teams, email, or issue trackers.
 
+Prefer /api/v1/clusters for notification digests. A cluster contains one or more update records; store every update id in the cluster after delivery so future polls do not repeat the same records.
+
     Vendor: {vendor}
     Title: {title}
     Severity: {severity}
@@ -977,8 +1033,28 @@ Use this structure for Discord, Slack, Teams, email, or issue trackers.
     Source detail: {source_detail_url}
     Tracked source: {source_surface_name} ({source_surface_type}) {source_surface_url}
     Version Watch: {version_watch_url}
+    Freshness caveat: include when /api/v1/status is degraded or stale
 
 Format one message per update or one grouped digest. Do not send it unless the user explicitly asks or the user-owned workflow is already configured to post. Store delivered ids to avoid repeats.
+
+### Cluster-First Notification Worker
+
+Use this when a developer wants to route updates into their own Slack, Discord, Teams, CI, issue tracker, dashboard, or agent runtime.
+
+    GET ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
+    GET ${new URL("/api/v1/clusters?severity=high&limit=25", normalizedBaseUrl).toString()}
+
+Worker rules:
+
+1. Check status first when the alert will affect release or incident decisions.
+2. Poll every 15 to 60 minutes unless the user asks for a different cadence.
+3. Query /api/v1/clusters with vendor, severity, audience, tag, release_class, and limit filters.
+4. Skip a cluster when every contained update id has already been delivered.
+5. Store every delivered update id, not only the cluster id.
+6. Include source_detail_url, version_watch_url, release_class, recommended_action, and a freshness caveat when needed.
+7. Use /api/v1/updates only for workflows that need individual records.
+
+Native delivery is intentionally later. The product sequence should be Discord webhook first, Slack second, email and RSS after that, then MCP after the API and alerting behavior are proven.
 
 ### Read-Only Changelog Dashboard
 
