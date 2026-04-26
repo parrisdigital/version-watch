@@ -14,7 +14,6 @@ import {
   MessageSquare,
   ShieldCheck,
   Terminal,
-  Webhook,
 } from "lucide-react";
 
 import { CodeBlock } from "@/components/docs/code-block";
@@ -155,8 +154,39 @@ const FILTERS = [
   },
   {
     name: "cursor",
-    example: "eyJvZmZzZXQiOjI1fQ",
-    behavior: "Uses the opaque next_cursor value to fetch the next page of matching updates.",
+    example: "eyJ2IjoyLCJw...",
+    behavior:
+      "Uses the opaque sort-key next_cursor value to fetch the next page without offset drift.",
+  },
+] as const;
+
+const STATUS_STATES = [
+  {
+    name: "healthy",
+    behavior: "The Convex-backed snapshot was refreshed within the expected window and active sources are clean.",
+  },
+  {
+    name: "degraded",
+    behavior: "The snapshot is recent, but one or more active sources failed, are stale, or refreshed partially.",
+  },
+  {
+    name: "stale",
+    behavior: "No acceptable refresh has completed inside the freshness window, so consumers should warn users.",
+  },
+] as const;
+
+const ERROR_CODES = [
+  {
+    code: "invalid_filter",
+    behavior: "A query parameter is malformed, unsupported, or outside the allowed values.",
+  },
+  {
+    code: "invalid_cursor",
+    behavior: "The cursor was not returned by Version Watch or no longer matches the v1 cursor format.",
+  },
+  {
+    code: "not_found",
+    behavior: "The requested update id does not exist in the public snapshot.",
   },
 ] as const;
 
@@ -298,6 +328,8 @@ const WRAPPER_FIELDS = [
   "updates",
 ] as const;
 
+const ERROR_FIELDS = ["error.code", "error.message"] as const;
+
 const FEATURED_VENDOR_SLUGS = [
   "openai",
   "anthropic",
@@ -378,6 +410,40 @@ function FilterRows() {
             <p className="text-sm leading-relaxed text-muted-foreground">{filter.behavior}</p>
           </div>
           {index < FILTERS.length - 1 ? <Separator /> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StatusRows() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      {STATUS_STATES.map((state, index) => (
+        <div key={state.name}>
+          <div className="grid gap-3 p-4 sm:grid-cols-[9rem_1fr] sm:p-5">
+            <Badge variant={state.name === "healthy" ? "secondary" : "outline"} className="w-fit font-mono">
+              {state.name}
+            </Badge>
+            <p className="text-sm leading-relaxed text-muted-foreground">{state.behavior}</p>
+          </div>
+          {index < STATUS_STATES.length - 1 ? <Separator /> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ErrorRows() {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      {ERROR_CODES.map((error, index) => (
+        <div key={error.code}>
+          <div className="grid gap-3 p-4 sm:grid-cols-[10rem_1fr] sm:p-5">
+            <code className="font-mono text-sm text-foreground">{error.code}</code>
+            <p className="text-sm leading-relaxed text-muted-foreground">{error.behavior}</p>
+          </div>
+          {index < ERROR_CODES.length - 1 ? <Separator /> : null}
         </div>
       ))}
     </div>
@@ -561,6 +627,23 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                     <DocsCard key={item.title} icon={item.icon} title={item.title} body={item.body} />
                   ))}
                 </div>
+                <div className="mt-8 grid gap-6 xl:grid-cols-[0.72fr_1.28fr] xl:items-start">
+                  <div className="flex flex-col gap-3">
+                    <h3 className="text-lg font-semibold tracking-tight text-foreground">
+                      Freshness contract
+                    </h3>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      Version Watch reads from Convex snapshots. It does not scrape vendors on each
+                      API request. When freshness matters, check /api/v1/status before treating results
+                      as operationally complete.
+                    </p>
+                    <p className="text-sm leading-relaxed text-muted-foreground">
+                      Paused and unsupported sources remain visible as coverage states, but they do not
+                      create active freshness debt. Active and degraded sources are the monitored set.
+                    </p>
+                  </div>
+                  <StatusRows />
+                </div>
                 <div className="mt-10">
                   <h3 className="text-lg font-semibold tracking-tight text-foreground">
                     Machine-readable surfaces
@@ -632,6 +715,14 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                         </Badge>
                       ))}
                     </div>
+                    <div className="flex flex-wrap gap-2">
+                      {ERROR_FIELDS.map((field) => (
+                        <Badge key={field} variant="outline" className="font-mono">
+                          {field}
+                        </Badge>
+                      ))}
+                    </div>
+                    <ErrorRows />
                   </div>
                   <CodeBlock title="Public update object" language="json" code={jsonExample} />
                 </div>
@@ -684,6 +775,10 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                         Treat degraded or stale status as a signal to mention possible incomplete coverage.
                       </p>
                       <p>
+                        Follow next_cursor as an opaque value when a response contains more matching
+                        records. Do not decode it, and do not build offset assumptions around it.
+                      </p>
+                      <p>
                         For Discord and Slack, format the message around vendor, title, summary,
                         recommended action, and the Version Watch URL.
                       </p>
@@ -700,7 +795,7 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                 <SectionIntro
                   kicker="Platform coverage"
                   title="Use one API across the platforms your stack depends on"
-                  body={`Version Watch currently tracks ${vendors.length} vendor surfaces. The public vendor route exposes the full list, source names, source URLs, and source types.`}
+                  body={`Version Watch currently exposes ${vendors.length} vendor records. The public vendor route lists source names, source URLs, and source types; use /api/v1/status for freshness and coverage health before relying on operational completeness.`}
                 />
                 <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {featuredVendors.map((vendor) => (

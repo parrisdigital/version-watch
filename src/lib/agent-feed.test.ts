@@ -230,6 +230,7 @@ describe("agent markdown feed", () => {
 
     expect(markdown).toContain("# Version Watch Feed");
     expect(markdown).toContain("API status:");
+    expect(markdown).toContain("Freshness rule:");
     expect(markdown).toContain("Cite the official Source URL");
     expect(markdown).toContain("- Recommended action:");
     expect(markdown).toContain(update.source_url);
@@ -244,6 +245,10 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("De-duplicate updates by id");
     expect(markdown).toContain("/api/v1/taxonomy");
     expect(markdown).toContain("/skills/version-watch/SKILL.md");
+    expect(markdown).toContain("Convex-backed snapshot API");
+    expect(markdown).toContain("Freshness Contract");
+    expect(markdown).toContain("invalid_cursor");
+    expect(markdown).toContain("Treat next_cursor as opaque");
   });
 
   it("renders llms.txt with broad integration guidance", () => {
@@ -255,6 +260,8 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("de-duplicate by id");
     expect(markdown).toContain("/api/v1/openapi.json");
     expect(markdown).toContain("/api/v1/status");
+    expect(markdown).toContain("Convex-backed snapshots");
+    expect(markdown).toContain("follow next_cursor as an opaque value");
   });
 
   it("renders the portable Version Watch skill", () => {
@@ -270,6 +277,9 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Vendor Watch Digest");
     expect(markdown).toContain("CI Preflight");
     expect(markdown).toContain("Team Notification Formatting");
+    expect(markdown).toContain("Freshness Handling");
+    expect(markdown).toContain("Pagination and Errors");
+    expect(markdown).toContain("Handle error.code values invalid_filter, invalid_cursor, and not_found");
   });
 });
 

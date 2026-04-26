@@ -497,6 +497,7 @@ export function renderUpdatesMarkdown(
     `JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}`,
     `Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}`,
     ...(nextPageUrl ? [`Next page: ${nextPageUrl}`] : []),
+    "Freshness rule: check API status before release gates, incident reviews, or high-confidence summaries.",
     "Cite the official Source URL when reporting an update.",
     "",
   ];
@@ -528,6 +529,8 @@ export function renderAgentsMarkdown(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
   return `# Version Watch Agent Access
 
 Version Watch tracks official developer platform changelogs, release notes, docs updates, RSS feeds, and GitHub releases. Use it as a public change intelligence layer for developer tools and agents.
+
+Version Watch is a Convex-backed snapshot API. It does not scrape vendor sites on each public API request. When freshness matters, check the status endpoint before reporting results as complete.
 
 Base URL: ${normalizedBaseUrl}
 
@@ -578,9 +581,28 @@ Each public update includes:
 - github_url
 - version_watch_url
 
-List responses also include schema_version, generated_at, count, total_count, and next_cursor.
+List responses also include schema_version, generated_at, status_url, count, total_count, filters, and next_cursor.
 
 The recommended_action field is the most useful field for agents. Treat it as an action hint, then cite source_url or version_watch_url for attribution.
+
+Errors use a stable shape: error.code and error.message. Current public codes are invalid_filter, invalid_cursor, and not_found.
+
+## Freshness Contract
+
+- healthy: the public Convex snapshot refreshed inside the expected window and active sources are clean.
+- degraded: the snapshot is recent, but one or more active sources failed, are stale, or the latest refresh was partial.
+- stale: no acceptable refresh completed within the freshness window.
+
+Paused and unsupported sources are visible as coverage states but do not count as global freshness debt. Degraded sources are still monitored and should be treated as incomplete coverage until they recover.
+
+Agents should mention degraded or stale status when producing release gates, incident reports, migration plans, or other high-confidence operational summaries.
+
+## Pagination
+
+- Treat next_cursor as opaque.
+- Pass it back as the cursor query parameter to fetch the next page.
+- Do not decode it or build offset assumptions around it.
+- Store delivered update ids and de-duplicate by id before posting alerts or creating tasks.
 
 ## Use Cases
 
@@ -622,6 +644,7 @@ Agents should use Version Watch to:
 - Do not notify repeatedly for the same id.
 - Prefer filtered queries over broad feeds for notifications.
 - For recurring polling, use a 15 to 60 minute interval unless the user asks for a different cadence.
+- If /api/v1/status is degraded or stale, include that caveat in summaries and avoid claiming complete coverage.
 `;
 }
 
@@ -633,6 +656,8 @@ export function renderLlmsTxt(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
 > Official platform changes ranked for humans and readable by agents.
 
 Version Watch turns official developer platform changelogs, release notes, docs updates, and GitHub releases into structured change intelligence.
+
+The public API reads from Convex-backed snapshots. It is not a live scrape-on-request system. Agents should check /api/v1/status when freshness matters.
 
 ## Agent Resources
 
@@ -664,7 +689,7 @@ Version Watch turns official developer platform changelogs, release notes, docs 
 
 ## Integration Rule
 
-Fetch updates with the narrowest useful filters, de-duplicate by id, and cite source_url or version_watch_url when reporting results.
+Fetch updates with the narrowest useful filters, check status_url for high-confidence work, follow next_cursor as an opaque value, de-duplicate by id, and cite source_url or version_watch_url when reporting results.
 `;
 }
 
@@ -679,6 +704,8 @@ description: Use Version Watch to retrieve current developer-platform changelog 
 # Version Watch Skill
 
 Version Watch is a public change intelligence API for official developer-platform changelogs, release notes, docs updates, RSS feeds, and GitHub releases.
+
+The API reads from Convex-backed snapshots. It is not live scrape-on-request. Always check freshness status when a user is making a release, incident, compliance, or upgrade decision.
 
 Use this skill when a user asks about recent platform changes, release risk, dependency upgrades, API or SDK changes, vendor monitoring, or agent-readable changelog context.
 
@@ -707,6 +734,20 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 9. Cite source_url for the official vendor source. Cite version_watch_url for the Version Watch record.
 10. Do not claim to have read the official source unless you opened source_url.
 
+## Freshness Handling
+
+- healthy: use results normally, while still citing official sources.
+- degraded: explain that the snapshot is recent but one or more active sources may be incomplete.
+- stale: warn that the snapshot missed the freshness window and avoid presenting results as complete.
+- paused or unsupported sources do not make the global API stale, but they mean that vendor is not actively monitored until a reliable machine-readable surface exists.
+
+## Pagination and Errors
+
+- Follow next_cursor by passing it as cursor on the next request.
+- Treat cursor values as opaque; do not decode them or assume offset pagination.
+- Store delivered update ids so repeated polling does not notify twice.
+- Handle error.code values invalid_filter, invalid_cursor, and not_found. Show error.message to the user or log it.
+
 ## Query Patterns
 
 - Latest high-signal changes: ${new URL("/api/v1/updates?severity=high&limit=10", normalizedBaseUrl).toString()}
@@ -724,6 +765,7 @@ Use this before a planned deploy or release.
     GET ${new URL("/api/v1/updates?severity=high&tag=api&limit=10", normalizedBaseUrl).toString()}
 
 Report only updates that match the project stack. Include recommended_action and cite source_url.
+If /api/v1/status is degraded or stale, include that caveat in the risk report.
 
 ### Dependency Upgrade Review
 
@@ -743,6 +785,7 @@ Use this to summarize changes for a known stack.
     GET ${new URL("/api/v1/updates?vendor=github&limit=5", normalizedBaseUrl).toString()}
 
 Group by vendor, de-duplicate by id, and sort by published_at descending.
+Use next_cursor when the digest needs more than one page.
 
 ### CI Preflight
 
@@ -753,6 +796,7 @@ Use this in release checks when the project has known vendors.
     GET ${new URL("/api/v1/updates?severity=high&tag=auth&limit=25", normalizedBaseUrl).toString()}
 
 Return a warning when a matching update affects auth, API, SDK, infra, billing, security, or deployment behavior.
+Fail softly when status is degraded or stale: report the matching updates but tell the user coverage may be incomplete.
 
 ### Team Notification Formatting
 

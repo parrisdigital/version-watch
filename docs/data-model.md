@@ -37,8 +37,12 @@ One document per official source URL.
 - `pollIntervalMinutes`
 - `parserKey`
 - `isActive`
+- `lifecycleState` with `active | degraded | paused | unsupported`
+- `lastAttemptAt`
 - `lastSuccessAt`
 - `lastFailureAt`
+- `lastErrorCode`
+- `lastErrorMessage`
 - `consecutiveFailures`
 - `notes`
 - `createdAt`
@@ -139,6 +143,7 @@ Log of source processing attempts.
 - `itemsFetched`
 - `itemsCreated`
 - `itemsDeduped`
+- `errorCode`
 - `errorMessage`
 - `runType`
 
@@ -161,6 +166,7 @@ Batch-level log of each full feed refresh cycle. This is the authoritative sourc
 - `itemsDeduped`
 - `published`
 - `failures`
+- `errorCode`
 - `errorMessage`
 
 ## Enumerations
@@ -172,6 +178,22 @@ Batch-level log of each full feed refresh cycle. This is the authoritative sourc
 - `docs_page`
 - `blog`
 - `rss`
+
+### `source.lifecycleState`
+
+- `active`: polled and counted in public freshness
+- `degraded`: still polled, but recently failing or stale
+- `paused`: not polled and not counted as active freshness debt
+- `unsupported`: known source without a reliable machine-readable surface
+
+### `source.errorCode`
+
+- `fetch_blocked`
+- `fetch_timeout`
+- `http_error`
+- `parse_error`
+- `empty_result`
+- `unknown_error`
 
 ### `rawCandidate.status`
 

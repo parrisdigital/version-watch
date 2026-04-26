@@ -21,6 +21,7 @@ Owns:
 - backend functions
 - ingestion actions
 - cron scheduling
+- source lifecycle state and source health history
 - backend logs and function health
 
 ## Environments
@@ -78,10 +79,14 @@ required for the MVP feedback loop.
 1. Merge approved PR to `main`
 2. Vercel deploys the web app
 3. Convex production deployment is updated
-4. Run a forced production ingestion refresh when parser or dedupe logic changed
+4. Run a forced production ingestion refresh when parser, source lifecycle, or dedupe logic changed
 5. Run `npm run health:production`
 6. Browser-check homepage, vendor, search, and event back-navigation flows
 7. Cron jobs continue using the production Convex environment
+
+The web app reads public API data from Convex snapshots. Updating Next.js on Vercel does not deploy
+Convex functions, schema changes, or cron definitions by itself. When a change touches `convex/`,
+production is not complete until the Convex production deployment has also been updated.
 
 ## Cron Ownership
 
@@ -114,6 +119,16 @@ Why:
 
 It warns, without failing, when recent refresh or ingestion runs contain recovered transient failures.
 
+Paused and unsupported sources are excluded from active freshness debt. This is intentional: a source
+that cannot be fetched reliably should not make the platform look broken as long as the public coverage
+state is honest. Active and degraded sources remain part of the monitored set.
+
+The public API exposes the same operating contract at `/api/v1/status`:
+
+- `healthy`: latest refresh is inside the expected window and active sources are clean
+- `degraded`: refresh is recent, but active source coverage is incomplete or a refresh was partial
+- `stale`: no acceptable refresh completed inside the freshness window
+
 The defaults are intentionally strict enough for the four-hour ingestion cadence. They can be tuned with
 `SINCE_HOURS`, `MAX_SOURCE_LAG_HOURS`, `MAX_LATEST_EVENT_AGE_HOURS`, `MAX_FUTURE_SKEW_HOURS`, and
 `EVENT_LIMIT`.
@@ -122,8 +137,8 @@ The defaults are intentionally strict enough for the four-hour ingestion cadence
 
 Convex owns the primary automation:
 
-- `scheduled-ingestion` force-refreshes the public feed at 00:00, 08:00, 12:00, 16:00, and 20:00 UTC
-- `daily-deep-diff` runs at 04:00 UTC and also records a completed refresh batch
+- `scheduled-ingestion` force-refreshes the public feed every 4 hours at minute 0
+- `daily-deep-diff` runs at 02:30 UTC and also records a completed refresh batch
 - `refresh-watchdog` runs every 30 minutes and forces a recovery refresh if no completed refresh batch has been recorded within the freshness window
 
 GitHub Actions runs `.github/workflows/production-health.yml`:
@@ -151,6 +166,20 @@ When a parser breaks:
 2. stop trusting new output from that source
 3. leave existing published events intact
 4. patch parser before resuming normal ingestion
+
+### Source lifecycle incidents
+
+Use source lifecycle state to keep the public coverage set honest:
+
+- `active`: source is polled and counted in public freshness
+- `degraded`: source is still polled but recently failing or stale
+- `paused`: source is intentionally not polled and not counted as active freshness debt
+- `unsupported`: source is known but lacks a reliable machine-readable surface
+
+Railway is currently unsupported because the public changelog is blocked for server-side fetches and no
+reliable official feed, API, allowlist, or GitHub-backed release surface is available. Historical Railway
+events can remain public, but Railway should not be described as actively monitored until the source state
+returns to `active`.
 
 ## Backups And Recovery
 
