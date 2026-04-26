@@ -198,6 +198,38 @@ async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
   }
 }
 
+function getUrlPath(value: string) {
+  try {
+    return new URL(value).pathname.replace(/\/$/, "") || "/";
+  } catch {
+    return "/";
+  }
+}
+
+function getUrlHost(value: string) {
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
+function filterDiscoveredFeedEntries(entries: ParsedSourceEntry[], sourceUrl: string) {
+  const sourcePath = getUrlPath(sourceUrl);
+  const sourceHost = getUrlHost(sourceUrl);
+
+  if (!sourceHost || sourcePath === "/") {
+    return entries;
+  }
+
+  return entries.filter((entry) => {
+    const entryHost = getUrlHost(entry.url);
+    const entryPath = getUrlPath(entry.url);
+
+    return entryHost === sourceHost && (entryPath === sourcePath || entryPath.startsWith(`${sourcePath}/`));
+  });
+}
+
 function buildPostHogPageDataUrl(sourceUrl: string) {
   const url = new URL(sourceUrl);
   const normalizedPath = url.pathname.replace(/\/$/, "") || "/";
@@ -261,7 +293,10 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
         try {
           const feedResponse = await fetchText(discoveredFeedUrl);
           if (feedResponse.ok) {
-            parsedEntries = await parseFeedEntries(feedResponse.body, source.url);
+            parsedEntries = filterDiscoveredFeedEntries(
+              await parseFeedEntries(feedResponse.body, source.url),
+              source.url,
+            );
           }
         } catch {
           parsedEntries = [];

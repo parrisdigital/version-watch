@@ -1,0 +1,80 @@
+name: Source Link Repair
+
+on:
+  workflow_dispatch:
+    inputs:
+      vendor_slug:
+        description: "Vendor slug to repair"
+        required: true
+        type: string
+      blocked_prefixes:
+        description: "Comma-separated URL or path prefixes to suppress"
+        required: true
+        type: string
+      dry_run:
+        description: "Run without writing Convex rows"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      limit:
+        description: "Maximum vendor rows to scan"
+        required: true
+        default: "500"
+        type: string
+
+jobs:
+  repair:
+    name: Repair source links
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+
+    env:
+      ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+      VERSION_WATCH_URL: https://versionwatch.dev
+
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Validate admin secret
+        run: |
+          if [ -z "$ADMIN_SECRET" ]; then
+            echo "::error::ADMIN_SECRET is not configured for the production GitHub environment."
+            exit 1
+          fi
+
+      - name: Run protected source-link repair
+        run: |
+          node <<'NODE'
+          const payload = {
+            vendor_slug: process.env.VENDOR_SLUG,
+            blocked_prefixes: process.env.BLOCKED_PREFIXES,
+            dry_run: process.env.DRY_RUN === "true",
+            limit: Number(process.env.LIMIT || "500"),
+          };
+          const response = await fetch(new URL("/api/admin/source-links/repair", process.env.VERSION_WATCH_URL), {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${process.env.ADMIN_SECRET}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+          const body = await response.json();
+          console.log(JSON.stringify(body, null, 2));
+          if (!response.ok || body.ok !== true) {
+            process.exit(1);
+          }
+          NODE
+        env:
+          VENDOR_SLUG: ${{ inputs.vendor_slug }}
+          BLOCKED_PREFIXES: ${{ inputs.blocked_prefixes }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          LIMIT: ${{ inputs.limit }}

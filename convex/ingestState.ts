@@ -241,6 +241,12 @@ const GITHUB_RELEASE_TAG_TITLE_PATTERN =
 const OFFICIAL_HOSTS_BY_VENDOR: Record<string, string[]> = {
   anthropic: ["anthropic.com", "claude.com", "docs.claude.com", "platform.claude.com", "support.claude.com"],
   "better-auth": ["better-auth.com", "github.com"],
+  supabase: ["supabase.com", "github.com"],
+};
+
+const BLOCKED_DETAIL_PATHS_BY_VENDOR: Record<string, RegExp[]> = {
+  supabase: [/^\/blog(?:\/|$)/i],
+  vercel: [/^\/blog(?:\/|$)/i],
 };
 
 function normalizeHost(value: string) {
@@ -251,10 +257,28 @@ function hostMatches(candidateHost: string, sourceHost: string) {
   return candidateHost === sourceHost || candidateHost.endsWith(`.${sourceHost}`);
 }
 
-function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string, vendorSlug: string) {
+function isBlockedDetailUrl(candidateUrl: string, vendorSlug: string) {
+  const blockedPaths = BLOCKED_DETAIL_PATHS_BY_VENDOR[vendorSlug] ?? [];
+  if (!blockedPaths.length) {
+    return false;
+  }
+
+  try {
+    const pathname = new URL(candidateUrl).pathname;
+    return blockedPaths.some((pattern) => pattern.test(pathname));
+  } catch {
+    return false;
+  }
+}
+
+export function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string, vendorSlug: string) {
   try {
     const candidateHost = normalizeHost(new URL(candidateUrl).hostname);
     const sourceHost = normalizeHost(new URL(sourceUrl).hostname);
+
+    if (isBlockedDetailUrl(candidateUrl, vendorSlug)) {
+      return false;
+    }
 
     if (hostMatches(candidateHost, sourceHost)) {
       return true;

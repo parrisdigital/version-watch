@@ -277,3 +277,118 @@ export const rescoreSignalV2 = mutation({
     };
   },
 });
+
+function matchesSourceUrlPrefix(sourceUrl: string, prefixes: string[]) {
+  try {
+    const url = new URL(sourceUrl);
+    const normalizedUrl = `${url.origin}${url.pathname}`.replace(/\/$/, "");
+
+    return prefixes.some((prefix) => {
+      const trimmed = prefix.trim();
+      if (!trimmed) {
+        return false;
+      }
+
+      if (trimmed.startsWith("/")) {
+        return url.pathname === trimmed || url.pathname.startsWith(`${trimmed.replace(/\/$/, "")}/`);
+      }
+
+      const normalizedPrefix = trimmed.replace(/\/$/, "");
+      return normalizedUrl === normalizedPrefix || normalizedUrl.startsWith(`${normalizedPrefix}/`);
+    });
+  } catch {
+    return prefixes.some((prefix) => sourceUrl.startsWith(prefix));
+  }
+}
+
+export const suppressSourceUrlPrefixes = mutation({
+  args: {
+    adminSecret: v.string(),
+    vendorSlug: v.string(),
+    prefixes: v.array(v.string()),
+    dryRun: v.optional(v.boolean()),
+    limit: v.optional(v.number()),
+  },
+  returns: v.object({
+    dryRun: v.boolean(),
+    vendorSlug: v.string(),
+    scanned: v.number(),
+    matched: v.number(),
+    suppressed: v.number(),
+    samples: v.array(
+      v.object({
+        slug: v.string(),
+        title: v.string(),
+        sourceUrl: v.string(),
+      }),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    requireAdminSecret(args.adminSecret);
+
+    const vendor = await ctx.db
+      .query("vendors")
+      .withIndex("by_slug", (q) => q.eq("slug", args.vendorSlug))
+      .unique();
+
+    if (!vendor) {
+      throw new Error(`Unknown vendor: ${args.vendorSlug}`);
+    }
+
+    const prefixes = args.prefixes.map((prefix) => prefix.trim()).filter(Boolean);
+    if (!prefixes.length) {
+      throw new Error("At least one URL prefix is required.");
+    }
+
+    const limit = Math.min(Math.max(args.limit ?? 500, 1), 2000);
+    const rows = await ctx.db
+      .query("changeEvents")
+      .withIndex("by_vendor_and_published", (q) => q.eq("vendorId", vendor._id))
+      .order("desc")
+      .take(limit);
+
+    let matched = 0;
+    let suppressed = 0;
+    const samples = [];
+
+    for (const event of rows) {
+      if (event.visibility !== "public") {
+        continue;
+      }
+
+      if (!matchesSourceUrlPrefix(event.sourceUrl, prefixes)) {
+        continue;
+      }
+
+      matched += 1;
+      if (samples.length < 10) {
+        samples.push({
+          slug: event.slug,
+          title: event.title,
+          sourceUrl: event.sourceUrl,
+        });
+      }
+
+      if (!args.dryRun) {
+        await ctx.db.patch(event._id, {
+          visibility: "hidden",
+          updatedAt: Date.now(),
+        });
+        await ctx.db.patch(event.rawCandidateId, {
+          status: "suppressed",
+        });
+        await recordReviewAction(ctx, event.rawCandidateId, "suppress", "source-link-repair");
+        suppressed += 1;
+      }
+    }
+
+    return {
+      dryRun: args.dryRun ?? false,
+      vendorSlug: vendor.slug,
+      scanned: rows.length,
+      matched,
+      suppressed,
+      samples,
+    };
+  },
+});

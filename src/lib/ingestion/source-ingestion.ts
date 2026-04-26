@@ -1149,6 +1149,65 @@ function parseSentryEntries(sourceUrl: string, html: string) {
   return dedupeEntries(entries);
 }
 
+function parseSupabaseEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const link of $('a[href^="https://github.com/orgs/supabase/discussions/"]').toArray()) {
+    const title = cleanText($(link).find("h3").first().text()) || cleanText($(link).text());
+    const dateText = cleanText($(link).parent().find("p").first().text());
+    const publishedAt = parseDateFromText(dateText);
+
+    if (!isMeaningfulTitle(title) || !publishedAt) {
+      continue;
+    }
+
+    const container = $(link).closest("div").parent().parent().parent();
+    const articleText = truncateSentence(cleanText(container.find("article").first().text()));
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl($(link).attr("href"), sourceUrl),
+      excerpt: articleText || title,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries).sort((left, right) => right.publishedAt - left.publishedAt);
+}
+
+function parseVercelEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const link of $('a[href^="/changelog/"]').toArray()) {
+    const title = cleanText($(link).text());
+    const card = $(link).closest("article, li, section, div");
+    const time = card.find("time").first();
+    const publishedAt = parseDateFromText(time.attr("datetime") ?? cleanText(time.text()));
+
+    if (!isMeaningfulTitle(title) || !publishedAt) {
+      continue;
+    }
+
+    const description =
+      truncateSentence(cleanText(card.find('[id="changelog-description"]').first().text())) ||
+      truncateSentence(cleanText(card.find("p").first().text())) ||
+      title;
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl($(link).attr("href"), sourceUrl),
+      excerpt: description,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries).sort((left, right) => right.publishedAt - left.publishedAt);
+}
+
 function parseBetterAuthEntries(sourceUrl: string, html: string) {
   const $ = load(html);
   const entries: ParsedSourceEntry[] = [];
@@ -1602,6 +1661,20 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "sentry:changelog_page") {
     const entries = parseSentryEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "supabase:changelog_page") {
+    const entries = parseSupabaseEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "vercel:changelog_page") {
+    const entries = parseVercelEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }

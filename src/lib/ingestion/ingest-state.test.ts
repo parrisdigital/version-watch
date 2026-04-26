@@ -9,6 +9,7 @@ import {
   findSameSourceCandidateByTitle,
   getFailureBackoffUntil,
   hasMeaningfulTitle,
+  isOfficialSourceUrl,
   shouldPollSource,
 } from "../../../convex/ingestState";
 import { buildSourceRegistryPayload } from "../../../convex/seed";
@@ -234,6 +235,42 @@ describe("source lifecycle state", () => {
     expect(payload.lifecycleState).toBe("unsupported");
     expect(payload.isActive).toBe(true);
     expect(payload).not.toHaveProperty("consecutiveFailures");
+  });
+});
+
+describe("official source URL validation", () => {
+  it("blocks known blog detail bleed from changelog sources", () => {
+    expect(
+      isOfficialSourceUrl(
+        "https://supabase.com/blog/supabase-is-now-iso-27001-certified",
+        "https://supabase.com/changelog",
+        "supabase",
+      ),
+    ).toBe(false);
+    expect(
+      isOfficialSourceUrl(
+        "https://vercel.com/blog/how-zo-computer-improved-ai-reliability-20x-on-vercel",
+        "https://vercel.com/changelog",
+        "vercel",
+      ),
+    ).toBe(false);
+  });
+
+  it("allows official detail links surfaced by changelog pages", () => {
+    expect(
+      isOfficialSourceUrl(
+        "https://github.com/orgs/supabase/discussions/45233",
+        "https://supabase.com/changelog",
+        "supabase",
+      ),
+    ).toBe(true);
+    expect(
+      isOfficialSourceUrl(
+        "https://vercel.com/changelog/gpt-5.5-on-ai-gateway",
+        "https://vercel.com/changelog",
+        "vercel",
+      ),
+    ).toBe(true);
   });
 });
 

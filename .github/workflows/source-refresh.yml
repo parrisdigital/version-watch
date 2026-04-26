@@ -1,0 +1,73 @@
+name: Source Refresh
+
+on:
+  workflow_dispatch:
+    inputs:
+      vendor_slug:
+        description: "Vendor slug to refresh"
+        required: false
+        type: string
+      source_url:
+        description: "Exact source URL to refresh"
+        required: false
+        type: string
+      force:
+        description: "Force refresh even if source is not due"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  refresh:
+    name: Refresh source coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+
+    env:
+      ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+      VERSION_WATCH_URL: https://versionwatch.dev
+
+    steps:
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Validate admin secret
+        run: |
+          if [ -z "$ADMIN_SECRET" ]; then
+            echo "::error::ADMIN_SECRET is not configured for the production GitHub environment."
+            exit 1
+          fi
+
+      - name: Run protected refresh
+        run: |
+          node <<'NODE'
+          const payload = {
+            vendor_slug: process.env.VENDOR_SLUG || undefined,
+            source_url: process.env.SOURCE_URL || undefined,
+            force: process.env.FORCE === "true",
+          };
+          const response = await fetch(new URL("/api/admin/refresh", process.env.VERSION_WATCH_URL), {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${process.env.ADMIN_SECRET}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(payload),
+          });
+          const body = await response.json();
+          console.log(JSON.stringify(body, null, 2));
+          if (!response.ok || body.ok !== true) {
+            process.exit(1);
+          }
+          NODE
+        env:
+          VENDOR_SLUG: ${{ inputs.vendor_slug }}
+          SOURCE_URL: ${{ inputs.source_url }}
+          FORCE: ${{ inputs.force }}

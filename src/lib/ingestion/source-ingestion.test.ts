@@ -522,6 +522,67 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-20T00:00:00.000Z"));
   });
 
+  it("parses Supabase changelog entries from the official changelog page instead of the blog feed", () => {
+    const html = `
+      <main>
+        <div>
+          <div>
+            <a href="https://github.com/orgs/supabase/discussions/45233">
+              <h3>Feature Preview: RLS Tester</h3>
+            </a>
+            <p>Apr 24, 2026</p>
+          </div>
+          <article>
+            <h2>Verify the correctness of your RLS policies with the RLS tester</h2>
+            <p>The RLS tester helps teams check row-level security behavior before shipping policies.</p>
+          </article>
+        </div>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "supabase:changelog_page",
+      sourceUrl: "https://supabase.com/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Feature Preview: RLS Tester",
+      url: "https://github.com/orgs/supabase/discussions/45233",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.excerpt).toContain("row-level security");
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-24T00:00:00.000Z"));
+  });
+
+  it("parses Vercel changelog cards with changelog detail URLs", () => {
+    const html = `
+      <main>
+        <article>
+          <time>Apr 24, 2026</time>
+          <h2><a href="/changelog/gpt-5.5-on-ai-gateway">GPT 5.5 on AI Gateway</a></h2>
+          <div id="changelog-description">
+            <p>GPT-5.5 is now available on Vercel AI Gateway.</p>
+          </div>
+        </article>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "vercel:changelog_page",
+      sourceUrl: "https://vercel.com/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "GPT 5.5 on AI Gateway",
+      url: "https://vercel.com/changelog/gpt-5.5-on-ai-gateway",
+      excerpt: "GPT-5.5 is now available on Vercel AI Gateway.",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-24T00:00:00.000Z"));
+  });
+
   it("parses Neon markdown changelog entries grouped under a release date", () => {
     const markdown = `
       # Changelog
