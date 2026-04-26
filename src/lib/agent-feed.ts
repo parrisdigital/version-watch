@@ -1,7 +1,8 @@
 import { scoreEvent } from "@/lib/classification/score";
-import type { ImportanceBand, MockEvent, VendorRecord } from "@/lib/mock-data";
+import type { ImportanceBand, MockEvent, SourceType, VendorRecord } from "@/lib/mock-data";
 
 export const DEFAULT_PUBLIC_BASE_URL = "https://versionwatch.dev";
+export const PUBLIC_API_SCHEMA_VERSION = "2026-04-26";
 export const DEFAULT_UPDATE_LIMIT = 25;
 export const MAX_UPDATE_LIMIT = 100;
 export const MAX_FUTURE_SKEW_MS = 60 * 60 * 1000;
@@ -12,7 +13,8 @@ export const PUBLIC_AGENT_HEADERS = {
   "Cache-Control": "public, max-age=60, s-maxage=300",
 };
 
-const severityBands = new Set<ImportanceBand>(["critical", "high", "medium", "low"]);
+export const PUBLIC_SEVERITIES = ["critical", "high", "medium", "low"] as const satisfies readonly ImportanceBand[];
+const severityBands = new Set<ImportanceBand>(PUBLIC_SEVERITIES);
 
 export type PublicUpdate = {
   id: string;
@@ -50,7 +52,20 @@ export type UpdateFilters = {
   severity?: ImportanceBand;
   audience?: string;
   tag?: string;
+  cursor?: string;
+  cursorOffset: number;
   limit: number;
+};
+
+export type PublicTaxonomy = {
+  severities: ImportanceBand[];
+  audiences: string[];
+  tags: string[];
+  source_types: SourceType[];
+  vendors: Array<{
+    slug: string;
+    name: string;
+  }>;
 };
 
 type ParseResult =
@@ -63,6 +78,10 @@ function normalize(value: string | null | undefined) {
 
 function unique(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
+}
+
+function sortedUnique(values: string[]) {
+  return unique(values.map((value) => normalize(value))).sort((a, b) => a.localeCompare(b));
 }
 
 function normalizeBaseUrl(value: string | undefined | null) {
@@ -87,6 +106,28 @@ export function getPublicBaseUrl(requestUrl?: string) {
     normalizeBaseUrl(requestUrl ? new URL(requestUrl).origin : undefined) ??
     DEFAULT_PUBLIC_BASE_URL
   );
+}
+
+export function encodeUpdateCursor(offset: number) {
+  return Buffer.from(JSON.stringify({ offset }), "utf8").toString("base64url");
+}
+
+export function decodeUpdateCursor(cursor: string) {
+  try {
+    const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+    if (
+      typeof parsed === "object" &&
+      parsed !== null &&
+      Number.isInteger(parsed.offset) &&
+      parsed.offset >= 0
+    ) {
+      return parsed.offset as number;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
 }
 
 export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
@@ -121,6 +162,17 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
     limit = parsed;
   }
 
+  const cursor = searchParams.get("cursor")?.trim();
+  let cursorOffset = 0;
+
+  if (cursor) {
+    const decoded = decodeUpdateCursor(cursor);
+    if (decoded === null) {
+      return { ok: false, error: "Invalid cursor. Use a cursor returned by next_cursor." };
+    }
+    cursorOffset = decoded;
+  }
+
   return {
     ok: true,
     filters: {
@@ -130,12 +182,14 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
       severity: severity ? (severity as ImportanceBand) : undefined,
       audience: normalize(searchParams.get("audience")) || undefined,
       tag: normalize(searchParams.get("tag")) || undefined,
+      cursor: cursor || undefined,
+      cursorOffset,
       limit: Math.min(limit, MAX_UPDATE_LIMIT),
     },
   };
 }
 
-export function filterEventsForPublicUpdates<T extends MockEvent>(
+export function filterEventsForPublicUpdateMatches<T extends MockEvent>(
   events: T[],
   filters: UpdateFilters,
   now = Date.now(),
@@ -146,7 +200,7 @@ export function filterEventsForPublicUpdates<T extends MockEvent>(
         return false;
       }
 
-      if (filters.sinceTimestamp && Date.parse(event.publishedAt) < filters.sinceTimestamp) {
+      if (filters.sinceTimestamp !== undefined && Date.parse(event.publishedAt) < filters.sinceTimestamp) {
         return false;
       }
 
@@ -170,8 +224,33 @@ export function filterEventsForPublicUpdates<T extends MockEvent>(
       }
 
       return true;
-    })
-    .slice(0, filters.limit);
+    });
+}
+
+export function paginateEventsForPublicUpdates<T extends MockEvent>(
+  events: T[],
+  filters: UpdateFilters,
+  now = Date.now(),
+) {
+  const matches = filterEventsForPublicUpdateMatches(events, filters, now);
+  const start = Math.min(filters.cursorOffset, matches.length);
+  const end = start + filters.limit;
+  const page = matches.slice(start, end);
+  const nextOffset = start + page.length;
+
+  return {
+    events: page,
+    total_count: matches.length,
+    next_cursor: nextOffset < matches.length ? encodeUpdateCursor(nextOffset) : null,
+  };
+}
+
+export function filterEventsForPublicUpdates<T extends MockEvent>(
+  events: T[],
+  filters: UpdateFilters,
+  now = Date.now(),
+) {
+  return paginateEventsForPublicUpdates(events, filters, now).events;
 }
 
 function hasCategory(event: MockEvent, category: string) {
@@ -318,6 +397,21 @@ export function serializePublicVendor(vendor: VendorRecord): PublicVendor {
   };
 }
 
+export function buildPublicTaxonomy(events: MockEvent[], vendors: VendorRecord[]): PublicTaxonomy {
+  return {
+    severities: [...PUBLIC_SEVERITIES],
+    audiences: sortedUnique(events.flatMap((event) => event.whoShouldCare)),
+    tags: sortedUnique(events.flatMap((event) => [...event.categories, ...event.affectedStack])),
+    source_types: Array.from(new Set(vendors.flatMap((vendor) => vendor.sources.map((source) => source.type)))).sort(),
+    vendors: vendors
+      .map((vendor) => ({
+        slug: vendor.slug,
+        name: vendor.name,
+      }))
+      .sort((a, b) => a.slug.localeCompare(b.slug)),
+  };
+}
+
 function list(values: string[]) {
   return values.length ? values.join(", ") : "none";
 }
@@ -375,10 +469,13 @@ Base URL: ${normalizedBaseUrl}
 - High-signal updates: ${new URL("/api/v1/updates?severity=high&limit=25", normalizedBaseUrl).toString()}
 - Critical updates: ${new URL("/api/v1/updates?severity=critical&limit=25", normalizedBaseUrl).toString()}
 - Vendor list: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
+- Taxonomy: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
+- OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
 - API documentation: ${new URL("/agent-access", normalizedBaseUrl).toString()}
 - LLM resource map: ${new URL("/llms.txt", normalizedBaseUrl).toString()}
+- Version Watch skill: ${new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString()}
 
 ## Filters
 
@@ -390,6 +487,7 @@ Use query parameters on /api/v1/updates, /api/v1/feed.json, /api/v1/feed.md, and
 - audience: frontend, backend, infra, ai, product, security, compliance, or related audience labels
 - tag: matches categories or affected stack tags such as api, auth, billing, sdk, agents, hosting, deployments
 - limit: defaults to 25 and clamps at 100
+- cursor: opaque pagination cursor returned as next_cursor
 
 ## Response Fields
 
@@ -411,6 +509,8 @@ Each public update includes:
 - github_url
 - version_watch_url
 
+List responses also include schema_version, generated_at, count, total_count, and next_cursor.
+
 The recommended_action field is the most useful field for agents. Treat it as an action hint, then cite source_url or version_watch_url for attribution.
 
 ## Use Cases
@@ -430,11 +530,13 @@ Agents should use Version Watch to:
 
 1. Determine the project stack or vendor list.
 2. Call /api/v1/vendors if you need valid vendor slugs.
-3. Query /api/v1/updates with vendor, severity, audience, tag, since, and limit filters.
-4. De-duplicate updates by id before notifying a user or posting to a channel.
-5. Summarize only updates that match the user or project context.
-6. Include recommended_action when giving advice.
-7. Cite source_url for the official vendor source and version_watch_url for the Version Watch record.
+3. Call /api/v1/taxonomy if you need valid severities, audiences, tags, source types, and vendor slugs.
+4. Query /api/v1/updates with vendor, severity, audience, tag, since, limit, and cursor filters.
+5. Continue pagination while next_cursor is present and more results are needed.
+6. De-duplicate updates by id before notifying a user or posting to a channel.
+7. Summarize only updates that match the user or project context.
+8. Include recommended_action when giving advice.
+9. Cite source_url for the official vendor source and version_watch_url for the Version Watch record.
 
 ## Integration Guidance
 
@@ -466,8 +568,11 @@ Version Watch turns official developer platform changelogs, release notes, docs 
 
 - API docs: ${new URL("/agent-access", normalizedBaseUrl).toString()}
 - Agent guide: ${new URL("/agents.md", normalizedBaseUrl).toString()}
+- Version Watch skill: ${new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString()}
 - Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
 - Vendors API: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
+- Taxonomy API: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
+- OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
 
@@ -489,5 +594,125 @@ Version Watch turns official developer platform changelogs, release notes, docs 
 ## Integration Rule
 
 Fetch updates with the narrowest useful filters, de-duplicate by id, and cite source_url or version_watch_url when reporting results.
+`;
+}
+
+export function renderVersionWatchSkillMarkdown(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+
+  return `---
+name: version-watch
+description: Use Version Watch to retrieve current developer-platform changelog intelligence, filter it to a project stack, cite official sources, and produce actionable release-risk summaries.
+---
+
+# Version Watch Skill
+
+Version Watch is a public change intelligence API for official developer-platform changelogs, release notes, docs updates, RSS feeds, and GitHub releases.
+
+Use this skill when a user asks about recent platform changes, release risk, dependency upgrades, API or SDK changes, vendor monitoring, or agent-readable changelog context.
+
+## Public Resources
+
+- API docs: ${new URL("/agent-access", normalizedBaseUrl).toString()}
+- OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
+- Taxonomy: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
+- Vendors: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
+- Updates: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
+- Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
+- Agent guide: ${new URL("/agents.md", normalizedBaseUrl).toString()}
+- LLM map: ${new URL("/llms.txt", normalizedBaseUrl).toString()}
+
+## Operating Procedure
+
+1. Identify the user's project stack, vendors, or platform areas.
+2. If vendor slugs or valid tags are uncertain, call /api/v1/vendors and /api/v1/taxonomy.
+3. Query /api/v1/updates with the narrowest useful filters.
+4. Use severity, audience, tag, since, and vendor filters before broad queries.
+5. Follow next_cursor only when more matching results are needed.
+6. De-duplicate by update id before reporting or notifying.
+7. Use summary, why_it_matters, and recommended_action to explain the impact.
+8. Cite source_url for the official vendor source. Cite version_watch_url for the Version Watch record.
+9. Do not claim to have read the official source unless you opened source_url.
+
+## Query Patterns
+
+- Latest high-signal changes: ${new URL("/api/v1/updates?severity=high&limit=10", normalizedBaseUrl).toString()}
+- Critical changes: ${new URL("/api/v1/updates?severity=critical&limit=10", normalizedBaseUrl).toString()}
+- Vendor-specific changes: ${new URL("/api/v1/updates?vendor=openai&limit=10", normalizedBaseUrl).toString()}
+- Stack-tag changes: ${new URL("/api/v1/updates?tag=auth&limit=10", normalizedBaseUrl).toString()}
+- Recent backend changes: ${new URL("/api/v1/updates?audience=backend&since=2026-04-24T00:00:00Z&limit=10", normalizedBaseUrl).toString()}
+
+## Common Agent Tasks
+
+### Release Risk Check
+
+Use this before a planned deploy or release.
+
+    GET ${new URL("/api/v1/updates?severity=high&tag=api&limit=10", normalizedBaseUrl).toString()}
+
+Report only updates that match the project stack. Include recommended_action and cite source_url.
+
+### Dependency Upgrade Review
+
+Use this before upgrading SDKs, CLIs, frameworks, or hosted platform dependencies.
+
+    GET ${new URL("/api/v1/updates?tag=sdk&limit=20", normalizedBaseUrl).toString()}
+    GET ${new URL("/api/v1/updates?tag=breaking&limit=20", normalizedBaseUrl).toString()}
+
+Compare vendor_slug, tags, and audience to the dependency being upgraded. Flag breaking, deprecation, API, and SDK updates first.
+
+### Vendor Watch Digest
+
+Use this to summarize changes for a known stack.
+
+    GET ${new URL("/api/v1/updates?vendor=openai&limit=5", normalizedBaseUrl).toString()}
+    GET ${new URL("/api/v1/updates?vendor=vercel&limit=5", normalizedBaseUrl).toString()}
+    GET ${new URL("/api/v1/updates?vendor=github&limit=5", normalizedBaseUrl).toString()}
+
+Group by vendor, de-duplicate by id, and sort by published_at descending.
+
+### CI Preflight
+
+Use this in release checks when the project has known vendors.
+
+    GET ${new URL("/api/v1/updates?severity=critical&limit=25", normalizedBaseUrl).toString()}
+    GET ${new URL("/api/v1/updates?severity=high&tag=infra&limit=25", normalizedBaseUrl).toString()}
+    GET ${new URL("/api/v1/updates?severity=high&tag=auth&limit=25", normalizedBaseUrl).toString()}
+
+Return a warning when a matching update affects auth, API, SDK, infra, billing, security, or deployment behavior.
+
+### Team Notification Formatting
+
+Use this structure for Discord, Slack, Teams, email, or issue trackers.
+
+    Vendor: {vendor}
+    Title: {title}
+    Severity: {severity}
+    Summary: {summary}
+    Recommended action: {recommended_action}
+    Source: {source_url}
+    Version Watch: {version_watch_url}
+
+Send one message per update or one grouped digest. Store delivered ids to avoid repeats.
+
+## Output Format
+
+When summarizing updates for a user, include:
+
+- Vendor and title
+- Published date
+- Severity and signal score
+- Summary
+- Why it matters
+- Recommended action
+- Official source URL
+- Version Watch URL
+
+## Guardrails
+
+- Prefer precise filters over broad feeds.
+- Do not notify repeatedly for the same update id.
+- Do not invent migration details that are not present in the update or official source.
+- When confidence matters, tell the user to review source_url before changing production systems.
 `;
 }

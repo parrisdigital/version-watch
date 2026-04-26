@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getPublicBaseUrl, PUBLIC_AGENT_HEADERS, serializePublicUpdate } from "@/lib/agent-feed";
+import { getPublicBaseUrl, PUBLIC_API_SCHEMA_VERSION, PUBLIC_AGENT_HEADERS, serializePublicUpdate } from "@/lib/agent-feed";
 import { getEventBySlug } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +23,7 @@ export async function GET(request: Request, context: RouteContext) {
 
   return NextResponse.json(
     {
+      schema_version: PUBLIC_API_SCHEMA_VERSION,
       update: serializePublicUpdate(event, getPublicBaseUrl(request.url)),
     },
     { headers: PUBLIC_AGENT_HEADERS },

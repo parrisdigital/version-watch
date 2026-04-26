@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 
 import {
-  filterEventsForPublicUpdates,
   getPublicBaseUrl,
+  paginateEventsForPublicUpdates,
   parseUpdateFilters,
+  PUBLIC_API_SCHEMA_VERSION,
   PUBLIC_AGENT_HEADERS,
   serializePublicUpdates,
 } from "@/lib/agent-feed";
@@ -25,13 +26,17 @@ export async function GET(request: Request) {
 
   const baseUrl = getPublicBaseUrl(request.url);
   const events = await getAllPublicEvents();
-  const updates = serializePublicUpdates(filterEventsForPublicUpdates(events, parsed.filters), baseUrl);
+  const page = paginateEventsForPublicUpdates(events, parsed.filters);
+  const updates = serializePublicUpdates(page.events, baseUrl);
 
   return NextResponse.json(
     {
+      schema_version: PUBLIC_API_SCHEMA_VERSION,
       generated_at: new Date().toISOString(),
       feed_url: new URL("/api/v1/feed.json", baseUrl).toString(),
       count: updates.length,
+      total_count: page.total_count,
+      next_cursor: page.next_cursor,
       updates,
     },
     { headers: PUBLIC_AGENT_HEADERS },

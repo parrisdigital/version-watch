@@ -8,4 +8,7 @@ test("agent access docs render the public API reference", async ({ page }) => {
   await expect(page.getByText("recommended_action").first()).toBeVisible();
   await expect(page.getByText(/Discord webhook worker/i)).toBeVisible();
   await expect(page.getByText(/Automation platforms/i)).toBeVisible();
+  await expect(page.getByText("/api/v1/openapi.json", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("/api/v1/taxonomy", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("/skills/version-watch/SKILL.md", { exact: true }).first()).toBeVisible();
 });

@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import { GET as getFeedMarkdown } from "@/app/api/v1/feed.md/route";
+import { GET as getOpenApi } from "@/app/api/v1/openapi.json/route";
+import { GET as getTaxonomy } from "@/app/api/v1/taxonomy/route";
 import { GET as getUpdateById } from "@/app/api/v1/updates/[id]/route";
 import { GET as getUpdates } from "@/app/api/v1/updates/route";
+import { GET as getSkill } from "@/app/skills/version-watch/SKILL.md/route";
 import {
   buildRecommendedAction,
+  encodeUpdateCursor,
   filterEventsForPublicUpdates,
   getPublicBaseUrl,
   parseUpdateFilters,
   renderAgentsMarkdown,
   renderLlmsTxt,
   renderUpdatesMarkdown,
+  renderVersionWatchSkillMarkdown,
   serializePublicUpdate,
 } from "@/lib/agent-feed";
 import { events } from "@/lib/mock-data";
@@ -56,6 +61,28 @@ describe("agent update filters", () => {
     expect(parsed).toEqual({
       ok: false,
       error: "Invalid limit. Use a positive integer.",
+    });
+  });
+
+  it("rejects invalid cursors", () => {
+    const parsed = parseUpdateFilters(new URLSearchParams({ cursor: "not-a-cursor" }));
+
+    expect(parsed).toEqual({
+      ok: false,
+      error: "Invalid cursor. Use a cursor returned by next_cursor.",
+    });
+  });
+
+  it("parses valid cursors", () => {
+    const cursor = encodeUpdateCursor(3);
+    const parsed = parseUpdateFilters(new URLSearchParams({ cursor }));
+
+    expect(parsed).toMatchObject({
+      ok: true,
+      filters: {
+        cursor,
+        cursorOffset: 3,
+      },
     });
   });
 
@@ -155,7 +182,8 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("/api/v1/updates");
     expect(markdown).toContain("recommended_action");
     expect(markdown).toContain("De-duplicate updates by id");
-    expect(markdown).toContain("Discord or Slack");
+    expect(markdown).toContain("/api/v1/taxonomy");
+    expect(markdown).toContain("/skills/version-watch/SKILL.md");
   });
 
   it("renders llms.txt with broad integration guidance", () => {
@@ -165,6 +193,21 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("What Agents Can Do");
     expect(markdown).toContain("issue trackers");
     expect(markdown).toContain("de-duplicate by id");
+    expect(markdown).toContain("/api/v1/openapi.json");
+  });
+
+  it("renders the portable Version Watch skill", () => {
+    const markdown = renderVersionWatchSkillMarkdown("https://version-watch.example");
+
+    expect(markdown).toContain("name: version-watch");
+    expect(markdown).toContain("Operating Procedure");
+    expect(markdown).toContain("/api/v1/taxonomy");
+    expect(markdown).toContain("De-duplicate by update id");
+    expect(markdown).toContain("Release Risk Check");
+    expect(markdown).toContain("Dependency Upgrade Review");
+    expect(markdown).toContain("Vendor Watch Digest");
+    expect(markdown).toContain("CI Preflight");
+    expect(markdown).toContain("Team Notification Formatting");
   });
 });
 
@@ -176,9 +219,39 @@ describe("agent route handlers", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
+    expect(body.schema_version).toBe("2026-04-26");
     expect(body.count).toBe(1);
+    expect(body.total_count).toBeGreaterThanOrEqual(1);
     expect(body.filters.limit).toBe(1);
     expect(body.updates[0].vendor_slug).toBe("stripe");
+  });
+
+  it("serves paginated update JSON with next_cursor", async () => {
+    const firstResponse = await getUpdates(
+      new Request("https://version-watch.example/api/v1/updates?limit=1"),
+    );
+    const firstBody = await firstResponse.json();
+
+    expect(firstResponse.status).toBe(200);
+    expect(firstBody.next_cursor).toEqual(expect.any(String));
+
+    const secondResponse = await getUpdates(
+      new Request(`https://version-watch.example/api/v1/updates?limit=1&cursor=${firstBody.next_cursor}`),
+    );
+    const secondBody = await secondResponse.json();
+
+    expect(secondResponse.status).toBe(200);
+    expect(secondBody.updates[0].id).not.toBe(firstBody.updates[0].id);
+  });
+
+  it("returns 400 for invalid cursors", async () => {
+    const response = await getUpdates(
+      new Request("https://version-watch.example/api/v1/updates?cursor=bad"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toContain("Invalid cursor");
   });
 
   it("returns 400 for invalid since filters", async () => {
@@ -210,6 +283,47 @@ describe("agent route handlers", () => {
 
     expect(response.status).toBe(404);
     expect(body.error).toBe("Update not found.");
+  });
+
+  it("serves taxonomy JSON", async () => {
+    const response = await getTaxonomy(new Request("https://version-watch.example/api/v1/taxonomy"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.schema_version).toBe("2026-04-26");
+    expect(body.taxonomy.severities).toEqual(["critical", "high", "medium", "low"]);
+    expect(body.taxonomy.vendors).toEqual(
+      expect.arrayContaining([expect.objectContaining({ slug: "openai" })]),
+    );
+    expect(body.taxonomy.tags.length).toBeGreaterThan(0);
+    expect(body.taxonomy.audiences.length).toBeGreaterThan(0);
+  });
+
+  it("serves OpenAPI JSON", async () => {
+    const response = await getOpenApi(new Request("https://version-watch.example/api/v1/openapi.json"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.openapi).toBe("3.1.0");
+    expect(body.paths["/api/v1/updates"]).toBeDefined();
+    expect(body.paths["/api/v1/taxonomy"]).toBeDefined();
+    expect(body.paths["/skills/version-watch/SKILL.md"]).toBeDefined();
+    expect(body.paths["/api/v1/updates"].get.parameters).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "cursor" })]),
+    );
+    expect(body.paths["/api/v1/feed.json"].get.parameters).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "limit" })]),
+    );
+  });
+
+  it("serves the Version Watch skill Markdown route", async () => {
+    const response = await getSkill(new Request("https://version-watch.example/skills/version-watch/SKILL.md"));
+    const body = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/markdown");
+    expect(body).toContain("Version Watch Skill");
+    expect(body).toContain("/api/v1/updates");
   });
 
   it("serves Markdown feed responses", async () => {
