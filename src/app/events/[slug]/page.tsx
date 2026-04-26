@@ -4,6 +4,7 @@ import { format, formatDistanceToNowStrict } from "date-fns";
 
 import { SeverityPill } from "@/components/severity-pill";
 import { SiteHeader } from "@/components/marketing/site-header";
+import { RelevanceSignalForm } from "@/components/relevance-signal-form";
 import { VendorMark } from "@/components/vendor-mark";
 import { deriveSignalMetadata, releaseClassLabel } from "@/lib/classification/signal";
 import { getEventBySlug } from "@/lib/site-data";
@@ -215,6 +216,8 @@ export default async function EventPage({
               ))}
             </div>
           </div>
+
+          <RelevanceSignalForm eventId={event.slug} />
         </div>
       </section>
     </main>

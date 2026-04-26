@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "health:production": "node scripts/check-production-freshness.mjs"
+    "health:production": "node scripts/check-production-freshness.mjs",
+    "signal:production": "node scripts/check-signal-quality.mjs"
   },
   "dependencies": {
     "@convex-dev/eslint-plugin": "^1.0.0",

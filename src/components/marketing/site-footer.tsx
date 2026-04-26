@@ -9,6 +9,7 @@ const FOOTER_LINKS = [
   { href: "/search", label: "Search" },
   { href: "/feedback", label: "Feedback" },
   { href: "/ops/health", label: "Source health" },
+  { href: "/ops/signal", label: "Signal quality" },
 ] as const;
 
 export function SiteFooter() {

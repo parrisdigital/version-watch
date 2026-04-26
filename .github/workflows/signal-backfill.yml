@@ -1,0 +1,79 @@
+name: Signal Backfill
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run without writing Convex rows"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      limit:
+        description: "Maximum rows to scan"
+        required: true
+        default: "1000"
+        type: string
+
+jobs:
+  rescore:
+    name: Rescore signal v2 rows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+
+    env:
+      ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+      VERSION_WATCH_URL: https://versionwatch.dev
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate admin secret
+        run: |
+          if [ -z "$ADMIN_SECRET" ]; then
+            echo "::error::ADMIN_SECRET is not configured for the production GitHub environment."
+            exit 1
+          fi
+
+      - name: Run signal quality preflight
+        run: npm run signal:production
+
+      - name: Run protected rescore
+        run: |
+          node <<'NODE'
+          const dryRun = process.env.DRY_RUN === "true";
+          const limit = Number(process.env.LIMIT || "1000");
+          const response = await fetch(new URL("/api/admin/rescore", process.env.VERSION_WATCH_URL), {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${process.env.ADMIN_SECRET}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ dry_run: dryRun, limit }),
+          });
+          const body = await response.json();
+          console.log(JSON.stringify(body, null, 2));
+          if (!response.ok || body.ok !== true) {
+            process.exit(1);
+          }
+          NODE
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          LIMIT: ${{ inputs.limit }}
+
+      - name: Run signal quality postcheck
+        run: npm run signal:production

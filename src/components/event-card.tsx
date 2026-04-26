@@ -73,11 +73,14 @@ export function EventCard({ event, compact = false, eventHref }: EventCardProps)
   const relative = formatDistanceToNowStrict(publishedDate, { addSuffix: true });
   const absolute = format(publishedDate, "MMM d, yyyy");
   const href = eventHref ?? `/events/${event.slug}`;
-  const signal = event.releaseClass ? null : deriveSignalMetadata(event);
-  const releaseClass = event.releaseClass ?? signal!.releaseClass;
-  const importanceBand = event.scoreVersion === "v2" ? event.importanceBand : signal?.importanceBand ?? event.importanceBand;
-  const signalScore = event.scoreVersion === "v2" ? event.computedScore ?? 0 : signal?.signalScore ?? event.computedScore ?? 0;
-  const topicTags = event.topicTags ?? signal?.topicTags ?? [];
+  const signal = deriveSignalMetadata(event);
+  const isSignalV2 = event.scoreVersion === "v2";
+  const releaseClass = isSignalV2 && event.releaseClass ? event.releaseClass : signal.releaseClass;
+  const importanceBand = isSignalV2 ? event.importanceBand : signal.importanceBand;
+  const signalScore = isSignalV2 && typeof event.computedScore === "number" ? event.computedScore : signal.signalScore;
+  const topicTags = isSignalV2 && event.topicTags?.length ? event.topicTags : signal.topicTags;
+  const displayTitle = isSignalV2 ? event.title : signal.displayTitle;
+  const displayWhyItMatters = isSignalV2 ? event.whyItMatters : signal.whyItMatters;
 
   return (
     <article className="group vw-panel relative overflow-hidden p-6 transition-[border-color,background-color] duration-300 hover:border-[var(--color-line-strong)] hover:bg-[var(--color-surface-raised)] md:p-7">
@@ -111,7 +114,7 @@ export function EventCard({ event, compact = false, eventHref }: EventCardProps)
           href={href}
           className="vw-stretched-link text-[var(--color-ink)] transition-colors group-hover:text-[var(--color-signal)]"
         >
-          {event.title}
+          {displayTitle}
         </Link>
       </h3>
 
@@ -123,7 +126,7 @@ export function EventCard({ event, compact = false, eventHref }: EventCardProps)
             Why it matters
           </dt>
           <dd className="text-[0.9375rem] leading-[1.65] text-[var(--color-ink-soft)]">
-            {event.whyItMatters}
+            {displayWhyItMatters}
           </dd>
 
           <dt className="text-xs uppercase tracking-[0.14em] text-[var(--color-signal)]">

@@ -119,6 +119,36 @@ export function buildOpenApiDocument(baseUrl: string) {
           },
         },
       },
+      "/api/v1/relevance": {
+        post: {
+          operationId: "submitRelevanceSignal",
+          summary: "Submit structured relevance signal",
+          description:
+            "Record a structured community signal for an update. Submit only when a human explicitly indicates impact, review need, or no impact.",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/RelevanceSignalRequest" },
+                examples: {
+                  needsReview: {
+                    value: {
+                      event_id: "openai-2026-04-24-gpt-5-5",
+                      signal: "needs_review",
+                      area: "ai_agents",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            "200": jsonResponse("Signal accepted.", { $ref: "#/components/schemas/RelevanceSignalResponse" }),
+            "400": jsonResponse("Invalid relevance signal payload.", { $ref: "#/components/schemas/ErrorResponse" }),
+            "500": jsonResponse("Relevance signal could not be recorded.", { $ref: "#/components/schemas/ErrorResponse" }),
+          },
+        },
+      },
       "/api/v1/feed.json": {
         get: {
           operationId: "getJsonFeed",
@@ -638,6 +668,37 @@ export function buildOpenApiDocument(baseUrl: string) {
             vendor: { $ref: "#/components/schemas/VendorFreshnessStatus" },
           },
         },
+        RelevanceSignalRequest: {
+          type: "object",
+          required: ["event_id", "signal", "area"],
+          properties: {
+            event_id: { type: "string", description: "Public update id." },
+            signal: { type: "string", enum: ["impacted", "needs_review", "no_impact"] },
+            area: {
+              type: "string",
+              enum: ["api", "auth", "billing", "deployments", "sdk", "security", "mobile", "ai_agents", "docs", "other"],
+            },
+            note: {
+              type: "string",
+              maxLength: 500,
+              description: "Optional short human-provided note. Do not include secrets or private incident details.",
+            },
+          },
+        },
+        RelevanceSignalResponse: {
+          type: "object",
+          examples: [
+            {
+              schema_version: PUBLIC_API_SCHEMA_VERSION,
+              ok: true,
+            },
+          ],
+          required: ["schema_version", "ok"],
+          properties: {
+            schema_version: { type: "string" },
+            ok: { type: "boolean" },
+          },
+        },
         ErrorResponse: {
           type: "object",
           required: ["error"],
@@ -648,7 +709,7 @@ export function buildOpenApiDocument(baseUrl: string) {
               properties: {
                 code: {
                   type: "string",
-                  enum: ["invalid_filter", "invalid_cursor", "not_found"],
+                  enum: ["invalid_filter", "invalid_cursor", "not_found", "server_error"],
                 },
                 message: { type: "string" },
               },

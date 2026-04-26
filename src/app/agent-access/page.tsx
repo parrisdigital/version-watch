@@ -96,6 +96,13 @@ const ENDPOINTS = [
     description: "Valid severities, audiences, tags, source types, and vendor slugs for agent filters.",
   },
   {
+    method: "POST",
+    path: "/api/v1/relevance",
+    title: "Submit relevance signal",
+    description:
+      "Structured community signal for impacted, needs-review, or no-impact feedback. Use only when a human explicitly provides the signal.",
+  },
+  {
     method: "GET",
     path: "/api/v1/openapi.json",
     title: "OpenAPI contract",
@@ -261,6 +268,11 @@ const MACHINE_READABLE_SURFACES = [
     label: "Version Watch skill",
     status: "Live",
     body: "Best for teaching agents when to use the API, how to filter, and how to cite sources.",
+  },
+  {
+    label: "Structured relevance signals",
+    status: "Live",
+    body: "Best for collecting impacted, needs-review, and no-impact feedback without turning records into an open comment thread.",
   },
   {
     label: "RSS and generic webhooks",
@@ -561,6 +573,16 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
   }),
 });`;
 
+  const relevanceExample = `await fetch("${baseUrl}/api/v1/relevance", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    event_id: "openai-2026-04-24-gpt-5-5",
+    signal: "needs_review",
+    area: "ai_agents"
+  })
+});`;
+
   return (
     <div className="vw-page flex min-h-dvh flex-col">
       <SiteHeader />
@@ -775,7 +797,7 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                 <SectionIntro
                   kicker="Integrations"
                   title="Connect it anywhere that can make an HTTP request"
-                  body="Because the API is public HTTP, any platform that can make a GET request can consume it. Native watchlists and push notifications come later; today, developers can poll filtered routes from scheduled workers, automation tools, bots, internal apps, and agent runtimes."
+                  body="Because the API is public HTTP, any platform that can make a GET request can consume it. Public self-serve watchlists come later; today, developers can poll filtered routes from scheduled workers, automation tools, bots, internal apps, and agent runtimes."
                 />
                 <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
                   {INTEGRATIONS.map((item) => (
@@ -786,6 +808,7 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                   <CodeBlock title="Latest updates" language="bash" code={`curl "${latestUrl}"`} />
                   <CodeBlock title="Discord webhook worker" language="ts" code={discordExample} />
                   <CodeBlock title="Slack incoming webhook" language="ts" code={slackExample} />
+                  <CodeBlock title="Structured relevance signal" language="ts" code={relevanceExample} />
                   <Card>
                     <CardHeader>
                       <ShieldCheck className="size-5 text-foreground" aria-hidden="true" />
@@ -863,11 +886,11 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                       <p className="vw-kicker">What is next</p>
                     </div>
                     <h2 className="vw-title text-balance text-2xl md:text-3xl">
-                      The API and Markdown feeds are live. Filtered notifications are the next layer.
+                      The API, Markdown feeds, signal v2, and structured feedback are live.
                     </h2>
                     <p className="vw-copy max-w-3xl text-base">
-                      The next product step is watchlists and generic webhook delivery, then email,
-                      RSS, community relevance signals, and MCP once the public API proves useful.
+                      The next product step is self-serve watchlists, public webhook configuration,
+                      RSS, email, and MCP once the freshness and signal foundations keep proving reliable.
                     </p>
                   </div>
                   <Button asChild variant="outline">

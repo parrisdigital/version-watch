@@ -29,9 +29,14 @@ export default async function ReviewQueuePage() {
               here before they hit the public feed.
             </p>
           </div>
-          <Link href="/ops/health" className="vw-button vw-button-secondary">
-            Source health
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/ops/signal" className="vw-button vw-button-primary">
+              Signal quality
+            </Link>
+            <Link href="/ops/health" className="vw-button vw-button-secondary">
+              Source health
+            </Link>
+          </div>
         </div>
       </section>
 

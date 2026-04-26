@@ -12,6 +12,7 @@ const routes = [
   { name: "search", path: "/search" },
   { name: "about", path: "/about" },
   { name: "ops-health", path: "/ops/health" },
+  { name: "ops-signal", path: "/ops/signal" },
   { name: "review-login", path: "/review/login" },
 ];
 

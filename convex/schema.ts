@@ -237,4 +237,53 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_created_at", ["createdAt"]),
+
+  watchlists: defineTable({
+    name: v.string(),
+    description: v.optional(v.string()),
+    isActive: v.boolean(),
+    vendorSlugs: v.array(v.string()),
+    severities: v.array(importanceBandValidator),
+    audiences: v.array(v.string()),
+    tags: v.array(v.string()),
+    releaseClasses: v.array(releaseClassValidator),
+    webhookType: v.union(v.literal("discord"), v.literal("slack"), v.literal("generic")),
+    webhookUrl: v.string(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    lastDispatchAt: v.optional(v.number()),
+  }).index("by_active", ["isActive"]),
+
+  watchlistDeliveries: defineTable({
+    watchlistId: v.id("watchlists"),
+    eventSlug: v.string(),
+    status: v.union(v.literal("sent"), v.literal("failure"), v.literal("skipped")),
+    attemptedAt: v.number(),
+    responseStatus: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+  })
+    .index("by_watchlist_and_event", ["watchlistId", "eventSlug"])
+    .index("by_watchlist_and_attempted", ["watchlistId", "attemptedAt"]),
+
+  eventRelevanceSignals: defineTable({
+    eventSlug: v.string(),
+    signal: v.union(v.literal("impacted"), v.literal("needs_review"), v.literal("no_impact")),
+    area: v.union(
+      v.literal("api"),
+      v.literal("auth"),
+      v.literal("billing"),
+      v.literal("deployments"),
+      v.literal("sdk"),
+      v.literal("security"),
+      v.literal("mobile"),
+      v.literal("ai_agents"),
+      v.literal("docs"),
+      v.literal("other"),
+    ),
+    note: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_event", ["eventSlug"])
+    .index("by_created_at", ["createdAt"]),
 });

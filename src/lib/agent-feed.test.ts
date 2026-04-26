@@ -4,6 +4,7 @@ import { GET as getFeedJson } from "@/app/api/v1/feed.json/route";
 import { GET as getFeedMarkdown } from "@/app/api/v1/feed.md/route";
 import { GET as getClusters } from "@/app/api/v1/clusters/route";
 import { GET as getOpenApi } from "@/app/api/v1/openapi.json/route";
+import { POST as postRelevance } from "@/app/api/v1/relevance/route";
 import { GET as getStatus } from "@/app/api/v1/status/route";
 import { GET as getVendorFreshnessBySlug } from "@/app/api/v1/status/vendors/[slug]/route";
 import { GET as getVendorFreshness } from "@/app/api/v1/status/vendors/route";
@@ -12,6 +13,11 @@ import { GET as getUpdateById } from "@/app/api/v1/updates/[id]/route";
 import { GET as getUpdates } from "@/app/api/v1/updates/route";
 import { POST as postAdminRefresh } from "@/app/api/admin/refresh/route";
 import { POST as postAdminRescore } from "@/app/api/admin/rescore/route";
+import {
+  GET as getAdminWatchlists,
+  POST as postAdminWatchlists,
+} from "@/app/api/admin/watchlists/route";
+import { POST as postAdminWatchlistDispatch } from "@/app/api/admin/watchlists/dispatch/route";
 import { GET as getSkill } from "@/app/skills/version-watch/SKILL.md/route";
 import {
   buildRecommendedAction,
@@ -254,6 +260,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("De-duplicate updates by id");
     expect(markdown).toContain("/api/v1/taxonomy");
     expect(markdown).toContain("/skills/version-watch/SKILL.md");
+    expect(markdown).toContain("/api/v1/relevance");
     expect(markdown).toContain("Convex-backed snapshot API");
     expect(markdown).toContain("Freshness Contract");
     expect(markdown).toContain("invalid_cursor");
@@ -271,6 +278,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("de-duplicate by id");
     expect(markdown).toContain("/api/v1/openapi.json");
     expect(markdown).toContain("/api/v1/status");
+    expect(markdown).toContain("/api/v1/relevance");
     expect(markdown).toContain("Convex-backed snapshots");
     expect(markdown).toContain("follow next_cursor as an opaque value");
     expect(markdown).toContain("/api/v1/status/vendors");
@@ -293,6 +301,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Pagination and Errors");
     expect(markdown).toContain("Handle error.code values invalid_filter, invalid_cursor, and not_found");
     expect(markdown).toContain("/api/v1/status/vendors/{slug}");
+    expect(markdown).toContain("/api/v1/relevance");
   });
 });
 
@@ -552,6 +561,7 @@ describe("agent route handlers", () => {
     expect(body.paths["/api/v1/status/vendors"]).toBeDefined();
     expect(body.paths["/api/v1/status/vendors/{slug}"]).toBeDefined();
     expect(body.paths["/api/v1/taxonomy"]).toBeDefined();
+    expect(body.paths["/api/v1/relevance"]).toBeDefined();
     expect(body.paths["/skills/version-watch/SKILL.md"]).toBeDefined();
     expect(body.paths["/api/v1/updates"].get.parameters).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "cursor" })]),
@@ -564,6 +574,8 @@ describe("agent route handlers", () => {
       expect.arrayContaining(["release_class", "impact_confidence", "signal_reasons", "score_version"]),
     );
     expect(body.components.schemas.ClustersResponse).toBeDefined();
+    expect(body.components.schemas.RelevanceSignalRequest.required).toEqual(["event_id", "signal", "area"]);
+    expect(body.components.schemas.RelevanceSignalResponse.required).toEqual(["schema_version", "ok"]);
     expect(body.components.schemas.VendorFreshnessStatus).toBeDefined();
     expect(body.components.schemas.UpdatesResponse.required).toContain("status_url");
     expect(body.components.schemas.UpdatesResponse.properties.filters.$ref).toBe(
@@ -684,6 +696,44 @@ describe("agent route handlers", () => {
 
     expect(response.status).toBe(401);
     expect(body).toEqual({ ok: false, error: "Unauthorized." });
+  });
+
+  it("rejects unauthenticated admin watchlist requests", async () => {
+    const listResponse = await getAdminWatchlists(
+      new Request("https://version-watch.example/api/admin/watchlists"),
+    );
+    const createResponse = await postAdminWatchlists(
+      new Request("https://version-watch.example/api/admin/watchlists", {
+        method: "POST",
+        body: JSON.stringify({ name: "Critical AI", webhook_type: "discord" }),
+      }),
+    );
+    const dispatchResponse = await postAdminWatchlistDispatch(
+      new Request("https://version-watch.example/api/admin/watchlists/dispatch", {
+        method: "POST",
+        body: JSON.stringify({ dry_run: true }),
+      }),
+    );
+
+    expect(listResponse.status).toBe(401);
+    expect(createResponse.status).toBe(401);
+    expect(dispatchResponse.status).toBe(401);
+  });
+
+  it("returns stable errors for invalid relevance signals", async () => {
+    const response = await postRelevance(
+      new Request("https://version-watch.example/api/v1/relevance", {
+        method: "POST",
+        body: JSON.stringify({ signal: "maybe", area: "api" }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatchObject({
+      code: "invalid_filter",
+      message: "event_id is required.",
+    });
   });
 
   it("serves the Version Watch skill Markdown route", async () => {

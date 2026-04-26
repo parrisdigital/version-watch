@@ -56,7 +56,7 @@ export type PublicVendor = {
   }>;
 };
 
-export type PublicApiErrorCode = "invalid_filter" | "invalid_cursor" | "not_found";
+export type PublicApiErrorCode = "invalid_filter" | "invalid_cursor" | "not_found" | "server_error";
 
 export type PublicApiError = {
   error: {
@@ -629,6 +629,7 @@ Base URL: ${normalizedBaseUrl}
 - API status: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
 - Vendor freshness: ${new URL("/api/v1/status/vendors", normalizedBaseUrl).toString()}
 - Taxonomy: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
+- Structured relevance signals: ${new URL("/api/v1/relevance", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
@@ -708,6 +709,7 @@ Agents should use Version Watch to:
 - Summarize relevant updates for engineering teams
 - Alert maintainers when a vendor ships a high-impact change
 - Enrich dependency, release, and migration reviews with current vendor context
+- Submit structured relevance signals only when a human or team explicitly confirms impact, review need, or no impact
 - Create tasks in Linear, Jira, GitHub Issues, or similar project systems when review is needed
 - Post filtered digests into Discord, Slack, Microsoft Teams, Telegram, or internal portals
 - Feed internal dashboards, knowledge bases, data warehouses, and weekly engineering reports
@@ -740,6 +742,7 @@ Agents should use Version Watch to:
 - Prefer filtered queries over broad feeds for notifications.
 - For recurring polling, use a 15 to 60 minute interval unless the user asks for a different cadence.
 - If /api/v1/status is degraded or stale, include that caveat in summaries and avoid claiming complete coverage.
+- Do not submit /api/v1/relevance feedback unless the user explicitly provides that signal.
 `;
 }
 
@@ -765,6 +768,7 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 - Status API: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
 - Vendor freshness API: ${new URL("/api/v1/status/vendors", normalizedBaseUrl).toString()}
 - Taxonomy API: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
+- Relevance signal API: ${new URL("/api/v1/relevance", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
@@ -790,6 +794,8 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 ## Integration Rule
 
 Fetch updates with the narrowest useful filters, check status_url for high-confidence work, follow next_cursor as an opaque value, de-duplicate by id, and cite source_url or version_watch_url when reporting results.
+
+Only submit /api/v1/relevance when a human explicitly confirms whether an update impacted them, needs review, or had no impact.
 `;
 }
 
@@ -816,6 +822,7 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 - API docs: ${new URL("/agent-access", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - Taxonomy: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
+- Relevance signals: ${new URL("/api/v1/relevance", normalizedBaseUrl).toString()}
 - Status: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
 - Vendor freshness: ${new URL("/api/v1/status/vendors", normalizedBaseUrl).toString()}
 - Vendors: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
@@ -837,6 +844,7 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 8. Use release_class, impact_confidence, signal_reasons, summary, why_it_matters, and recommended_action to explain the impact.
 9. Cite source_url for the official vendor source. Cite version_watch_url for the Version Watch record.
 10. Do not claim to have read the official source unless you opened source_url.
+11. Submit /api/v1/relevance only when the user explicitly says the update impacted them, needs review, or has no impact.
 
 ## Freshness Handling
 
@@ -937,6 +945,7 @@ When summarizing updates for a user, include:
 
 - Prefer precise filters over broad feeds.
 - Do not notify repeatedly for the same update id.
+- Do not submit community relevance signals by inference; require explicit human confirmation.
 - Do not invent migration details that are not present in the update or official source.
 - When confidence matters, tell the user to review source_url before changing production systems.
 `;
