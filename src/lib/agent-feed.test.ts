@@ -225,6 +225,21 @@ describe("agent update serialization", () => {
     expect(update.recommended_action).not.toMatch(/review the official entry/i);
   });
 
+  it("normalizes GitHub release surfaces in the public source provenance", () => {
+    const event = {
+      ...events[0]!,
+      sourceUrl: "https://github.com/openclaw/openclaw/releases/tag/v2026.4.25-beta.9",
+      sourceSurfaceUrl: "https://github.com/openclaw/openclaw/releases",
+      sourceSurfaceName: "GitHub Releases",
+      sourceSurfaceType: "changelog_page" as const,
+    };
+    const update = serializePublicUpdate(event, "https://version-watch.example");
+
+    expect(update.source_detail_url).toBe("https://github.com/openclaw/openclaw/releases/tag/v2026.4.25-beta.9");
+    expect(update.source_surface_url).toBe("https://github.com/openclaw/openclaw/releases");
+    expect(update.source_surface_type).toBe("github_release");
+  });
+
   it("generates deterministic recommended actions by category", () => {
     const breaking = {
       ...events[0]!,

@@ -494,7 +494,7 @@ export function serializePublicUpdate(event: MockEvent & { computedScore?: numbe
   const signal = getEventSignalMetadata(event);
   const sourceSurfaceUrl = event.sourceSurfaceUrl ?? event.sourceUrl;
   const sourceSurfaceName = event.sourceSurfaceName ?? event.sourceName ?? "Official source";
-  const sourceSurfaceType = event.sourceSurfaceType ?? event.sourceType;
+  const sourceSurfaceType = normalizePublicSourceType(sourceSurfaceUrl, event.sourceSurfaceType ?? event.sourceType);
 
   return {
     id: event.slug,
@@ -569,6 +569,20 @@ function list(values: string[]) {
 
 function markdownLine(value: string) {
   return value.replace(/\s+/g, " ").trim();
+}
+
+export function normalizePublicSourceType(sourceUrl: string, fallback: SourceType): SourceType {
+  try {
+    const url = new URL(sourceUrl);
+    const isGithub = url.hostname === "github.com" || url.hostname.endsWith(".github.com");
+    if (isGithub && /\/releases(?:\/|$)/i.test(url.pathname)) {
+      return "github_release";
+    }
+  } catch {
+    return fallback;
+  }
+
+  return fallback;
 }
 
 export function renderUpdatesMarkdown(

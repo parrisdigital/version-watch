@@ -20,6 +20,20 @@ const sourceTypeLabel: Record<MockEvent["sourceType"], string> = {
   rss: "RSS",
 };
 
+function getDisplaySourceType(event: MockEvent): MockEvent["sourceType"] {
+  try {
+    const url = new URL(event.sourceSurfaceUrl ?? event.sourceUrl);
+    const isGithub = url.hostname === "github.com" || url.hostname.endsWith(".github.com");
+    if (isGithub && /\/releases(?:\/|$)/i.test(url.pathname)) {
+      return "github_release";
+    }
+  } catch {
+    return event.sourceSurfaceType ?? event.sourceType;
+  }
+
+  return event.sourceSurfaceType ?? event.sourceType;
+}
+
 const searchBackKeys = ["query", "vendor", "category", "stack", "importance"] as const;
 const importanceBands = new Set(["critical", "high", "medium", "low"]);
 
@@ -85,6 +99,7 @@ export default async function EventPage({
   const displayTopicTags = event.topicTags?.length ? event.topicTags : signal.topicTags;
   const displayReleaseClass = event.releaseClass ?? signal.releaseClass;
   const displayCategoryTags = Array.from(new Set([...event.categories, ...displayTopicTags]));
+  const displaySourceType = getDisplaySourceType(event);
 
   // Graceful fallback for sparse events where title = summary = whatChanged.
   const normalizedTitle = normalize(displayTitle);
@@ -127,7 +142,7 @@ export default async function EventPage({
               />
               <span className="flex flex-col leading-none">
                 <span className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-[0.12em] text-[var(--color-signal)]">
-                  {sourceTypeLabel[event.sourceType]}
+                  {sourceTypeLabel[displaySourceType]}
                 </span>
                 <span className="mt-2 font-[var(--font-display)] text-[2rem] font-semibold leading-none tracking-tight text-[var(--color-ink)] transition-colors group-hover:text-[var(--color-signal)]">
                   {event.vendorName}
