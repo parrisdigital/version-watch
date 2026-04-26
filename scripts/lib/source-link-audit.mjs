@@ -46,6 +46,10 @@ function hasPathPrefix(candidateUrl, sourceUrl) {
   const sourcePath = source.pathname.replace(/\/$/, "") || "/";
   const candidatePath = candidate.pathname.replace(/\/$/, "") || "/";
 
+  if (sourcePath === "/") {
+    return candidateHost === sourceHost;
+  }
+
   return candidateHost === sourceHost && (candidatePath === sourcePath || candidatePath.startsWith(`${sourcePath}/`));
 }
 
