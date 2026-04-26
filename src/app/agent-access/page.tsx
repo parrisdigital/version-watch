@@ -41,6 +41,7 @@ const DOC_NAV = [
   { href: "#filters", label: "Filters" },
   { href: "#response", label: "Response shape" },
   { href: "#skill", label: "Agent skill" },
+  { href: "#build", label: "Build with API" },
   { href: "#integrations", label: "Integrations" },
   { href: "#coverage", label: "Platform coverage" },
   { href: "#roadmap", label: "What is next" },
@@ -558,6 +559,7 @@ for (const update of updates.updates) {
         "**" + update.vendor + ": " + update.title + "**\\n" +
         update.summary + "\\n" +
         "Action: " + update.recommended_action + "\\n" +
+        "Source: " + update.source_detail_url + "\\n" +
         update.version_watch_url,
     }),
   });
@@ -575,10 +577,53 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
       .map((update) =>
         "*" + update.vendor + ": " + update.title + "*\\n" +
         update.recommended_action + "\\n" +
+        update.source_detail_url + "\\n" +
         update.version_watch_url
       )
       .join("\\n\\n"),
   }),
+});`;
+
+  const syncExample = `let cursor = "";
+const seen = new Set(await loadDeliveredUpdateIds());
+
+do {
+  const url = new URL("${baseUrl}/api/v1/updates");
+  url.searchParams.set("vendor", "openai");
+  url.searchParams.set("limit", "100");
+  if (cursor) url.searchParams.set("cursor", cursor);
+
+  const page = await fetch(url).then((response) => response.json());
+
+  for (const update of page.updates) {
+    if (seen.has(update.id)) continue;
+
+    await saveUpdate({
+      id: update.id,
+      vendor: update.vendor_slug,
+      title: update.title,
+      severity: update.severity,
+      release_class: update.release_class,
+      published_at: update.published_at,
+      recommended_action: update.recommended_action,
+      source_detail_url: update.source_detail_url,
+      source_surface_url: update.source_surface_url,
+      version_watch_url: update.version_watch_url,
+    });
+  }
+
+  cursor = page.next_cursor ?? "";
+} while (cursor);`;
+
+  const dashboardExample = `const [status, updates] = await Promise.all([
+  fetch("${baseUrl}/api/v1/status").then((response) => response.json()),
+  fetch("${baseUrl}/api/v1/clusters?severity=high&limit=20").then((response) => response.json()),
+]);
+
+renderDashboard({
+  freshness: status.status,
+  status_url: updates.status_url,
+  clusters: updates.clusters,
 });`;
 
   const relevanceExample = `await fetch("${baseUrl}/api/v1/relevance", {
@@ -798,6 +843,50 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                     code={`curl "${skillUrl}"`}
                   />
                   <CodeBlock title="Freshness status" language="bash" code={`curl "${statusUrl}"`} />
+                </div>
+              </section>
+
+              <section id="build" className="scroll-mt-28">
+                <SectionIntro
+                  kicker="Build with Version Watch"
+                  title="Use Version Watch as a read-only changelog data layer"
+                  body="Developers can build their own dashboards, release intelligence portals, CI checks, digests, and internal bots on top of the public API. The API returns snapshots and provenance; your app owns storage, delivery, permissions, and any side effects."
+                />
+                <div className="mt-8 grid gap-4 xl:grid-cols-2">
+                  <CodeBlock title="Sync into your own database" language="ts" code={syncExample} />
+                  <CodeBlock title="Render a release dashboard" language="ts" code={dashboardExample} />
+                  <Card>
+                    <CardHeader>
+                      <FileJson className="size-5 text-foreground" aria-hidden="true" />
+                      <CardTitle>Attribution contract</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+                      <p>
+                        Use source_detail_url as the exact official vendor entry. Use source_surface_url to
+                        show the tracked changelog, docs, RSS, or GitHub release surface that Version Watch monitors.
+                      </p>
+                      <p>
+                        Use version_watch_url when you want to link back to the normalized Version Watch record.
+                        Store update ids to prevent duplicate digests, alerts, or dashboard rows.
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <ShieldCheck className="size-5 text-foreground" aria-hidden="true" />
+                      <CardTitle>Read-only boundary</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+                      <p>
+                        Version Watch does not post to external tools for users today. It gives developers the
+                        data contract to build their own workers, bots, and internal products safely.
+                      </p>
+                      <p>
+                        Check /api/v1/status before release gates or high-confidence summaries, and show degraded
+                        or stale status when coverage may be incomplete.
+                      </p>
+                    </CardContent>
+                  </Card>
                 </div>
               </section>
 

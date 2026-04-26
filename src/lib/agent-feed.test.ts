@@ -290,6 +290,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("read-only source of changelog intelligence");
     expect(markdown).toContain("Do not modify code, update dependencies, deploy, create issues, post notifications, or submit relevance feedback unless the user explicitly asks");
     expect(markdown).toContain("source_detail_url");
+    expect(markdown).toContain("Build Your Own Read-Only Changelog System");
   });
 
   it("renders llms.txt with broad integration guidance", () => {
@@ -306,6 +307,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("follow next_cursor as an opaque value");
     expect(markdown).toContain("/api/v1/status/vendors");
     expect(markdown).toContain("Do not post, open issues, change code, or submit feedback unless the user explicitly asks");
+    expect(markdown).toContain("read-only changelog dashboards");
   });
 
   it("renders the portable Version Watch skill", () => {
@@ -329,6 +331,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Read-Only Scope");
     expect(markdown).toContain("Do not modify code, update dependencies, deploy, create issues, post notifications");
     expect(markdown).toContain("source_detail_url");
+    expect(markdown).toContain("Read-Only Changelog Dashboard");
   });
 });
 

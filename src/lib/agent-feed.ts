@@ -761,11 +761,21 @@ Agents should use Version Watch as read-only changelog intelligence to:
 
 ## Integration Guidance
 
-- Discord or Slack: a user-owned scheduled worker can poll filtered updates and post vendor, title, summary, recommended_action, and version_watch_url.
+- Discord or Slack: a user-owned scheduled worker can poll filtered updates and post vendor, title, summary, recommended_action, source_detail_url, and version_watch_url.
 - CI/CD: query high or critical updates before release and flag matching vendor, API, SDK, auth, hosting, infra, or billing changes.
 - Agents and IDEs: fetch context before suggesting dependency upgrades, migration plans, or code changes.
 - Issue trackers: draft review task content for critical or high updates that match a team's vendors or tags.
 - Data platforms: store update id, vendor_slug, severity, published_at, tags, recommended_action, source_detail_url, source_surface_url, and version_watch_url.
+
+## Build Your Own Read-Only Changelog System
+
+Developers can use Version Watch as a public changelog data layer for their own dashboards, release portals, digests, CI checks, and internal bots. Version Watch provides normalized records, freshness status, filters, pagination, and provenance. Your application owns storage, delivery, permissions, and any side effects.
+
+- Store update id to avoid duplicate rows or notifications.
+- Store source_detail_url as the official vendor entry.
+- Store source_surface_url to show the tracked changelog, docs, RSS, or GitHub release surface.
+- Store version_watch_url when you want to link back to the normalized Version Watch record.
+- Check /api/v1/status before release gates or high-confidence summaries.
 
 ## Guardrails
 
@@ -824,10 +834,13 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 - Summarize relevant changes for developers
 - Prepare high-signal update summaries for Discord, Slack, Teams, issue trackers, CI/CD, dashboards, and knowledge bases
 - Use recommended_action as the next-step hint and source_detail_url as the exact official citation
+- Help developers build read-only changelog dashboards, digests, release portals, and internal bots from the public API
 
 ## Integration Rule
 
 Fetch updates with the narrowest useful filters, check status_url for high-confidence work, follow next_cursor as an opaque value, de-duplicate by id, and cite source_detail_url or version_watch_url when reporting results. Do not post, open issues, change code, or submit feedback unless the user explicitly asks.
+
+For user-owned systems, sync /api/v1/updates into your own database by storing id, vendor_slug, published_at, severity, release_class, recommended_action, source_detail_url, source_surface_url, and version_watch_url.
 
 Only submit /api/v1/relevance when a human explicitly confirms whether an update impacted them, needs review, or had no impact.
 `;
@@ -966,6 +979,16 @@ Use this structure for Discord, Slack, Teams, email, or issue trackers.
     Version Watch: {version_watch_url}
 
 Format one message per update or one grouped digest. Do not send it unless the user explicitly asks or the user-owned workflow is already configured to post. Store delivered ids to avoid repeats.
+
+### Read-Only Changelog Dashboard
+
+Use this when a developer wants to build their own internal changelog portal or release intelligence view.
+
+    GET ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
+    GET ${new URL("/api/v1/updates?limit=100", normalizedBaseUrl).toString()}
+    GET ${new URL("/api/v1/clusters?limit=50", normalizedBaseUrl).toString()}
+
+Store id, vendor_slug, published_at, severity, release_class, recommended_action, source_detail_url, source_surface_url, and version_watch_url. Refresh with next_cursor, de-duplicate by id, and show degraded or stale status when coverage may be incomplete.
 
 ## Output Format
 

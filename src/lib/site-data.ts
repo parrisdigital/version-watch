@@ -3,6 +3,7 @@ import { fetchAction, fetchQuery } from "convex/nextjs";
 
 import { api } from "../../convex/_generated/api";
 import { scoreEvent } from "@/lib/classification/score";
+import { buildSourceLinkQualityReport, type SourceLinkQualityReport } from "@/lib/source-link-quality";
 import {
   events as fallbackEvents,
   reviewCandidates,
@@ -262,4 +263,18 @@ export async function getSourceHealth(): Promise<SourceHealthView[]> {
       ? format(new Date(entry.lastSuccessAt), "MMM d, yyyy HH:mm")
       : "Never",
   }));
+}
+
+export async function getSourceLinkQualityReport(): Promise<SourceLinkQualityReport> {
+  const [vendors, events, freshnessReport] = await Promise.all([
+    getVendors(),
+    getAllPublicEvents(),
+    getProductionFreshnessReport({ sinceHours: 8, eventLimit: 24 }),
+  ]);
+
+  return buildSourceLinkQualityReport({
+    vendors,
+    events,
+    freshnessReport,
+  });
 }

@@ -9,6 +9,7 @@ const FOOTER_LINKS = [
   { href: "/search", label: "Search" },
   { href: "/feedback", label: "Feedback" },
   { href: "/ops/health", label: "Source health" },
+  { href: "/ops/source-links", label: "Source links" },
   { href: "/ops/signal", label: "Signal quality" },
 ] as const;
 

@@ -25,9 +25,14 @@ export default async function OpsSignalPage() {
                 tracks repeated release noise, and shows where persisted rows still need backfill.
               </p>
             </div>
-            <Link href="/ops/health" className="vw-button vw-button-secondary">
-              Source health
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/ops/source-links" className="vw-button vw-button-secondary">
+                Source links
+              </Link>
+              <Link href="/ops/health" className="vw-button vw-button-ghost">
+                Source health
+              </Link>
+            </div>
           </div>
 
           <dl className="mt-8 grid gap-px overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-line)] sm:grid-cols-2 lg:grid-cols-4">
