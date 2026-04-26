@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { clusterChangeEvents } from "@/lib/change-clusters";
+import { deriveSignalMetadata } from "@/lib/classification/signal";
 import type { MockEvent } from "@/lib/mock-data";
 
 const baseEvent: MockEvent = {
@@ -70,5 +71,18 @@ describe("clusterChangeEvents", () => {
 
     expect(clusters.every((cluster) => cluster.kind === "single")).toBe(true);
     expect(clusters.map((cluster) => cluster.updateCount)).toEqual([1, 1, 1]);
+  });
+
+  it("derives v2 cluster scores when stored event scores are still legacy", () => {
+    const event = {
+      ...baseEvent,
+      computedScore: 58,
+      scoreVersion: undefined,
+    };
+
+    const [cluster] = clusterChangeEvents([event], { minClusterSize: 2, windowHours: 24 });
+
+    expect(cluster?.signalScore).toBe(deriveSignalMetadata(event).signalScore);
+    expect(cluster?.signalScore).toBeLessThan(58);
   });
 });

@@ -41,6 +41,11 @@ function getClusterKey(event: ClusterableEvent, releaseClass: ReleaseClass) {
   return `${event.vendorSlug}:${event.sourceUrl}:${getReleaseFamily(event, releaseClass)}`;
 }
 
+function signalScoreForEvent(event: ClusterableEvent) {
+  const signal = deriveSignalMetadata(event);
+  return event.scoreVersion === "v2" && typeof event.computedScore === "number" ? event.computedScore : signal.signalScore;
+}
+
 function singleCluster(event: ClusterableEvent): ChangeCluster {
   const signal = deriveSignalMetadata(event);
 
@@ -57,7 +62,7 @@ function singleCluster(event: ClusterableEvent): ChangeCluster {
     latestPublishedAt: event.publishedAt,
     earliestPublishedAt: event.publishedAt,
     updateCount: 1,
-    signalScore: event.computedScore ?? signal.signalScore,
+    signalScore: signalScoreForEvent(event),
     events: [event],
   };
 }
@@ -68,7 +73,7 @@ function groupedCluster(events: ClusterableEvent[], windowHours: number): Change
   const earliest = sorted[sorted.length - 1]!;
   const signal = deriveSignalMetadata(latest);
   const releaseClass = latest.releaseClass ?? signal.releaseClass;
-  const score = Math.max(...sorted.map((event) => event.computedScore ?? deriveSignalMetadata(event).signalScore));
+  const score = Math.max(...sorted.map(signalScoreForEvent));
 
   return {
     id: `cluster_${latest.vendorSlug}_${getReleaseFamily(latest, releaseClass).replace(/[^a-z0-9_-]+/gi, "_")}_${Date.parse(latest.publishedAt)}`,
@@ -124,4 +129,3 @@ export function clusterChangeEvents(
     })
     .sort((a, b) => Date.parse(b.latestPublishedAt) - Date.parse(a.latestPublishedAt));
 }
-
