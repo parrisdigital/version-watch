@@ -256,7 +256,7 @@ export function filterEventsForPublicUpdateMatches<T extends MockEvent>(
         return false;
       }
 
-      if (filters.severity && event.importanceBand !== filters.severity) {
+      if (filters.severity && getEventSignalMetadata(event).importanceBand !== filters.severity) {
         return false;
       }
 

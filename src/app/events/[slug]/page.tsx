@@ -5,6 +5,7 @@ import { format, formatDistanceToNowStrict } from "date-fns";
 import { SeverityPill } from "@/components/severity-pill";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { VendorMark } from "@/components/vendor-mark";
+import { deriveSignalMetadata, releaseClassLabel } from "@/lib/classification/signal";
 import { getEventBySlug } from "@/lib/site-data";
 import type { MockEvent } from "@/lib/mock-data";
 
@@ -75,9 +76,17 @@ export default async function EventPage({
   const publishedDate = new Date(event.publishedAt);
   const relative = formatDistanceToNowStrict(publishedDate, { addSuffix: true });
   const absolute = format(publishedDate, "PPpp");
+  const signal = deriveSignalMetadata(event);
+  const displayTitle = event.scoreVersion === "v2" ? event.title : signal.displayTitle;
+  const displayWhyItMatters = event.scoreVersion === "v2" ? event.whyItMatters : signal.whyItMatters;
+  const displaySeverity = event.scoreVersion === "v2" ? event.importanceBand : signal.importanceBand;
+  const displayScore = event.computedScore ?? signal.signalScore;
+  const displayTopicTags = event.topicTags?.length ? event.topicTags : signal.topicTags;
+  const displayReleaseClass = event.releaseClass ?? signal.releaseClass;
+  const displayCategoryTags = Array.from(new Set([...event.categories, ...displayTopicTags]));
 
   // Graceful fallback for sparse events where title = summary = whatChanged.
-  const normalizedTitle = normalize(event.title);
+  const normalizedTitle = normalize(displayTitle);
   const showSummary = normalize(event.summary) !== normalizedTitle;
   const showWhatChanged =
     normalize(event.whatChanged) !== normalizedTitle && normalize(event.whatChanged) !== normalize(event.summary);
@@ -127,7 +136,7 @@ export default async function EventPage({
 
             <dl className="grid grid-cols-3 gap-6 sm:justify-self-end sm:text-right">
               <MetaRail label="Severity">
-                <SeverityPill band={event.importanceBand} />
+                <SeverityPill band={displaySeverity} />
               </MetaRail>
               <MetaRail label="Published" title={absolute}>
                 <span className="font-[var(--font-display)] text-sm font-semibold tabular-nums text-[var(--color-ink)]">
@@ -139,14 +148,14 @@ export default async function EventPage({
               </MetaRail>
               <MetaRail label="Signal">
                 <span className="font-[var(--font-display)] text-2xl font-semibold tabular-nums text-[var(--color-signal)]">
-                  {event.computedScore ?? 0}
+                  {displayScore}
                 </span>
               </MetaRail>
             </dl>
           </div>
 
           <h1 className="vw-display mt-10 text-balance text-[2.5rem] leading-[1.02] sm:text-5xl md:text-[4rem]">
-            {event.title}
+            {displayTitle}
           </h1>
 
           {showSummary ? (
@@ -190,7 +199,7 @@ export default async function EventPage({
 
           <div className="mt-10 grid gap-4 md:grid-cols-2">
             {showWhatChanged ? <DetailBlock label="What changed" body={event.whatChanged} /> : null}
-            <DetailBlock label="Why it matters" body={event.whyItMatters} />
+            <DetailBlock label="Why it matters" body={displayWhyItMatters} />
             <DetailList label="Who should care" items={event.whoShouldCare} />
             <DetailList label="Affected stack" items={event.affectedStack} />
           </div>
@@ -198,7 +207,8 @@ export default async function EventPage({
           <div className="mt-10">
             <p className="vw-kicker vw-kicker-muted">Categories</p>
             <div className="mt-3 flex flex-wrap gap-1.5">
-              {event.categories.map((category) => (
+              <span className="vw-tag vw-tag-mono">{releaseClassLabel(displayReleaseClass)}</span>
+              {displayCategoryTags.map((category) => (
                 <span key={category} className="vw-tag vw-tag-mono">
                   {category}
                 </span>

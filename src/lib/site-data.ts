@@ -59,7 +59,7 @@ async function readFromConvex<T>(read: () => Promise<T>, fallback: () => T): Pro
 function attachScores(items: SiteEvent[]): SiteEvent[] {
   return items.map((event) => ({
     ...event,
-    computedScore: event.computedScore ?? scoreEvent(event),
+    computedScore: scoreEvent(event),
   }));
 }
 
@@ -219,7 +219,7 @@ export async function getEventBySlug(slug: string) {
 
   return {
     ...event,
-    computedScore: event.computedScore ?? scoreEvent(event),
+    computedScore: scoreEvent(event),
   };
 }
 

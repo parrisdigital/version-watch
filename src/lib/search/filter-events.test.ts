@@ -10,7 +10,7 @@ describe("filterEvents", () => {
       vendor: "stripe",
       category: "breaking",
       stack: "payments",
-      importance: "high",
+      importance: "critical",
     });
 
     expect(result).toHaveLength(1);
