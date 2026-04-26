@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 const NAV_LINKS = [
   { href: "/", label: "Latest" },
   { href: "/vendors", label: "Vendors" },
+  { href: "/agent-access", label: "API" },
   { href: "/search", label: "Search" },
   { href: "/about", label: "About" },
   { href: "/feedback", label: "Feedback" },

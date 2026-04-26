@@ -7,6 +7,8 @@ import {
   buildRecommendedAction,
   filterEventsForPublicUpdates,
   parseUpdateFilters,
+  renderAgentsMarkdown,
+  renderLlmsTxt,
   renderUpdatesMarkdown,
   serializePublicUpdate,
 } from "@/lib/agent-feed";
@@ -140,6 +142,24 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("# Version Watch Feed");
     expect(markdown).toContain("- Recommended action:");
     expect(markdown).toContain(update.source_url);
+  });
+
+  it("renders agent guidance for integrations and de-duplication", () => {
+    const markdown = renderAgentsMarkdown("https://version-watch.example");
+
+    expect(markdown).toContain("/api/v1/updates");
+    expect(markdown).toContain("recommended_action");
+    expect(markdown).toContain("De-duplicate updates by id");
+    expect(markdown).toContain("Discord or Slack");
+  });
+
+  it("renders llms.txt with broad integration guidance", () => {
+    const markdown = renderLlmsTxt("https://version-watch.example");
+
+    expect(markdown).toContain("/agent-access");
+    expect(markdown).toContain("What Agents Can Do");
+    expect(markdown).toContain("issue trackers");
+    expect(markdown).toContain("de-duplicate by id");
   });
 });
 

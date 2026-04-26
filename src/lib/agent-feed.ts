@@ -365,23 +365,91 @@ export function renderAgentsMarkdown(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
 
   return `# Version Watch Agent Access
 
-Version Watch tracks official developer platform changelogs, release notes, docs updates, and GitHub releases.
+Version Watch tracks official developer platform changelogs, release notes, docs updates, RSS feeds, and GitHub releases. Use it as a public change intelligence layer for developer tools and agents.
 
-## Recommended Agent Endpoints
+Base URL: ${normalizedBaseUrl}
+
+## Recommended Endpoints
 
 - Latest updates: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
-- High-signal updates: ${new URL("/api/v1/updates?severity=high", normalizedBaseUrl).toString()}
+- High-signal updates: ${new URL("/api/v1/updates?severity=high&limit=25", normalizedBaseUrl).toString()}
+- Critical updates: ${new URL("/api/v1/updates?severity=critical&limit=25", normalizedBaseUrl).toString()}
 - Vendor list: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
+- API documentation: ${new URL("/agent-access", normalizedBaseUrl).toString()}
+- LLM resource map: ${new URL("/llms.txt", normalizedBaseUrl).toString()}
 
 ## Filters
 
-Use query parameters on /api/v1/updates: since, vendor, severity, audience, tag, and limit.
+Use query parameters on /api/v1/updates, /api/v1/feed.json, /api/v1/feed.md, and /feed.md.
+
+- since: ISO 8601 timestamp, for example 2026-04-24T00:00:00Z
+- vendor: vendor slug, for example openai, stripe, vercel, github, cloudflare, convex
+- severity: critical, high, medium, or low
+- audience: frontend, backend, infra, ai, product, security, compliance, or related audience labels
+- tag: matches categories or affected stack tags such as api, auth, billing, sdk, agents, hosting, deployments
+- limit: defaults to 25 and clamps at 100
+
+## Response Fields
+
+Each public update includes:
+
+- id
+- vendor
+- vendor_slug
+- title
+- published_at
+- severity
+- signal_score
+- audience
+- tags
+- summary
+- why_it_matters
+- recommended_action
+- source_url
+- github_url
+- version_watch_url
+
+The recommended_action field is the most useful field for agents. Treat it as an action hint, then cite source_url or version_watch_url for attribution.
 
 ## Use Cases
 
-Agents should use Version Watch to detect breaking platform changes, monitor APIs and SDKs used by a project, summarize relevant updates for engineering teams, and alert maintainers when a vendor ships a high-impact change.
+Agents should use Version Watch to:
+
+- Detect breaking platform changes before upgrades or deployments
+- Monitor APIs, SDKs, auth systems, billing systems, hosting providers, and AI platforms used by a project
+- Summarize relevant updates for engineering teams
+- Alert maintainers when a vendor ships a high-impact change
+- Enrich dependency, release, and migration reviews with current vendor context
+- Create tasks in Linear, Jira, GitHub Issues, or similar project systems when review is needed
+- Post filtered digests into Discord, Slack, Microsoft Teams, Telegram, or internal portals
+- Feed internal dashboards, knowledge bases, data warehouses, and weekly engineering reports
+
+## Agent Workflow
+
+1. Determine the project stack or vendor list.
+2. Call /api/v1/vendors if you need valid vendor slugs.
+3. Query /api/v1/updates with vendor, severity, audience, tag, since, and limit filters.
+4. De-duplicate updates by id before notifying a user or posting to a channel.
+5. Summarize only updates that match the user or project context.
+6. Include recommended_action when giving advice.
+7. Cite source_url for the official vendor source and version_watch_url for the Version Watch record.
+
+## Integration Guidance
+
+- Discord or Slack: poll filtered updates from a scheduled worker, then post vendor, title, summary, recommended_action, and version_watch_url.
+- CI/CD: query high or critical updates before release and flag matching vendor, API, SDK, auth, hosting, infra, or billing changes.
+- Agents and IDEs: fetch context before suggesting dependency upgrades, migration plans, or code changes.
+- Issue trackers: create review tasks for critical or high updates that match a team's vendors or tags.
+- Data platforms: store update id, vendor_slug, severity, published_at, tags, recommended_action, source_url, and version_watch_url.
+
+## Guardrails
+
+- Do not claim to have read the official source unless you actually open source_url.
+- Do not notify repeatedly for the same id.
+- Prefer filtered queries over broad feeds for notifications.
+- For recurring polling, use a 15 to 60 minute interval unless the user asks for a different cadence.
 `;
 }
 
@@ -396,16 +464,30 @@ Version Watch turns official developer platform changelogs, release notes, docs 
 
 ## Agent Resources
 
+- API docs: ${new URL("/agent-access", normalizedBaseUrl).toString()}
+- Agent guide: ${new URL("/agents.md", normalizedBaseUrl).toString()}
 - Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
 - Vendors API: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
-- Agent guide: ${new URL("/agents.md", normalizedBaseUrl).toString()}
 
 ## Query Examples
 
 - High-severity updates: ${new URL("/api/v1/updates?severity=high", normalizedBaseUrl).toString()}
 - Backend audience updates: ${new URL("/api/v1/updates?audience=backend", normalizedBaseUrl).toString()}
 - Auth-tagged updates: ${new URL("/api/v1/updates?tag=auth", normalizedBaseUrl).toString()}
+- Vendor-specific updates: ${new URL("/api/v1/updates?vendor=openai&limit=10", normalizedBaseUrl).toString()}
+
+## What Agents Can Do
+
+- Monitor platform changes for a project stack
+- Detect breaking, security, API, SDK, auth, billing, hosting, model, and infra updates
+- Summarize relevant changes for developers
+- Route high-signal updates into Discord, Slack, Teams, issue trackers, CI/CD, dashboards, and knowledge bases
+- Use recommended_action as the next-step hint and source_url as the official citation
+
+## Integration Rule
+
+Fetch updates with the narrowest useful filters, de-duplicate by id, and cite source_url or version_watch_url when reporting results.
 `;
 }
