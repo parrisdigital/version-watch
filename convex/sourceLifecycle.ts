@@ -5,6 +5,10 @@ export type SourceLifecycleState = (typeof sourceLifecycleStates)[number];
 const unsupportedSourceUrls = new Set([
   // Railway currently returns a Cloudflare managed challenge to server-side fetches and has no official feed/API.
   "https://railway.com/changelog",
+  // Windsurf currently returns server errors for the public changelog from backend fetches.
+  "https://windsurf.com/changelog",
+  // Antigravity's changelog shell fetches, but the release content is not present in server-rendered HTML.
+  "https://antigravity.google/changelog",
 ]);
 
 export function getRegistryLifecycleState(sourceUrl: string): SourceLifecycleState {

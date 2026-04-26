@@ -109,6 +109,163 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-17T00:00:00.000Z"));
   });
 
+  it("parses xAI month-grouped release notes", () => {
+    const html = `
+      <main>
+        <h1>April 2026</h1>
+        <div>Apr 15</div>
+        <h3>Speech to Text is available</h3>
+        <p>The xAI API now supports speech-to-text transcription.</p>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "xai:docs_page",
+      sourceUrl: "https://docs.x.ai/developers/release-notes",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Speech to Text is available",
+      excerpt: "The xAI API now supports speech-to-text transcription.",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-15T00:00:00.000Z"));
+  });
+
+  it("parses Groq date-led changelog entries and cleans run-together verbs", () => {
+    const html = `
+      <main>
+        <span>Dec 1, 2025</span>
+        <h3>AddedMCP Connectors (Beta)</h3>
+        <p>MCP Connectors provide a streamlined way to integrate with popular business applications.</p>
+        <h3>ChangedPython SDK v0.33.0, TypeScript SDK v0.34.0</h3>
+        <p>The SDKs include updated client behavior and examples.</p>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "groq:docs_page",
+      sourceUrl: "https://console.groq.com/docs/changelog",
+      html,
+    });
+
+    expect(entries.map((entry) => entry.title)).toEqual([
+      "MCP Connectors (Beta)",
+      "Python SDK v0.33.0, TypeScript SDK v0.34.0",
+    ]);
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2025-12-01T00:00:00.000Z"));
+  });
+
+  it("parses Augment month-grouped changelog cards", () => {
+    const html = `
+      <main>
+        <div>APRIL 2026</div>
+        <div>Apr 23</div>
+        <h2><a href="/changelog/intent-0-3-6-release-notes">Intent 0.3.6 Release Notes</a></h2>
+        <p>Model picker no longer swaps your selected model when a provider is slow to load.</p>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "augment-code:changelog_page",
+      sourceUrl: "https://www.augmentcode.com/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Intent 0.3.6 Release Notes",
+      url: "https://www.augmentcode.com/changelog/intent-0-3-6-release-notes",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-23T00:00:00.000Z"));
+  });
+
+  it("parses Warp version headings", () => {
+    const html = `
+      <main>
+        <h2 id="id-2026.04.22-v0.2026.04.22.08.46">hashtag2026.04.22 (v0.2026.04.22.08.46)</h2>
+        <p>Warp added new agent mode controls for terminal workflows.</p>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "warp:docs_page",
+      sourceUrl: "https://docs.warp.dev/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Warp 2026.04.22 (v0.2026.04.22.08.46)",
+      url: "https://docs.warp.dev/changelog#id-2026.04.22-v0.2026.04.22.08.46",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-22T00:00:00.000Z"));
+  });
+
+  it("parses Zed stable release text blocks", () => {
+    const html = `
+      <main>
+        April 2026
+        0.233.10Apr 24, 2026macOSLoading…WindowsLoading…LinuxLoading…
+        Added support for GPT 5.5 in the assistant panel.
+        0.232.7Apr 17, 2026macOSLoading…Fixed editor performance regressions.
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "zed:changelog_page",
+      sourceUrl: "https://zed.dev/releases/stable",
+      html,
+    });
+
+    expect(entries.map((entry) => entry.title)).toEqual(["Zed 0.233.10", "Zed 0.232.7"]);
+    expect(entries[0]?.excerpt).toContain("Added support for GPT 5.5");
+  });
+
+  it("parses Dia article changelog entries", () => {
+    const html = `
+      <main>
+        <article>
+          <time datetime="2026-01-29">January 28, 2026</time>
+          <h2><a href="/changelog/1-16-0">What's New in Dia 1.16.0</a></h2>
+          <p>Dia added browser updates for research workflows.</p>
+        </article>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "dia:changelog_page",
+      sourceUrl: "https://www.diabrowser.com/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "What's New in Dia 1.16.0",
+      url: "https://www.diabrowser.com/changelog/1-16-0",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-01-29T00:00:00.000Z"));
+  });
+
+  it("parses Brave release-note headings", () => {
+    const html = `
+      <main>
+        <h2 id="release-notes-v1-89-143">Release Notes v1.89.143 (Apr 23, 2026)</h2>
+        <p>Brave updated Leo and general browser behavior.</p>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "brave:changelog_page",
+      sourceUrl: "https://brave.com/latest/",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Brave 1.89.143 release notes",
+      url: "https://brave.com/latest/#release-notes-v1-89-143",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-23T00:00:00.000Z"));
+  });
+
   it("parses OpenAI-style dated timeline entries without dedicated headings", () => {
     const html = `
       <main>

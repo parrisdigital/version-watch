@@ -108,6 +108,9 @@ const VENDOR_STACKS: Record<string, string[]> = {
   openai: ["llms", "agents", "developer-workflow"],
   anthropic: ["llms", "agents"],
   gemini: ["llms", "search", "agents"],
+  xai: ["llms", "agents", "api"],
+  "meta-ai": ["llms", "agents", "sdk"],
+  groq: ["llms", "agents", "api"],
   vercel: ["hosting", "deployments", "frontend-infra"],
   stripe: ["payments", "subscriptions"],
   github: ["developer-workflow", "ci-cd"],
@@ -119,9 +122,18 @@ const VENDOR_STACKS: Record<string, string[]> = {
   "android-developers": ["mobile-platform"],
   firecrawl: ["agents", "scraping", "search"],
   exa: ["search", "llms", "agents"],
+  cline: ["developer-workflow", "agents", "llms"],
+  "augment-code": ["developer-workflow", "agents", "llms"],
   clerk: ["auth", "developer-workflow"],
   resend: ["email", "backend"],
   linear: ["developer-workflow", "product"],
+  warp: ["terminal", "developer-workflow", "agents"],
+  vscode: ["editor", "developer-workflow", "tooling"],
+  zed: ["editor", "developer-workflow", "llms"],
+  dia: ["browser", "developer-workflow", "llms"],
+  brave: ["browser", "privacy", "llms"],
+  windsurf: ["developer-workflow", "agents", "llms"],
+  "google-antigravity": ["developer-workflow", "agents", "llms"],
   docker: ["containers", "developer-workflow", "infra"],
   "hermes-agent": ["agents", "developer-workflow", "automation"],
   "t3-code": ["developer-workflow", "llms", "desktop-app"],
@@ -469,6 +481,243 @@ function parseDatedHeadingEntries(sourceUrl: string, html: string) {
       publishedAt,
       githubUrl,
       parseConfidence: url !== sourceUrl ? "high" : "medium",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function collectContainerExcerpt($: ReturnType<typeof load>, element: any, title: string) {
+  const container = $(element).closest("article, li, section, div").first();
+  const parts: string[] = [];
+
+  for (const candidate of container.find("p, li").toArray()) {
+    const text = cleanText($(candidate).text());
+    if (!text || text === title || isDateLike(text) || text.length < 24) {
+      continue;
+    }
+
+    parts.push(text);
+    if (parts.join(" ").length >= 260) {
+      break;
+    }
+  }
+
+  return truncateSentence(parts.join(" "));
+}
+
+function getEntryElementUrl($: ReturnType<typeof load>, element: any, sourceUrl: string) {
+  const link =
+    $(element).find("a[href]").first().attr("href") ??
+    $(element).closest("a[href]").attr("href") ??
+    $(element).closest("article, li, section, div").find("a[href]").first().attr("href");
+
+  if (link) {
+    return toAbsoluteUrl(link, sourceUrl);
+  }
+
+  const id = $(element).attr("id") ?? $(element).find("[id]").first().attr("id");
+  if (id) {
+    return `${sourceUrl.split("#")[0]}#${encodeURIComponent(id)}`;
+  }
+
+  return sourceUrl;
+}
+
+function normalizeChangeVerbTitle(title: string) {
+  const spaced = cleanText(title).replace(
+    /^(Added|Changed|Fixed|Removed|Deprecated|Updated|Improved|New)(?=[A-Z0-9])/,
+    "$1 ",
+  );
+
+  return spaced
+    .replace(/^(Added|Changed|Fixed|Removed|Deprecated|Updated|Improved)\s+(?=[A-Z0-9])/i, "")
+    .trim();
+}
+
+function parseDateLedHeadingEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+  let context: MonthYearContext | null = null;
+  let activeDate: number | null = null;
+
+  for (const element of root.find("h1, h2, h3, h4, div, span, time").toArray()) {
+    const tagName = element.tagName?.toLowerCase?.() ?? "";
+    const text = cleanText($(element).text());
+    if (!text) {
+      continue;
+    }
+
+    const monthYear = parseMonthYearContext(text);
+    if (monthYear && (/^h[1-3]$/.test(tagName) || text.length <= 32)) {
+      context = monthYear;
+      activeDate = null;
+      continue;
+    }
+
+    if (!/^h[1-6]$/.test(tagName) && text.length <= 40) {
+      const publishedAt = parseDateText(text, context) ?? parseDateFromText(text, context);
+      if (publishedAt) {
+        activeDate = publishedAt;
+        continue;
+      }
+    }
+
+    if (!activeDate || !/^h[2-4]$/.test(tagName)) {
+      continue;
+    }
+
+    const title = normalizeChangeVerbTitle(text);
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const excerpt = collectExcerpt($, element) || collectContainerExcerpt($, element, title) || title;
+    entries.push({
+      title,
+      url: getEntryElementUrl($, element, sourceUrl),
+      excerpt,
+      publishedAt: activeDate,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseWarpEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const heading of root.find("h2, h3, h4").toArray()) {
+    const rawTitle = cleanText($(heading).text()).replace(/^hashtag/i, "");
+    const match = rawTitle.match(/\b(20\d{2})\.(\d{2})\.(\d{2})\b(?:\s*\((v[^)]+)\))?/i);
+    if (!match) {
+      continue;
+    }
+
+    const publishedAt = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    const releaseDate = `${match[1]}.${match[2]}.${match[3]}`;
+    const version = match[4];
+    const title = `Warp ${releaseDate}${version ? ` (${version})` : ""}`;
+    const id = $(heading).attr("id") ?? rawTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+    entries.push({
+      title,
+      url: `${sourceUrl.split("#")[0]}#${encodeURIComponent(id)}`,
+      excerpt: collectExcerpt($, heading) || title,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseZedStableEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const text = cleanText(root.text());
+  const matches = Array.from(text.matchAll(/(0\.\d+\.\d+)([A-Z][a-z]{2} \d{1,2}, 20\d{2})/g));
+  const entries: ParsedSourceEntry[] = [];
+
+  for (let index = 0; index < matches.length; index += 1) {
+    const match = matches[index]!;
+    const next = matches[index + 1];
+    const publishedAt = parseDateText(match[2]!, null);
+    if (!publishedAt || match.index === undefined) {
+      continue;
+    }
+
+    const bodyStart = match.index + match[0].length;
+    const bodyEnd = next?.index ?? text.length;
+    const excerpt = truncateSentence(
+      text
+        .slice(bodyStart, bodyEnd)
+        .replace(/\b(?:macOS|Windows|Linux)Loading…?/g, " ")
+        .replace(/\bLoading…?/g, " ")
+        .replace(/\s+/g, " "),
+    );
+
+    entries.push({
+      title: `Zed ${match[1]}`,
+      url: `${sourceUrl.split("#")[0]}#${encodeURIComponent(match[1]!)}`,
+      excerpt: excerpt || `Zed ${match[1]} stable release notes.`,
+      publishedAt,
+      parseConfidence: "medium",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseDiaEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const time of $("time[datetime]").toArray()) {
+    const publishedAt = parseDateText($(time).attr("datetime") ?? cleanText($(time).text()), null);
+    if (!publishedAt) {
+      continue;
+    }
+
+    const article = $(time).closest("article").first();
+    const container = article.length > 0 ? article : $(time).closest("li, section, div").first();
+    const titleLink = container.find("h1 a[href], h2 a[href], h3 a[href], h4 a[href], a[href]").first();
+    const title = cleanText(titleLink.text() || container.find("h1, h2, h3, h4").first().text());
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const excerpt =
+      truncateSentence(
+        container
+          .find("p")
+          .toArray()
+          .map((element) => cleanText($(element).text()))
+          .filter((value) => value && value !== title)
+          .slice(0, 2)
+          .join(" "),
+      ) || title;
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(titleLink.attr("href"), sourceUrl),
+      excerpt,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseBraveEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const heading of root.find("h1, h2, h3, h4").toArray()) {
+    const rawTitle = cleanText($(heading).text());
+    const match = rawTitle.match(/Release Notes\s+v?([0-9.]+)\s*\(([^)]+)\)/i);
+    if (!match) {
+      continue;
+    }
+
+    const publishedAt = parseDateFromText(match[2]!);
+    if (!publishedAt) {
+      continue;
+    }
+
+    const id = $(heading).attr("id");
+    entries.push({
+      title: `Brave ${match[1]} release notes`,
+      url: id ? `${sourceUrl.split("#")[0]}#${encodeURIComponent(id)}` : sourceUrl,
+      excerpt: collectExcerpt($, heading) || rawTitle,
+      publishedAt,
+      parseConfidence: "high",
     });
   }
 
@@ -1715,6 +1964,41 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "gemini:docs_page") {
     const entries = parseOpenAITimeline(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "xai:docs_page" || parserKey === "groq:docs_page" || parserKey === "augment-code:changelog_page") {
+    const entries = parseDateLedHeadingEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "warp:docs_page") {
+    const entries = parseWarpEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "zed:changelog_page") {
+    const entries = parseZedStableEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "dia:changelog_page") {
+    const entries = parseDiaEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "brave:changelog_page") {
+    const entries = parseBraveEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }

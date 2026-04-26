@@ -383,11 +383,16 @@ const FEATURED_VENDOR_SLUGS = [
   "openai",
   "anthropic",
   "gemini",
+  "xai",
+  "meta-ai",
+  "groq",
   "vercel",
   "stripe",
   "github",
   "cloudflare",
   "cursor",
+  "cline",
+  "augment-code",
   "supabase",
   "firebase",
   "apple-developer",
@@ -395,7 +400,6 @@ const FEATURED_VENDOR_SLUGS = [
   "exa",
   "clerk",
   "convex",
-  "railway",
 ] as const;
 
 function DocsCard({

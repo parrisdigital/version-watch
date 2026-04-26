@@ -198,8 +198,13 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "openusage",
   "biome",
   "convex",
+  "augment-code",
+  "brave",
+  "cline",
+  "dia",
   "pnpm",
   "fastify",
+  "groq",
   "posthog",
   "netlify",
   "render",
@@ -210,6 +215,7 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "expo",
   "sentry",
   "better-auth",
+  "meta-ai",
   "langchain",
   "resend",
   "shadcn",
@@ -219,7 +225,11 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "uv",
   "vercel",
   "vite",
+  "vscode",
+  "warp",
   "workos",
+  "xai",
+  "zed",
 ]);
 
 const NOISE_TITLE_PATTERNS = [

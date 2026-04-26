@@ -16,6 +16,9 @@ on:
       - main
     paths:
       - "convex/**"
+      - "src/lib/mock-data.ts"
+      - "src/lib/ingestion/**"
+      - "src/lib/classification/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/convex-production.yml"

@@ -29,10 +29,17 @@ const criticalVendorSlugs = new Set([
   "convex",
   "apple-developer",
   "cursor",
+  "xai",
+  "meta-ai",
+  "groq",
 ]);
 
 const highVendorSlugs = new Set([
   "gemini",
+  "augment-code",
+  "brave",
+  "cline",
+  "dia",
   "firebase",
   "firecrawl",
   "exa",
@@ -45,6 +52,9 @@ const highVendorSlugs = new Set([
   "workos",
   "posthog",
   "resend",
+  "vscode",
+  "warp",
+  "zed",
 ]);
 
 const machineReadableSourceTypes = new Set(["github_release", "rss", "changelog_page"]);
