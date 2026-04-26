@@ -26,7 +26,8 @@ export async function publishRawCandidate(ctx: any, rawCandidate: any) {
     return null;
   }
 
-  const slug = buildCandidateSlug(vendor.slug, rawCandidate.rawPublishedAt, rawCandidate.rawTitle);
+  const title = rawCandidate.proposedTitle ?? rawCandidate.rawTitle;
+  const slug = buildCandidateSlug(vendor.slug, rawCandidate.rawPublishedAt, title);
   const existingByCandidate = await ctx.db
     .query("changeEvents")
     .withIndex("by_raw_candidate", (q: any) => q.eq("rawCandidateId", rawCandidate._id))
@@ -42,13 +43,18 @@ export async function publishRawCandidate(ctx: any, rawCandidate: any) {
     sourceId: rawCandidate.sourceId,
     rawCandidateId: rawCandidate._id,
     slug,
-    title: rawCandidate.rawTitle,
+    title,
     summary: rawCandidate.proposedSummary,
     whatChanged: rawCandidate.proposedWhatChanged,
     whyItMatters: rawCandidate.proposedWhyItMatters,
     whoShouldCare: rawCandidate.proposedWhoShouldCare,
     affectedStack: rawCandidate.proposedAffectedStack,
     categories: rawCandidate.proposedCategories,
+    topicTags: rawCandidate.proposedTopicTags,
+    releaseClass: rawCandidate.releaseClass,
+    impactConfidence: rawCandidate.impactConfidence,
+    signalReasons: rawCandidate.signalReasons,
+    scoreVersion: rawCandidate.scoreVersion,
     importanceScore: rawCandidate.importanceScore,
     importanceBand: rawCandidate.importanceBand,
     publishedAt: rawCandidate.rawPublishedAt,

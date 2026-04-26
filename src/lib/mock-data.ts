@@ -1,3 +1,5 @@
+import type { ImpactConfidence, ReleaseClass } from "@/lib/classification/signal";
+
 export type SourceType =
   | "github_release"
   | "changelog_page"
@@ -32,6 +34,11 @@ export type MockEvent = {
   whoShouldCare: string[];
   affectedStack: string[];
   categories: string[];
+  topicTags?: string[];
+  releaseClass?: ReleaseClass;
+  impactConfidence?: ImpactConfidence;
+  signalReasons?: string[];
+  scoreVersion?: string;
   publishedAt: string;
   sourceUrl: string;
   sourceType: SourceType;

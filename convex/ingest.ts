@@ -19,6 +19,7 @@ import {
   parsePostHogPageData,
   type ParsedSourceEntry,
 } from "../src/lib/ingestion/source-ingestion";
+import { deriveSignalMetadataForEvents } from "../src/lib/classification/signal";
 
 function cleanText(value: string | null | undefined) {
   return (value ?? "")
@@ -299,6 +300,7 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
 
         return {
           title: normalized.title,
+          rawTitle: normalized.rawTitle,
           sourceUrl: entry.url,
           summary: normalized.summary,
           whatChanged: normalized.whatChanged,
@@ -306,6 +308,11 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
           whoShouldCare: normalized.whoShouldCare,
           affectedStack: normalized.affectedStack,
           categories: normalized.categories,
+          topicTags: normalized.topicTags,
+          releaseClass: normalized.releaseClass,
+          impactConfidence: normalized.impactConfidence,
+          signalReasons: normalized.signalReasons,
+          scoreVersion: normalized.scoreVersion,
           publishedAt: entry.publishedAt,
           importanceScore: normalized.importanceScore,
           importanceBand: normalized.importanceBand,
@@ -315,7 +322,40 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
       })
       .filter((item) => item.title && item.publishedAt);
 
-    if (items.length === 0) {
+    const enrichedItems = deriveSignalMetadataForEvents(
+      items.map((item) => ({
+        ...item,
+        id: `${source.vendorSlug}:${item.sourceUrl}`,
+        slug: `${source.vendorSlug}:${item.sourceUrl}:${item.publishedAt}`,
+        vendorSlug: source.vendorSlug,
+        vendorName: source.vendorName,
+        publishedAt: new Date(item.publishedAt).toISOString(),
+        sourceType: source.sourceType,
+        sourceName: source.name,
+      })),
+    ).map(({ event, metadata }) => ({
+      title: metadata.displayTitle,
+      rawTitle: event.rawTitle,
+      sourceUrl: event.sourceUrl,
+      summary: event.summary,
+      whatChanged: event.whatChanged,
+      whyItMatters: metadata.whyItMatters,
+      whoShouldCare: event.whoShouldCare,
+      affectedStack: event.affectedStack,
+      categories: event.categories,
+      topicTags: metadata.topicTags,
+      releaseClass: metadata.releaseClass,
+      impactConfidence: metadata.impactConfidence,
+      signalReasons: metadata.signalReasons,
+      scoreVersion: metadata.scoreVersion,
+      publishedAt: Date.parse(event.publishedAt),
+      importanceScore: metadata.signalScore,
+      importanceBand: metadata.importanceBand,
+      parseConfidence: event.parseConfidence,
+      githubUrl: event.githubUrl,
+    }));
+
+    if (enrichedItems.length === 0) {
       throw new SourceIngestionError("empty_result", `No parseable entries found for ${source.url}`);
     }
 
@@ -324,7 +364,7 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
       vendorId: source.vendorId,
       startedAt,
       runType,
-      items,
+      items: enrichedItems,
       etag: sourceResponse.etag,
       lastModified: sourceResponse.lastModified,
       contentHash: sourceResponse.contentHash,

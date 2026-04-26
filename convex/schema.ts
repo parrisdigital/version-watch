@@ -4,6 +4,22 @@ import { v } from "convex/values";
 import { sourceErrorCodeValidator } from "./ingestionErrors";
 import { sourceFreshnessTierValidator } from "./sourceFreshness";
 
+const importanceBandValidator = v.union(v.literal("critical"), v.literal("high"), v.literal("medium"), v.literal("low"));
+const releaseClassValidator = v.union(
+  v.literal("breaking"),
+  v.literal("security"),
+  v.literal("model_launch"),
+  v.literal("pricing"),
+  v.literal("policy"),
+  v.literal("api_change"),
+  v.literal("sdk_release"),
+  v.literal("cli_patch"),
+  v.literal("beta_release"),
+  v.literal("docs_update"),
+  v.literal("routine_release"),
+);
+const impactConfidenceValidator = v.union(v.literal("high"), v.literal("medium"), v.literal("low"));
+
 export default defineSchema({
   vendors: defineTable({
     slug: v.string(),
@@ -76,8 +92,14 @@ export default defineSchema({
     proposedWhoShouldCare: v.array(v.string()),
     proposedAffectedStack: v.array(v.string()),
     proposedCategories: v.array(v.string()),
+    proposedTitle: v.optional(v.string()),
+    proposedTopicTags: v.optional(v.array(v.string())),
+    releaseClass: v.optional(releaseClassValidator),
+    impactConfidence: v.optional(impactConfidenceValidator),
+    signalReasons: v.optional(v.array(v.string())),
+    scoreVersion: v.optional(v.string()),
     importanceScore: v.number(),
-    importanceBand: v.union(v.literal("critical"), v.literal("high"), v.literal("medium"), v.literal("low")),
+    importanceBand: importanceBandValidator,
     status: v.union(
       v.literal("pending_review"),
       v.literal("published"),
@@ -103,8 +125,13 @@ export default defineSchema({
     whoShouldCare: v.array(v.string()),
     affectedStack: v.array(v.string()),
     categories: v.array(v.string()),
+    topicTags: v.optional(v.array(v.string())),
+    releaseClass: v.optional(releaseClassValidator),
+    impactConfidence: v.optional(impactConfidenceValidator),
+    signalReasons: v.optional(v.array(v.string())),
+    scoreVersion: v.optional(v.string()),
     importanceScore: v.number(),
-    importanceBand: v.union(v.literal("critical"), v.literal("high"), v.literal("medium"), v.literal("low")),
+    importanceBand: importanceBandValidator,
     publishedAt: v.number(),
     discoveredAt: v.number(),
     sourceUrl: v.string(),

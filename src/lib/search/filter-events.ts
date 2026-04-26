@@ -35,6 +35,7 @@ export function filterEvents<T extends MockEvent>(events: T[], filters: SearchFi
         event.whatChanged,
         event.whyItMatters,
         ...event.categories,
+        ...(event.topicTags ?? []),
         ...event.affectedStack,
         ...event.whoShouldCare,
       ]
@@ -43,7 +44,7 @@ export function filterEvents<T extends MockEvent>(events: T[], filters: SearchFi
         .includes(query);
 
     const matchesVendor = !vendor || event.vendorSlug === vendor;
-    const matchesCategory = !category || event.categories.includes(category);
+    const matchesCategory = !category || event.categories.includes(category) || (event.topicTags ?? []).includes(category);
     const matchesStack = !stack || event.affectedStack.includes(stack);
     const matchesImportance = !importance || event.importanceBand === importance;
 
@@ -77,7 +78,7 @@ function getFacetCounts(values: string[]) {
 export function getSearchFacets<T extends MockEvent>(events: T[]) {
   return {
     vendors: getFacetCounts(events.map((event) => event.vendorSlug)),
-    categories: getFacetCounts(events.flatMap((event) => event.categories)),
+    categories: getFacetCounts(events.flatMap((event) => [...event.categories, ...(event.topicTags ?? [])])),
     stacks: getFacetCounts(events.flatMap((event) => event.affectedStack)),
     importanceBands: getFacetCounts(events.map((event) => event.importanceBand)),
   };

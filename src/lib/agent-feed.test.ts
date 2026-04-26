@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { GET as getFeedJson } from "@/app/api/v1/feed.json/route";
 import { GET as getFeedMarkdown } from "@/app/api/v1/feed.md/route";
+import { GET as getClusters } from "@/app/api/v1/clusters/route";
 import { GET as getOpenApi } from "@/app/api/v1/openapi.json/route";
 import { GET as getStatus } from "@/app/api/v1/status/route";
 import { GET as getVendorFreshnessBySlug } from "@/app/api/v1/status/vendors/[slug]/route";
@@ -10,6 +11,7 @@ import { GET as getTaxonomy } from "@/app/api/v1/taxonomy/route";
 import { GET as getUpdateById } from "@/app/api/v1/updates/[id]/route";
 import { GET as getUpdates } from "@/app/api/v1/updates/route";
 import { POST as postAdminRefresh } from "@/app/api/admin/refresh/route";
+import { POST as postAdminRescore } from "@/app/api/admin/rescore/route";
 import { GET as getSkill } from "@/app/skills/version-watch/SKILL.md/route";
 import {
   buildRecommendedAction,
@@ -200,11 +202,15 @@ describe("agent update serialization", () => {
       vendor: event.vendorName,
       vendor_slug: event.vendorSlug,
       published_at: event.publishedAt,
-      severity: event.importanceBand,
+      severity: "critical",
       source_url: event.sourceUrl,
       version_watch_url: `https://version-watch.example/events/${event.slug}`,
+      release_class: "breaking",
+      impact_confidence: "high",
+      score_version: "v2",
     });
     expect(update.signal_score).toBeGreaterThan(0);
+    expect(update.signal_reasons).toEqual(expect.arrayContaining(["release_class:breaking"]));
     expect(update.tags).toEqual(expect.arrayContaining(event.categories));
     expect(update.recommended_action).not.toMatch(/review the official entry/i);
   });
@@ -523,6 +529,10 @@ describe("agent route handlers", () => {
     expect(response.status).toBe(200);
     expect(body.schema_version).toBe("2026-04-26");
     expect(body.taxonomy.severities).toEqual(["critical", "high", "medium", "low"]);
+    expect(body.taxonomy.release_classes).toEqual(
+      expect.arrayContaining(["breaking", "model_launch", "cli_patch"]),
+    );
+    expect(body.taxonomy.impact_confidences).toEqual(["high", "medium", "low"]);
     expect(body.taxonomy.vendors).toEqual(
       expect.arrayContaining([expect.objectContaining({ slug: "openai" })]),
     );
@@ -537,6 +547,7 @@ describe("agent route handlers", () => {
     expect(response.status).toBe(200);
     expect(body.openapi).toBe("3.1.0");
     expect(body.paths["/api/v1/updates"]).toBeDefined();
+    expect(body.paths["/api/v1/clusters"]).toBeDefined();
     expect(body.paths["/api/v1/status"]).toBeDefined();
     expect(body.paths["/api/v1/status/vendors"]).toBeDefined();
     expect(body.paths["/api/v1/status/vendors/{slug}"]).toBeDefined();
@@ -549,12 +560,35 @@ describe("agent route handlers", () => {
       expect.arrayContaining([expect.objectContaining({ name: "limit" })]),
     );
     expect(body.components.schemas.StatusResponse).toBeDefined();
+    expect(body.components.schemas.PublicUpdate.required).toEqual(
+      expect.arrayContaining(["release_class", "impact_confidence", "signal_reasons", "score_version"]),
+    );
+    expect(body.components.schemas.ClustersResponse).toBeDefined();
     expect(body.components.schemas.VendorFreshnessStatus).toBeDefined();
     expect(body.components.schemas.UpdatesResponse.required).toContain("status_url");
     expect(body.components.schemas.UpdatesResponse.properties.filters.$ref).toBe(
       "#/components/schemas/UpdateFilters",
     );
     expect(body.components.schemas.ErrorResponse.properties.error.required).toEqual(["code", "message"]);
+  });
+
+  it("serves clustered update JSON without changing the raw update feed", async () => {
+    const response = await getClusters(
+      new Request("https://version-watch.example/api/v1/clusters?limit=5"),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.schema_version).toBe("2026-04-26");
+    expect(body.status_url).toBe("https://version-watch.example/api/v1/status");
+    expect(body.count).toBeGreaterThan(0);
+    expect(body.clusters[0]).toMatchObject({
+      id: expect.any(String),
+      kind: expect.stringMatching(/single|cluster/),
+      release_class: expect.any(String),
+      signal_score: expect.any(Number),
+      updates: expect.any(Array),
+    });
   });
 
   it("serves public API status JSON", async () => {
@@ -631,6 +665,19 @@ describe("agent route handlers", () => {
       new Request("https://version-watch.example/api/admin/refresh", {
         method: "POST",
         body: JSON.stringify({ vendor: "openai" }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body).toEqual({ ok: false, error: "Unauthorized." });
+  });
+
+  it("rejects unauthenticated admin rescore requests", async () => {
+    const response = await postAdminRescore(
+      new Request("https://version-watch.example/api/admin/rescore", {
+        method: "POST",
+        body: JSON.stringify({ dry_run: true }),
       }),
     );
     const body = await response.json();

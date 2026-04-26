@@ -1,6 +1,7 @@
 import { load } from "cheerio";
 
-import { getImportanceBand, scoreEvent } from "@/lib/classification/score";
+import { deriveSignalMetadata } from "@/lib/classification/signal";
+import type { ImpactConfidence, ReleaseClass } from "@/lib/classification/signal";
 import type { MockEvent, SourceType } from "@/lib/mock-data";
 
 export type ParseConfidence = "high" | "medium" | "low";
@@ -17,12 +18,18 @@ export type ParsedSourceEntry = {
 export type NormalizedParsedEntry = {
   slug: string;
   title: string;
+  rawTitle: string;
   summary: string;
   whatChanged: string;
   whyItMatters: string;
   whoShouldCare: string[];
   affectedStack: string[];
   categories: string[];
+  topicTags: string[];
+  releaseClass: ReleaseClass;
+  impactConfidence: ImpactConfidence;
+  signalReasons: string[];
+  scoreVersion: string;
   importanceScore: number;
   importanceBand: MockEvent["importanceBand"];
   parseConfidence: ParseConfidence;
@@ -1747,20 +1754,6 @@ function classifyAudience(categories: string[], affectedStack: string[]) {
   return [...audience];
 }
 
-function buildWhyItMatters(
-  vendorName: string,
-  sourceName: string,
-  affectedStack: string[],
-  categories: string[],
-) {
-  const teams = affectedStack.slice(0, 2).join(" and ") || "application";
-  const urgency = categories.includes("breaking") || categories.includes("security")
-    ? "before the next deploy"
-    : "during the next release review";
-
-  return `${vendorName} updated ${sourceName.toLowerCase()} semantics for ${teams}. Review the official entry ${urgency}.`;
-}
-
 function slugify(value: string) {
   return cleanText(value)
     .toLowerCase()
@@ -1782,7 +1775,7 @@ export function normalizeParsedEntry({
   const whoShouldCare = classifyAudience(categories, affectedStack);
   const summary = truncateSentence(entry.excerpt || entry.title, 240) || entry.title;
 
-  const score = scoreEvent({
+  const signal = deriveSignalMetadata({
     id: `${vendorSlug}:${entry.url}`,
     slug: slugify(`${vendorSlug}-${entry.title}`),
     vendorSlug,
@@ -1797,21 +1790,26 @@ export function normalizeParsedEntry({
     publishedAt: new Date(entry.publishedAt).toISOString(),
     sourceUrl: entry.url,
     sourceType,
-    importanceBand: "low",
     githubUrl: entry.githubUrl,
   });
 
   return {
     slug: slugify(`${vendorSlug}-${new Date(entry.publishedAt).toISOString().slice(0, 10)}-${entry.title}`),
-    title: entry.title,
+    title: signal.displayTitle,
+    rawTitle: entry.title,
     summary,
     whatChanged: summary,
-    whyItMatters: buildWhyItMatters(vendorName, sourceName, affectedStack, categories),
+    whyItMatters: signal.whyItMatters,
     whoShouldCare,
     affectedStack,
     categories,
-    importanceScore: score,
-    importanceBand: getImportanceBand(score),
+    topicTags: signal.topicTags,
+    releaseClass: signal.releaseClass,
+    impactConfidence: signal.impactConfidence,
+    signalReasons: signal.signalReasons,
+    scoreVersion: signal.scoreVersion,
+    importanceScore: signal.signalScore,
+    importanceBand: signal.importanceBand,
     parseConfidence: entry.parseConfidence ?? (entry.url !== "" ? "high" : "medium"),
     githubUrl: entry.githubUrl,
   };

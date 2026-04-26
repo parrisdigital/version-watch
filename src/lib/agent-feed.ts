@@ -1,4 +1,11 @@
-import { scoreEvent } from "@/lib/classification/score";
+import {
+  deriveSignalMetadata,
+  IMPACT_CONFIDENCES,
+  RELEASE_CLASSES,
+  SCORE_VERSION,
+  type ImpactConfidence,
+  type ReleaseClass,
+} from "@/lib/classification/signal";
 import type { ImportanceBand, MockEvent, SourceType, VendorRecord } from "@/lib/mock-data";
 
 export const DEFAULT_PUBLIC_BASE_URL = "https://versionwatch.dev";
@@ -24,6 +31,10 @@ export type PublicUpdate = {
   published_at: string;
   severity: ImportanceBand;
   signal_score: number;
+  release_class: ReleaseClass;
+  impact_confidence: ImpactConfidence;
+  signal_reasons: string[];
+  score_version: string;
   audience: string[];
   tags: string[];
   summary: string;
@@ -73,6 +84,8 @@ export type UpdateFilters = {
 
 export type PublicTaxonomy = {
   severities: ImportanceBand[];
+  release_classes: ReleaseClass[];
+  impact_confidences: ImpactConfidence[];
   audiences: string[];
   tags: string[];
   source_types: SourceType[];
@@ -253,7 +266,9 @@ export function filterEventsForPublicUpdateMatches<T extends MockEvent>(
 
       if (
         filters.tag &&
-        ![...event.categories, ...event.affectedStack].some((item) => normalize(item) === filters.tag)
+        ![...event.categories, ...(event.topicTags ?? getEventSignalMetadata(event).topicTags), ...event.affectedStack].some(
+          (item) => normalize(item) === filters.tag,
+        )
       ) {
         return false;
       }
@@ -314,6 +329,28 @@ function hasCategory(event: MockEvent, category: string) {
   return event.categories.includes(category);
 }
 
+function getEventSignalMetadata(event: MockEvent & { computedScore?: number }) {
+  const derived = deriveSignalMetadata(event);
+
+  if (event.scoreVersion === SCORE_VERSION && event.releaseClass && event.impactConfidence) {
+    return {
+      ...derived,
+      releaseClass: event.releaseClass,
+      impactConfidence: event.impactConfidence,
+      signalReasons: event.signalReasons?.length ? event.signalReasons : derived.signalReasons,
+      topicTags: event.topicTags?.length ? event.topicTags : derived.topicTags,
+      signalScore: event.computedScore ?? derived.signalScore,
+      importanceBand: event.importanceBand ?? derived.importanceBand,
+      displayTitle: event.title || derived.displayTitle,
+      whyItMatters: event.whyItMatters && !isGenericWhyItMatters(event.whyItMatters)
+        ? event.whyItMatters
+        : derived.whyItMatters,
+    };
+  }
+
+  return derived;
+}
+
 function stackLabel(event: MockEvent) {
   const primary = event.affectedStack.slice(0, 2).join(" and ");
   return primary || "application";
@@ -324,8 +361,24 @@ function isGenericWhyItMatters(value: string) {
 }
 
 export function buildActionableWhyItMatters(event: MockEvent) {
+  const signal = getEventSignalMetadata(event);
+
+  if (
+    event.scoreVersion !== SCORE_VERSION ||
+    signal.releaseClass === "cli_patch" ||
+    signal.releaseClass === "beta_release" ||
+    signal.releaseClass === "routine_release" ||
+    signal.releaseClass === "docs_update"
+  ) {
+    return signal.whyItMatters;
+  }
+
   if (event.whyItMatters && !isGenericWhyItMatters(event.whyItMatters)) {
     return event.whyItMatters;
+  }
+
+  if (signal.whyItMatters) {
+    return signal.whyItMatters;
   }
 
   const stack = stackLabel(event);
@@ -371,6 +424,23 @@ export function buildActionableWhyItMatters(event: MockEvent) {
 
 export function buildRecommendedAction(event: MockEvent) {
   const stack = stackLabel(event);
+  const signal = getEventSignalMetadata(event);
+
+  if (signal.releaseClass === "cli_patch") {
+    return `Upgrade the CLI only if it affects active ${stack} workflows, then run local or CI smoke tests around agent and developer tooling paths.`;
+  }
+
+  if (signal.releaseClass === "beta_release") {
+    return `Track this in prerelease testing only; avoid production rollout unless your team explicitly depends on this beta ${stack} surface.`;
+  }
+
+  if (signal.releaseClass === "routine_release") {
+    return `Log the update for awareness and review it only if ${stack} work is already active.`;
+  }
+
+  if (signal.releaseClass === "docs_update") {
+    return `Skim the source and update internal docs or implementation notes if ${stack} is active in your project.`;
+  }
 
   if (hasCategory(event, "security")) {
     return `Prioritize source review, patch affected ${stack} paths, and rotate or audit credentials if the source indicates exposure.`;
@@ -417,17 +487,22 @@ export function buildRecommendedAction(event: MockEvent) {
 
 export function serializePublicUpdate(event: MockEvent & { computedScore?: number }, baseUrl = DEFAULT_PUBLIC_BASE_URL): PublicUpdate {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const signal = getEventSignalMetadata(event);
 
   return {
     id: event.slug,
     vendor: event.vendorName,
     vendor_slug: event.vendorSlug,
-    title: event.title,
+    title: signal.displayTitle,
     published_at: event.publishedAt,
-    severity: event.importanceBand,
-    signal_score: event.computedScore ?? scoreEvent(event),
+    severity: signal.importanceBand,
+    signal_score: signal.signalScore,
+    release_class: signal.releaseClass,
+    impact_confidence: signal.impactConfidence,
+    signal_reasons: signal.signalReasons,
+    score_version: signal.scoreVersion,
     audience: event.whoShouldCare,
-    tags: unique([...event.categories, ...event.affectedStack]),
+    tags: unique([...event.categories, ...(event.topicTags ?? signal.topicTags), ...event.affectedStack]),
     summary: event.summary,
     why_it_matters: buildActionableWhyItMatters(event),
     recommended_action: buildRecommendedAction(event),
@@ -457,8 +532,15 @@ export function serializePublicVendor(vendor: VendorRecord): PublicVendor {
 export function buildPublicTaxonomy(events: MockEvent[], vendors: VendorRecord[]): PublicTaxonomy {
   return {
     severities: [...PUBLIC_SEVERITIES],
+    release_classes: [...RELEASE_CLASSES],
+    impact_confidences: [...IMPACT_CONFIDENCES],
     audiences: sortedUnique(events.flatMap((event) => event.whoShouldCare)),
-    tags: sortedUnique(events.flatMap((event) => [...event.categories, ...event.affectedStack])),
+    tags: sortedUnique(
+      events.flatMap((event) => {
+        const signal = getEventSignalMetadata(event);
+        return [...event.categories, ...(event.topicTags ?? signal.topicTags), ...event.affectedStack];
+      }),
+    ),
     source_types: Array.from(new Set(vendors.flatMap((vendor) => vendor.sources.map((source) => source.type)))).sort(),
     vendors: vendors
       .map((vendor) => ({
@@ -510,6 +592,9 @@ export function renderUpdatesMarkdown(
       `- Published: ${update.published_at}`,
       `- Severity: ${update.severity}`,
       `- Signal score: ${update.signal_score}`,
+      `- Release class: ${update.release_class}`,
+      `- Impact confidence: ${update.impact_confidence}`,
+      `- Signal reasons: ${list(update.signal_reasons)}`,
       `- Audience: ${list(update.audience)}`,
       `- Tags: ${list(update.tags)}`,
       `- Summary: ${markdownLine(update.summary)}`,
@@ -537,6 +622,7 @@ Base URL: ${normalizedBaseUrl}
 ## Recommended Endpoints
 
 - Latest updates: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
+- Clustered updates: ${new URL("/api/v1/clusters", normalizedBaseUrl).toString()}
 - High-signal updates: ${new URL("/api/v1/updates?severity=high&limit=25", normalizedBaseUrl).toString()}
 - Critical updates: ${new URL("/api/v1/updates?severity=critical&limit=25", normalizedBaseUrl).toString()}
 - Vendor list: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
@@ -552,13 +638,13 @@ Base URL: ${normalizedBaseUrl}
 
 ## Filters
 
-Use query parameters on /api/v1/updates, /api/v1/feed.json, /api/v1/feed.md, and /feed.md.
+Use query parameters on /api/v1/updates, /api/v1/clusters, /api/v1/feed.json, /api/v1/feed.md, and /feed.md.
 
 - since: ISO 8601 timestamp, for example 2026-04-24T00:00:00Z
 - vendor: vendor slug, for example openai, stripe, vercel, github, cloudflare, convex
 - severity: critical, high, medium, or low
 - audience: frontend, backend, infra, ai, product, security, compliance, or related audience labels
-- tag: matches categories or affected stack tags such as api, auth, billing, sdk, agents, hosting, deployments
+- tag: matches categories, topic tags, or affected stack tags such as api, auth, sdk, frontier-model, cli-release, agents, hosting, deployments
 - limit: defaults to 25 and clamps at 100
 - cursor: opaque pagination cursor returned as next_cursor
 
@@ -573,6 +659,10 @@ Each public update includes:
 - published_at
 - severity
 - signal_score
+- release_class
+- impact_confidence
+- signal_reasons
+- score_version
 - audience
 - tags
 - summary
@@ -584,7 +674,7 @@ Each public update includes:
 
 List responses also include schema_version, generated_at, status_url, count, total_count, filters, and next_cursor.
 
-The recommended_action field is the most useful field for agents. Treat it as an action hint, then cite source_url or version_watch_url for attribution.
+The release_class field explains what kind of change this is, while severity is the operational urgency. The recommended_action field is the most useful field for agents. Treat it as an action hint, then cite source_url or version_watch_url for attribution.
 
 Errors use a stable shape: error.code and error.message. Current public codes are invalid_filter, invalid_cursor, and not_found.
 
@@ -670,6 +760,7 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 - Agent guide: ${new URL("/agents.md", normalizedBaseUrl).toString()}
 - Version Watch skill: ${new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString()}
 - Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
+- Clustered updates API: ${new URL("/api/v1/clusters", normalizedBaseUrl).toString()}
 - Vendors API: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
 - Status API: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
 - Vendor freshness API: ${new URL("/api/v1/status/vendors", normalizedBaseUrl).toString()}
@@ -684,12 +775,14 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 - Backend audience updates: ${new URL("/api/v1/updates?audience=backend", normalizedBaseUrl).toString()}
 - Auth-tagged updates: ${new URL("/api/v1/updates?tag=auth", normalizedBaseUrl).toString()}
 - Vendor-specific updates: ${new URL("/api/v1/updates?vendor=openai&limit=10", normalizedBaseUrl).toString()}
+- Clustered latest updates: ${new URL("/api/v1/clusters?limit=10", normalizedBaseUrl).toString()}
 - Vendor freshness: ${new URL("/api/v1/status/vendors/openai", normalizedBaseUrl).toString()}
 
 ## What Agents Can Do
 
 - Monitor platform changes for a project stack
 - Detect breaking, security, API, SDK, auth, billing, hosting, model, and infra updates
+- Distinguish release_class from severity so routine CLI patches do not look as urgent as model launches or breaking changes
 - Summarize relevant changes for developers
 - Route high-signal updates into Discord, Slack, Teams, issue trackers, CI/CD, dashboards, and knowledge bases
 - Use recommended_action as the next-step hint and source_url as the official citation
@@ -727,6 +820,7 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 - Vendor freshness: ${new URL("/api/v1/status/vendors", normalizedBaseUrl).toString()}
 - Vendors: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
 - Updates: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
+- Clusters: ${new URL("/api/v1/clusters", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
 - Agent guide: ${new URL("/agents.md", normalizedBaseUrl).toString()}
 - LLM map: ${new URL("/llms.txt", normalizedBaseUrl).toString()}
@@ -736,11 +830,11 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 1. Identify the user's project stack, vendors, or platform areas.
 2. If freshness matters, call /api/v1/status and tell the user if the feed is degraded or stale.
 3. If vendor slugs or valid tags are uncertain, call /api/v1/vendors and /api/v1/taxonomy.
-4. Query /api/v1/updates with the narrowest useful filters.
+4. Query /api/v1/updates with the narrowest useful filters. Use /api/v1/clusters for digest-style views.
 5. Use severity, audience, tag, since, and vendor filters before broad queries.
 6. Follow next_cursor only when more matching results are needed.
 7. De-duplicate by update id before reporting or notifying.
-8. Use summary, why_it_matters, and recommended_action to explain the impact.
+8. Use release_class, impact_confidence, signal_reasons, summary, why_it_matters, and recommended_action to explain the impact.
 9. Cite source_url for the official vendor source. Cite version_watch_url for the Version Watch record.
 10. Do not claim to have read the official source unless you opened source_url.
 
@@ -816,6 +910,8 @@ Use this structure for Discord, Slack, Teams, email, or issue trackers.
     Vendor: {vendor}
     Title: {title}
     Severity: {severity}
+    Release class: {release_class}
+    Impact confidence: {impact_confidence}
     Summary: {summary}
     Recommended action: {recommended_action}
     Source: {source_url}
@@ -830,6 +926,7 @@ When summarizing updates for a user, include:
 - Vendor and title
 - Published date
 - Severity and signal score
+- Release class and impact confidence
 - Summary
 - Why it matters
 - Recommended action

@@ -585,7 +585,7 @@ describe("parseHtmlEntries", () => {
 });
 
 describe("normalizeParsedEntry", () => {
-  it("keeps the official title and derives structured metadata", () => {
+  it("keeps the official source title and derives structured metadata", () => {
     const normalized = normalizeParsedEntry({
       vendorSlug: "stripe",
       vendorName: "Stripe",
@@ -601,12 +601,16 @@ describe("normalizeParsedEntry", () => {
       },
     });
 
-    expect(normalized.title).toBe(
+    expect(normalized.rawTitle).toBe(
       "Updates computation of subscription schedule phase end date to consider billing cycle anchor changes",
+    );
+    expect(normalized.title).toBe(
+      "Updates computation of subscription schedule phase end date to consider billing cycle anchor...",
     );
     expect(normalized.categories).toEqual(expect.arrayContaining(["breaking", "api"]));
     expect(normalized.affectedStack).toEqual(expect.arrayContaining(["payments", "subscriptions"]));
     expect(normalized.importanceBand).toBe("critical");
+    expect(normalized.releaseClass).toBe("breaking");
     expect(normalized.summary).toContain("billing_cycle_anchor");
   });
 });

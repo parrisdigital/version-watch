@@ -3,6 +3,10 @@ import { ArrowRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { EventCard } from "@/components/event-card";
+import { SeverityPill } from "@/components/severity-pill";
+import { VendorMark } from "@/components/vendor-mark";
+import { clusterChangeEvents, type ChangeCluster } from "@/lib/change-clusters";
+import { getImportanceBand, releaseClassLabel } from "@/lib/classification/signal";
 import type { SiteEvent } from "@/lib/site-data";
 
 type LatestUpdatesSectionProps = {
@@ -17,7 +21,8 @@ const SEVERITY_LEGEND = [
 ] as const;
 
 export function LatestUpdatesSection({ events }: LatestUpdatesSectionProps) {
-  const visible = events.slice(0, 8);
+  const clustered = clusterChangeEvents(events, { minClusterSize: 3, windowHours: 24 });
+  const visible = clustered.slice(0, 8);
 
   return (
     <section id="latest" className="scroll-mt-16">
@@ -31,8 +36,8 @@ export function LatestUpdatesSection({ events }: LatestUpdatesSectionProps) {
               Fresh changes from the platforms your stack runs on.
             </h2>
             <p className="max-w-[56ch] text-pretty text-base text-[var(--muted-foreground)] sm:text-sm sm:leading-6 lg:text-base lg:leading-7">
-              Ordered by publish time — newest first. Each record keeps its signal score so you can
-              see at a glance whether an update is likely to create real follow-up work.
+              Ordered by publish time with related release noise collapsed. Each record keeps its
+              release class, severity, and signal score so real follow-up work stands out.
             </p>
           </div>
           <Button asChild variant="outline">
@@ -68,8 +73,12 @@ export function LatestUpdatesSection({ events }: LatestUpdatesSectionProps) {
         </div>
 
         <div className="mt-10 grid gap-4 lg:grid-cols-2">
-          {visible.map((event) => (
-            <EventCard key={event.id} event={event} />
+          {visible.map((item) => (
+            item.kind === "cluster" ? (
+              <ReleaseClusterCard key={item.id} cluster={item} />
+            ) : (
+              <EventCard key={item.id} event={item.events[0]!} />
+            )
           ))}
         </div>
 
@@ -82,5 +91,57 @@ export function LatestUpdatesSection({ events }: LatestUpdatesSectionProps) {
         ) : null}
       </div>
     </section>
+  );
+}
+
+function ReleaseClusterCard({ cluster }: { cluster: ChangeCluster }) {
+  const latest = cluster.events[0]!;
+  const band = getImportanceBand(cluster.signalScore);
+
+  return (
+    <article className="group vw-panel relative overflow-hidden p-6 transition-[border-color,background-color] duration-300 hover:border-[var(--color-line-strong)] hover:bg-[var(--color-surface-raised)] md:p-7">
+      <div className="flex flex-wrap items-center gap-4">
+        <span className="flex items-center gap-3">
+          <VendorMark vendorSlug={cluster.vendorSlug} vendorName={cluster.vendorName} size="sm" />
+          <span className="flex flex-col leading-tight">
+            <span className="font-[var(--font-display)] text-sm font-semibold text-[var(--color-ink)]">
+              {cluster.vendorName}
+            </span>
+            <span className="text-xs text-[var(--color-ink-muted)]">Release cluster</span>
+          </span>
+        </span>
+
+        <span className="ml-auto flex flex-wrap items-center gap-3">
+          <span className="vw-tag vw-tag-mono">{releaseClassLabel(cluster.releaseClass)}</span>
+          <SeverityPill band={band} />
+        </span>
+      </div>
+
+      <h3 className="vw-title mt-6 text-[1.5rem] leading-[1.15] md:text-[1.75rem]">
+        <Link href={`/events/${latest.slug}`} className="vw-stretched-link text-[var(--color-ink)] transition-colors group-hover:text-[var(--color-signal)]">
+          {cluster.title}
+        </Link>
+      </h3>
+
+      <p className="vw-copy mt-4 text-[0.9375rem] leading-[1.6] md:text-base">{cluster.summary}</p>
+
+      <div className="mt-6 flex flex-wrap gap-2">
+        {cluster.events.slice(0, 5).map((event) => (
+          <Link key={event.slug} href={`/events/${event.slug}`} className="vw-tag vw-tag-mono relative z-10 hover:border-[var(--color-line-strong)]">
+            {event.title}
+          </Link>
+        ))}
+        {cluster.events.length > 5 ? <span className="vw-tag vw-tag-mono">+{cluster.events.length - 5} more</span> : null}
+      </div>
+
+      <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-[var(--color-line-quiet)] pt-5">
+        <span className="text-sm font-semibold text-[var(--color-ink-soft)] transition-colors group-hover:text-[var(--color-signal)]">
+          Open latest event
+        </span>
+        <span className="ml-auto font-[var(--font-mono)] text-[0.6875rem] tabular-nums text-[var(--color-ink-muted)]">
+          {cluster.signalScore}
+        </span>
+      </div>
+    </article>
   );
 }

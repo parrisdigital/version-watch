@@ -16,7 +16,7 @@ const PIPELINE_STEPS = [
   {
     index: "03",
     title: "Classify & score",
-    body: "A rules-based classifier tags each update with categories, affected stack, and audience. A signal score weighs category severity, source authority, freshness, and evidence.",
+    body: "A rules-based classifier tags each update with categories, affected stack, audience, release class, impact confidence, and machine-readable signal reasons.",
   },
   {
     index: "04",
@@ -49,7 +49,7 @@ const RECORD_FIELDS = [
   },
   {
     label: "Importance band",
-    body: "Critical · high · medium · low, derived from the signal score. Critical means \"plan this week.\" Low means \"good to know.\"",
+    body: "Critical · high · medium · low, derived from release class, confidence, evidence, freshness, and repeat-noise decay.",
   },
   {
     label: "Source trail",

@@ -16,6 +16,7 @@ import {
 
 const normalizedEntryValidator = v.object({
   title: v.string(),
+  rawTitle: v.optional(v.string()),
   sourceUrl: v.string(),
   summary: v.string(),
   whatChanged: v.string(),
@@ -23,6 +24,23 @@ const normalizedEntryValidator = v.object({
   whoShouldCare: v.array(v.string()),
   affectedStack: v.array(v.string()),
   categories: v.array(v.string()),
+  topicTags: v.array(v.string()),
+  releaseClass: v.union(
+    v.literal("breaking"),
+    v.literal("security"),
+    v.literal("model_launch"),
+    v.literal("pricing"),
+    v.literal("policy"),
+    v.literal("api_change"),
+    v.literal("sdk_release"),
+    v.literal("cli_patch"),
+    v.literal("beta_release"),
+    v.literal("docs_update"),
+    v.literal("routine_release"),
+  ),
+  impactConfidence: v.union(v.literal("high"), v.literal("medium"), v.literal("low")),
+  signalReasons: v.array(v.string()),
+  scoreVersion: v.string(),
   publishedAt: v.number(),
   importanceScore: v.number(),
   importanceBand: v.union(v.literal("critical"), v.literal("high"), v.literal("medium"), v.literal("low")),
@@ -594,7 +612,8 @@ export const persistSourceEntries = internalMutation({
     let published = 0;
 
     for (const item of args.items) {
-      const dedupeKey = buildDedupeKey(String(args.sourceId), item);
+      const rawTitle = item.rawTitle ?? item.title;
+      const dedupeKey = buildDedupeKey(String(args.sourceId), { ...item, title: rawTitle });
       const exactCandidate = await ctx.db
         .query("rawCandidates")
         .withIndex("by_dedupe_key", (q) => q.eq("dedupeKey", dedupeKey))
@@ -608,13 +627,13 @@ export const persistSourceEntries = internalMutation({
               q.eq("sourceId", args.sourceId).eq("sourceUrl", item.sourceUrl).eq("rawPublishedAt", item.publishedAt),
             )
             .collect(),
-          item.title,
+          rawTitle,
         );
       const sameTitleCandidate =
         sameSourceCandidate ??
         (await ctx.db
           .query("rawCandidates")
-          .withIndex("by_source_and_title", (q) => q.eq("sourceId", args.sourceId).eq("rawTitle", item.title))
+          .withIndex("by_source_and_title", (q) => q.eq("sourceId", args.sourceId).eq("rawTitle", rawTitle))
           .first());
       const sourceCandidates = sameTitleCandidate
         ? []
@@ -623,7 +642,7 @@ export const persistSourceEntries = internalMutation({
             .withIndex("by_source_and_title", (q) => q.eq("sourceId", args.sourceId))
             .collect();
       const sameNormalizedTitleCandidate =
-        sameTitleCandidate ?? findSameSourceCandidateByTitle(sourceCandidates, item.title);
+        sameTitleCandidate ?? findSameSourceCandidateByTitle(sourceCandidates, rawTitle);
       const sameCanonicalSourceCandidate =
         sameNormalizedTitleCandidate ?? findSameCanonicalSourceCandidate(sourceCandidates, item);
       const existingCandidate = sameCanonicalSourceCandidate;
@@ -639,7 +658,7 @@ export const persistSourceEntries = internalMutation({
         externalId: item.sourceUrl,
         sourceUrl: item.sourceUrl,
         githubUrl: item.githubUrl,
-        rawTitle: item.title,
+        rawTitle,
         rawBody: item.summary,
         rawPublishedAt: item.publishedAt,
         discoveredAt: now,
@@ -647,11 +666,17 @@ export const persistSourceEntries = internalMutation({
         parseConfidence: item.parseConfidence,
         normalizationVersion: "v2",
         proposedSummary: item.summary,
+        proposedTitle: item.title,
         proposedWhatChanged: item.whatChanged,
         proposedWhyItMatters: item.whyItMatters,
         proposedWhoShouldCare: item.whoShouldCare,
         proposedAffectedStack: item.affectedStack,
         proposedCategories: item.categories,
+        proposedTopicTags: item.topicTags,
+        releaseClass: item.releaseClass,
+        impactConfidence: item.impactConfidence,
+        signalReasons: item.signalReasons,
+        scoreVersion: item.scoreVersion,
         importanceScore: item.importanceScore,
         importanceBand: item.importanceBand,
         status,

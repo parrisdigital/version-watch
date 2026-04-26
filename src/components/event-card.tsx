@@ -3,6 +3,7 @@ import { format, formatDistanceToNowStrict } from "date-fns";
 
 import { SeverityPill } from "@/components/severity-pill";
 import { VendorMark } from "@/components/vendor-mark";
+import { deriveSignalMetadata, releaseClassLabel } from "@/lib/classification/signal";
 import type { MockEvent } from "@/lib/mock-data";
 
 type EventCardProps = {
@@ -72,6 +73,11 @@ export function EventCard({ event, compact = false, eventHref }: EventCardProps)
   const relative = formatDistanceToNowStrict(publishedDate, { addSuffix: true });
   const absolute = format(publishedDate, "MMM d, yyyy");
   const href = eventHref ?? `/events/${event.slug}`;
+  const signal = event.releaseClass ? null : deriveSignalMetadata(event);
+  const releaseClass = event.releaseClass ?? signal!.releaseClass;
+  const importanceBand = event.scoreVersion === "v2" ? event.importanceBand : signal?.importanceBand ?? event.importanceBand;
+  const signalScore = event.scoreVersion === "v2" ? event.computedScore ?? 0 : signal?.signalScore ?? event.computedScore ?? 0;
+  const topicTags = event.topicTags ?? signal?.topicTags ?? [];
 
   return (
     <article className="group vw-panel relative overflow-hidden p-6 transition-[border-color,background-color] duration-300 hover:border-[var(--color-line-strong)] hover:bg-[var(--color-surface-raised)] md:p-7">
@@ -89,7 +95,8 @@ export function EventCard({ event, compact = false, eventHref }: EventCardProps)
         </span>
 
         <span className="ml-auto flex flex-wrap items-center gap-3">
-          <SeverityPill band={event.importanceBand} />
+          <span className="vw-tag vw-tag-mono">{releaseClassLabel(releaseClass)}</span>
+          <SeverityPill band={importanceBand} />
           <span
             className="text-xs tabular-nums text-[var(--color-ink-muted)]"
             title={absolute}
@@ -138,6 +145,11 @@ export function EventCard({ event, compact = false, eventHref }: EventCardProps)
             {category}
           </span>
         ))}
+        {topicTags.slice(0, compact ? 1 : 3).map((tag) => (
+          <span key={tag} className="vw-tag vw-tag-mono">
+            {tag}
+          </span>
+        ))}
         {event.affectedStack.slice(0, compact ? 2 : 4).map((stack) => (
           <span key={stack} className="vw-tag vw-tag-mono">
             {stack}
@@ -147,7 +159,7 @@ export function EventCard({ event, compact = false, eventHref }: EventCardProps)
           className="ml-auto font-[var(--font-mono)] text-[0.6875rem] tabular-nums text-[var(--color-ink-muted)]"
           title="Version Watch signal score"
         >
-          {event.computedScore ?? 0}
+          {signalScore}
         </span>
       </div>
 
