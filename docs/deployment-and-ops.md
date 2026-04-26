@@ -88,9 +88,9 @@ The web app reads public API data from Convex snapshots. Updating Next.js on Ver
 Convex functions, schema changes, or cron definitions by itself. When a change touches `convex/`,
 production is not complete until the Convex production deployment has also been updated.
 
-GitHub can own Convex production deploys through `.github/workflows/convex-production.yml` once the
-repository has a `CONVEX_DEPLOY_KEY` secret. Without that secret, the workflow skips safely and production
-Convex must be deployed manually.
+GitHub owns Convex deployment through `.github/workflows/convex-production.yml` once the repository has
+GitHub Environments named `development` and `production`, each with an environment-scoped
+`CONVEX_DEPLOY_KEY` secret. The workflow fails clearly when the deploy key is missing.
 
 ## Cron Ownership
 
@@ -141,9 +141,20 @@ The defaults are intentionally strict enough for the four-hour ingestion cadence
 
 Convex owns the primary automation:
 
-- `scheduled-ingestion` force-refreshes the public feed every 4 hours at minute 0
+- `scheduled-ingestion` runs every 15 minutes and fetches only sources currently due
 - `daily-deep-diff` runs at 02:30 UTC and also records a completed refresh batch
 - `refresh-watchdog` runs every 30 minutes and forces a recovery refresh if no completed refresh batch has been recorded within the freshness window
+
+Source freshness tiers decide when each source is due:
+
+- `critical`: every 30 minutes for top reliable developer-platform sources
+- `high`: every 60 minutes for important platform sources
+- `standard`: every 4 hours for normal monitored sources
+- `long_tail`: every 12 hours for lower-priority docs and blog surfaces
+
+Failed sources use exponential backoff with a circuit-breaker delay after repeated failures. Sources can
+also store `ETag`, `Last-Modified`, and `contentHash` metadata so unchanged responses avoid unnecessary
+parsing.
 
 GitHub Actions runs `.github/workflows/production-health.yml`:
 
@@ -154,10 +165,12 @@ GitHub Actions runs `.github/workflows/production-health.yml`:
 
 GitHub Actions also includes `.github/workflows/convex-production.yml`:
 
-- on pushes to `main` that touch `convex/**`, package metadata, or the workflow itself
-- manually through `workflow_dispatch`
-- deploys Convex production with `npx convex deploy --typecheck try` when `CONVEX_DEPLOY_KEY` is configured
-- skips without failing when `CONVEX_DEPLOY_KEY` is missing
+- manually deploys the shared `development` Convex environment through `workflow_dispatch`
+- deploys the `production` Convex environment on pushes to `main` that touch `convex/**`, package metadata, or the workflow itself
+- runs `npm test` before deploy
+- deploys with `npx convex deploy --typecheck try`
+- fails clearly when the selected GitHub environment does not define `CONVEX_DEPLOY_KEY`
+- runs production freshness after production Convex deploy and the production web deploy window
 
 A failed run is the alert. It shows up in the GitHub Actions UI and in normal GitHub notification surfaces for
 the repository. The first response is to check whether production ingestion failed, whether a source is stale,

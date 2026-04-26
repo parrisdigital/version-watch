@@ -541,6 +541,7 @@ Base URL: ${normalizedBaseUrl}
 - Critical updates: ${new URL("/api/v1/updates?severity=critical&limit=25", normalizedBaseUrl).toString()}
 - Vendor list: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
 - API status: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
+- Vendor freshness: ${new URL("/api/v1/status/vendors", normalizedBaseUrl).toString()}
 - Taxonomy: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
@@ -590,10 +591,14 @@ Errors use a stable shape: error.code and error.message. Current public codes ar
 ## Freshness Contract
 
 - healthy: the public Convex snapshot refreshed inside the expected window and active sources are clean.
-- degraded: the snapshot is recent, but one or more active sources failed, are stale, or the latest refresh was partial.
+- degraded: the snapshot is recent, but one or more active sources failed, are stale, backed off, or the latest refresh was partial.
 - stale: no acceptable refresh completed within the freshness window.
 
+Version Watch uses adaptive source freshness. A 15-minute Convex scheduler fetches only due sources. Critical vendors refresh faster, long-tail sources refresh slower, and failing sources back off before retrying.
+
 Paused and unsupported sources are visible as coverage states but do not count as global freshness debt. Degraded sources are still monitored and should be treated as incomplete coverage until they recover.
+
+For vendor-specific workflows, call /api/v1/status/vendors/{slug} before acting on a single platform.
 
 Agents should mention degraded or stale status when producing release gates, incident reports, migration plans, or other high-confidence operational summaries.
 
@@ -667,6 +672,7 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 - Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
 - Vendors API: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
 - Status API: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
+- Vendor freshness API: ${new URL("/api/v1/status/vendors", normalizedBaseUrl).toString()}
 - Taxonomy API: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
@@ -678,6 +684,7 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 - Backend audience updates: ${new URL("/api/v1/updates?audience=backend", normalizedBaseUrl).toString()}
 - Auth-tagged updates: ${new URL("/api/v1/updates?tag=auth", normalizedBaseUrl).toString()}
 - Vendor-specific updates: ${new URL("/api/v1/updates?vendor=openai&limit=10", normalizedBaseUrl).toString()}
+- Vendor freshness: ${new URL("/api/v1/status/vendors/openai", normalizedBaseUrl).toString()}
 
 ## What Agents Can Do
 
@@ -707,6 +714,8 @@ Version Watch is a public change intelligence API for official developer-platfor
 
 The API reads from Convex-backed snapshots. It is not live scrape-on-request. Always check freshness status when a user is making a release, incident, compliance, or upgrade decision.
 
+Version Watch uses adaptive freshness: a 15-minute Convex scheduler fetches due sources based on freshness tier, source health, and backoff. A vendor-filtered API request can enqueue a background refresh when that vendor is due without blocking the response.
+
 Use this skill when a user asks about recent platform changes, release risk, dependency upgrades, API or SDK changes, vendor monitoring, or agent-readable changelog context.
 
 ## Public Resources
@@ -715,6 +724,7 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - Taxonomy: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
 - Status: ${new URL("/api/v1/status", normalizedBaseUrl).toString()}
+- Vendor freshness: ${new URL("/api/v1/status/vendors", normalizedBaseUrl).toString()}
 - Vendors: ${new URL("/api/v1/vendors", normalizedBaseUrl).toString()}
 - Updates: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
@@ -740,6 +750,7 @@ Use this skill when a user asks about recent platform changes, release risk, dep
 - degraded: explain that the snapshot is recent but one or more active sources may be incomplete.
 - stale: warn that the snapshot missed the freshness window and avoid presenting results as complete.
 - paused or unsupported sources do not make the global API stale, but they mean that vendor is not actively monitored until a reliable machine-readable surface exists.
+- /api/v1/status/vendors/{slug} gives per-vendor tier, next due time, backoff, source counts, and queued refresh state.
 
 ## Pagination and Errors
 

@@ -15,6 +15,25 @@ export type PublicApiStatus = {
   };
 };
 
+export type PublicVendorFreshnessStatus = {
+  vendor: string;
+  vendor_slug: string;
+  lifecycle_state: "active" | "degraded" | "paused" | "unsupported";
+  freshness_tier: "critical" | "high" | "standard" | "long_tail";
+  latest_attempt_at: string | null;
+  latest_success_at: string | null;
+  latest_failure_at: string | null;
+  next_due_at: string | null;
+  backoff_until: string | null;
+  active_source_count: number;
+  degraded_source_count: number;
+  failing_source_count: number;
+  stale_source_count: number;
+  paused_source_count: number;
+  unsupported_source_count: number;
+  queued_refresh: boolean;
+};
+
 export const MAX_EXPECTED_REFRESH_AGE_MINUTES = 5 * 60;
 const STALE_SOURCE_GRACE_MINUTES = 60;
 const unsupportedSourceUrls = new Set(["https://railway.com/changelog"]);
@@ -105,4 +124,41 @@ export function buildPublicApiStatus(report: any, now = Date.now()): PublicApiSt
       unsupported_vendors: report.coverage?.unsupportedVendorCount ?? report.unsupportedVendorCount ?? 0,
     },
   };
+}
+
+function normalizeLifecycleState(value: unknown): PublicVendorFreshnessStatus["lifecycle_state"] {
+  return value === "active" || value === "degraded" || value === "paused" || value === "unsupported"
+    ? value
+    : "unsupported";
+}
+
+function normalizeFreshnessTier(value: unknown): PublicVendorFreshnessStatus["freshness_tier"] {
+  return value === "critical" || value === "high" || value === "standard" || value === "long_tail"
+    ? value
+    : "standard";
+}
+
+export function serializeVendorFreshnessStatus(record: any): PublicVendorFreshnessStatus {
+  return {
+    vendor: record.vendor,
+    vendor_slug: record.vendorSlug,
+    lifecycle_state: normalizeLifecycleState(record.lifecycleState),
+    freshness_tier: normalizeFreshnessTier(record.freshnessTier),
+    latest_attempt_at: record.latestAttemptAt ?? null,
+    latest_success_at: record.latestSuccessAt ?? null,
+    latest_failure_at: record.latestFailureAt ?? null,
+    next_due_at: record.nextDueAt ?? null,
+    backoff_until: record.backoffUntil ?? null,
+    active_source_count: record.activeSourceCount ?? 0,
+    degraded_source_count: record.degradedSourceCount ?? 0,
+    failing_source_count: record.failingSourceCount ?? 0,
+    stale_source_count: record.staleSourceCount ?? 0,
+    paused_source_count: record.pausedSourceCount ?? 0,
+    unsupported_source_count: record.unsupportedSourceCount ?? 0,
+    queued_refresh: Boolean(record.queuedRefresh),
+  };
+}
+
+export function serializeVendorFreshnessStatuses(records: any[]) {
+  return records.map((record) => serializeVendorFreshnessStatus(record));
 }

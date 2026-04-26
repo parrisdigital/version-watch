@@ -4,9 +4,12 @@ import { GET as getFeedJson } from "@/app/api/v1/feed.json/route";
 import { GET as getFeedMarkdown } from "@/app/api/v1/feed.md/route";
 import { GET as getOpenApi } from "@/app/api/v1/openapi.json/route";
 import { GET as getStatus } from "@/app/api/v1/status/route";
+import { GET as getVendorFreshnessBySlug } from "@/app/api/v1/status/vendors/[slug]/route";
+import { GET as getVendorFreshness } from "@/app/api/v1/status/vendors/route";
 import { GET as getTaxonomy } from "@/app/api/v1/taxonomy/route";
 import { GET as getUpdateById } from "@/app/api/v1/updates/[id]/route";
 import { GET as getUpdates } from "@/app/api/v1/updates/route";
+import { POST as postAdminRefresh } from "@/app/api/admin/refresh/route";
 import { GET as getSkill } from "@/app/skills/version-watch/SKILL.md/route";
 import {
   buildRecommendedAction,
@@ -249,6 +252,8 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Freshness Contract");
     expect(markdown).toContain("invalid_cursor");
     expect(markdown).toContain("Treat next_cursor as opaque");
+    expect(markdown).toContain("/api/v1/status/vendors");
+    expect(markdown).toContain("adaptive source freshness");
   });
 
   it("renders llms.txt with broad integration guidance", () => {
@@ -262,6 +267,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("/api/v1/status");
     expect(markdown).toContain("Convex-backed snapshots");
     expect(markdown).toContain("follow next_cursor as an opaque value");
+    expect(markdown).toContain("/api/v1/status/vendors");
   });
 
   it("renders the portable Version Watch skill", () => {
@@ -280,6 +286,7 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Freshness Handling");
     expect(markdown).toContain("Pagination and Errors");
     expect(markdown).toContain("Handle error.code values invalid_filter, invalid_cursor, and not_found");
+    expect(markdown).toContain("/api/v1/status/vendors/{slug}");
   });
 });
 
@@ -531,6 +538,8 @@ describe("agent route handlers", () => {
     expect(body.openapi).toBe("3.1.0");
     expect(body.paths["/api/v1/updates"]).toBeDefined();
     expect(body.paths["/api/v1/status"]).toBeDefined();
+    expect(body.paths["/api/v1/status/vendors"]).toBeDefined();
+    expect(body.paths["/api/v1/status/vendors/{slug}"]).toBeDefined();
     expect(body.paths["/api/v1/taxonomy"]).toBeDefined();
     expect(body.paths["/skills/version-watch/SKILL.md"]).toBeDefined();
     expect(body.paths["/api/v1/updates"].get.parameters).toEqual(
@@ -540,6 +549,7 @@ describe("agent route handlers", () => {
       expect.arrayContaining([expect.objectContaining({ name: "limit" })]),
     );
     expect(body.components.schemas.StatusResponse).toBeDefined();
+    expect(body.components.schemas.VendorFreshnessStatus).toBeDefined();
     expect(body.components.schemas.UpdatesResponse.required).toContain("status_url");
     expect(body.components.schemas.UpdatesResponse.properties.filters.$ref).toBe(
       "#/components/schemas/UpdateFilters",
@@ -566,6 +576,67 @@ describe("agent route handlers", () => {
         unsupported_vendors: expect.any(Number),
       }),
     });
+  });
+
+  it("serves public vendor freshness JSON", async () => {
+    const response = await getVendorFreshness(new Request("https://version-watch.example/api/v1/status/vendors"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.schema_version).toBe("2026-04-26");
+    expect(body.count).toBeGreaterThan(0);
+    expect(body.vendors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          vendor_slug: "openai",
+          lifecycle_state: expect.any(String),
+          freshness_tier: expect.any(String),
+          queued_refresh: false,
+        }),
+      ]),
+    );
+  });
+
+  it("serves one public vendor freshness JSON response", async () => {
+    const response = await getVendorFreshnessBySlug(
+      new Request("https://version-watch.example/api/v1/status/vendors/openai"),
+      { params: Promise.resolve({ slug: "openai" }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.vendor).toMatchObject({
+      vendor_slug: "openai",
+      lifecycle_state: expect.any(String),
+      active_source_count: expect.any(Number),
+    });
+  });
+
+  it("returns 404 for unknown vendor freshness", async () => {
+    const response = await getVendorFreshnessBySlug(
+      new Request("https://version-watch.example/api/v1/status/vendors/missing"),
+      { params: Promise.resolve({ slug: "missing" }) },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(404);
+    expect(body.error).toMatchObject({
+      code: "not_found",
+      message: "Vendor freshness status not found.",
+    });
+  });
+
+  it("rejects unauthenticated admin refresh requests", async () => {
+    const response = await postAdminRefresh(
+      new Request("https://version-watch.example/api/admin/refresh", {
+        method: "POST",
+        body: JSON.stringify({ vendor: "openai" }),
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body).toEqual({ ok: false, error: "Unauthorized." });
   });
 
   it("serves the Version Watch skill Markdown route", async () => {

@@ -1,7 +1,16 @@
-name: Convex Production Deploy
+name: Convex Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "Convex environment to deploy"
+        required: true
+        default: "development"
+        type: choice
+        options:
+          - development
+          - production
   push:
     branches:
       - main
@@ -12,14 +21,17 @@ on:
       - ".github/workflows/convex-production.yml"
 
 concurrency:
-  group: convex-production-${{ github.ref }}
+  group: convex-deploy-${{ github.ref }}-${{ github.event.inputs.environment || 'production' }}
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    name: Deploy Convex production
+  deploy-development:
+    if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'development' }}
+    name: Deploy Convex development
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    environment:
+      name: development
 
     env:
       CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
@@ -37,12 +49,92 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Skip when deploy key is not configured
-        if: ${{ env.CONVEX_DEPLOY_KEY == '' }}
+      - name: Validate Convex deploy key
         run: |
-          echo "CONVEX_DEPLOY_KEY is not configured. Skipping Convex production deploy."
-          echo "Add a Convex production deploy key as a repository secret to enable GitHub-driven Convex deploys."
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "::error::CONVEX_DEPLOY_KEY is not configured for the development GitHub environment."
+            exit 1
+          fi
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Deploy Convex development
+        run: npx convex deploy --typecheck try
+
+  deploy-production:
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') }}
+    name: Deploy Convex production
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+
+    env:
+      CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Convex deploy key
+        run: |
+          if [ -z "$CONVEX_DEPLOY_KEY" ]; then
+            echo "::error::CONVEX_DEPLOY_KEY is not configured for the production GitHub environment."
+            exit 1
+          fi
+
+      - name: Run unit tests
+        run: npm test
 
       - name: Deploy Convex production
-        if: ${{ env.CONVEX_DEPLOY_KEY != '' }}
         run: npx convex deploy --typecheck try
+
+  production-health:
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') }}
+    name: Production freshness after Convex deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: deploy-production
+
+    env:
+      CONVEX_URL: https://joyous-mole-525.convex.cloud
+      EVENT_LIMIT: "24"
+      MAX_FUTURE_SKEW_HOURS: "1"
+      MAX_LATEST_EVENT_AGE_HOURS: "72"
+      MAX_SOURCE_LAG_HOURS: "8"
+      MAX_SOURCE_LAG_GRACE_HOURS: "1"
+      MAX_SOURCE_LAG_MULTIPLIER: "2"
+      MAX_DEGRADED_SOURCE_COUNT: "1"
+      MAX_CONSECUTIVE_SOURCE_FAILURES: "1"
+      MAX_RECENT_FAILURE_SOURCE_COUNT: "1"
+      MAX_RECENT_FAILURES_PER_SOURCE: "1"
+      SINCE_HOURS: "8"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Wait for production deploy window
+        run: sleep 180
+
+      - name: Run production freshness check
+        run: npm run health:production

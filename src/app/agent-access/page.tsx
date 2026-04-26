@@ -73,6 +73,18 @@ const ENDPOINTS = [
   },
   {
     method: "GET",
+    path: "/api/v1/status/vendors",
+    title: "Read vendor freshness",
+    description: "Per-vendor lifecycle, freshness tier, next due time, backoff, and queued refresh state.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/status/vendors/[slug]",
+    title: "Read one vendor freshness",
+    description: "Freshness status for one tracked vendor slug.",
+  },
+  {
+    method: "GET",
     path: "/api/v1/taxonomy",
     title: "Read filter taxonomy",
     description: "Valid severities, audiences, tags, source types, and vendor slugs for agent filters.",
@@ -237,7 +249,7 @@ const MACHINE_READABLE_SURFACES = [
   {
     label: "Freshness status",
     status: "Live",
-    body: "Best for checking whether the Convex-backed snapshot is healthy, degraded, or stale before acting.",
+    body: "Best for checking whether the Convex-backed snapshot and individual vendor coverage are healthy, degraded, or stale before acting.",
   },
   {
     label: "Version Watch skill",
@@ -638,8 +650,9 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                       as operationally complete.
                     </p>
                     <p className="text-sm leading-relaxed text-muted-foreground">
-                      Paused and unsupported sources remain visible as coverage states, but they do not
-                      create active freshness debt. Active and degraded sources are the monitored set.
+                      A 15-minute Convex scheduler fetches only sources that are due based on freshness
+                      tier, backoff, and source health. Paused and unsupported sources remain visible as
+                      coverage states, but they do not create active freshness debt.
                     </p>
                   </div>
                   <StatusRows />
@@ -773,6 +786,10 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                       <p>
                         Check /api/v1/status before high-confidence agent reports or release gates.
                         Treat degraded or stale status as a signal to mention possible incomplete coverage.
+                      </p>
+                      <p>
+                        For vendor-specific workflows, call /api/v1/status/vendors/[slug] to see freshness
+                        tier, next due time, backoff state, and whether a background refresh is queued.
                       </p>
                       <p>
                         Follow next_cursor as an opaque value when a response contains more matching

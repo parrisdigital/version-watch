@@ -1,5 +1,6 @@
 "use node";
 
+import { createHash } from "node:crypto";
 import Parser from "rss-parser";
 import { action, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -38,20 +39,46 @@ const WATCHDOG_RUNNING_GRACE_MS = 30 * 60 * 1000;
 
 type RunType = "scheduled" | "manual" | "deep_diff" | "watchdog";
 
-function buildFetchHeaders(userAgent: string) {
-  return {
+type SourceFetchTarget = {
+  url: string;
+  parserKey?: string;
+  sourceType?: string;
+  etag?: string;
+  lastModified?: string;
+};
+
+function sourceLooksLikeDirectFeed(source: SourceFetchTarget) {
+  return source.sourceType === "rss" || /(?:rss|feed|atom).*\.(?:xml|rss)$|\/feed\/?$/i.test(source.url);
+}
+
+function canUseConditionalCache(source: SourceFetchTarget) {
+  return sourceLooksLikeDirectFeed(source) || !source.parserKey || !FEED_PARSER_KEYS.has(source.parserKey);
+}
+
+function buildFetchHeaders(userAgent: string, source?: SourceFetchTarget) {
+  const headers: Record<string, string> = {
     "User-Agent": userAgent,
     Accept: "text/markdown,text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
     "Accept-Language": "en-US,en;q=0.9",
   };
+
+  if (source && canUseConditionalCache(source)) {
+    if (source.etag) {
+      headers["If-None-Match"] = source.etag;
+    }
+
+    if (source.lastModified) {
+      headers["If-Modified-Since"] = source.lastModified;
+    }
+  }
+
+  return headers;
 }
 
-async function fetchTextOnce(url: string, userAgent: string) {
+async function fetchTextOnce(source: SourceFetchTarget, userAgent: string) {
   try {
-    return await fetch(url, {
-      headers: {
-        ...buildFetchHeaders(userAgent),
-      },
+    return await fetch(source.url, {
+      headers: buildFetchHeaders(userAgent, source),
       redirect: "follow",
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
@@ -61,19 +88,44 @@ async function fetchTextOnce(url: string, userAgent: string) {
   }
 }
 
-async function fetchText(url: string) {
-  let response = await fetchTextOnce(url, DEFAULT_INGESTION_USER_AGENT);
+function getContentHash(body: string) {
+  return createHash("sha256").update(body).digest("hex");
+}
+
+async function fetchText(source: SourceFetchTarget | string) {
+  const sourceTarget = typeof source === "string" ? { url: source } : source;
+  let response = await fetchTextOnce(sourceTarget, DEFAULT_INGESTION_USER_AGENT);
 
   if (!response.ok && BROWSER_RETRY_STATUSES.has(response.status)) {
     await response.body?.cancel();
-    response = await fetchTextOnce(url, BROWSER_FALLBACK_USER_AGENT);
+    response = await fetchTextOnce(sourceTarget, BROWSER_FALLBACK_USER_AGENT);
   }
+
+  if (response.status === 304) {
+    await response.body?.cancel();
+    return {
+      ok: true,
+      notModified: true,
+      url: response.url,
+      status: response.status,
+      body: "",
+      etag: response.headers.get("etag") ?? sourceTarget.etag,
+      lastModified: response.headers.get("last-modified") ?? sourceTarget.lastModified,
+      contentHash: undefined,
+    };
+  }
+
+  const body = await response.text();
 
   return {
     ok: response.ok,
+    notModified: false,
     url: response.url,
     status: response.status,
-    body: await response.text(),
+    body,
+    etag: response.headers.get("etag") ?? undefined,
+    lastModified: response.headers.get("last-modified") ?? undefined,
+    contentHash: body ? getContentHash(body) : undefined,
   };
 }
 
@@ -170,12 +222,30 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
   const startedAt = Date.now();
 
   try {
-    const sourceResponse = await fetchText(source.url);
+    const sourceResponse = await fetchText(source);
     if (!sourceResponse.ok) {
       throw new SourceIngestionError(
         classifyHttpStatus(sourceResponse.status),
         `Fetch failed with status ${sourceResponse.status} for ${source.url}`,
       );
+    }
+
+    if (
+      sourceResponse.notModified ||
+      (canUseConditionalCache(source) &&
+        source.contentHash &&
+        sourceResponse.contentHash &&
+        source.contentHash === sourceResponse.contentHash)
+    ) {
+      return await ctx.runMutation(internal.ingestState.persistSourceUnchanged, {
+        sourceId: source.sourceId,
+        vendorId: source.vendorId,
+        startedAt,
+        runType,
+        etag: sourceResponse.etag,
+        lastModified: sourceResponse.lastModified,
+        contentHash: sourceResponse.contentHash ?? source.contentHash,
+      });
     }
 
     let parsedEntries: ParsedSourceEntry[] = [];
@@ -255,6 +325,9 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
       startedAt,
       runType,
       items,
+      etag: sourceResponse.etag,
+      lastModified: sourceResponse.lastModified,
+      contentHash: sourceResponse.contentHash,
     });
   } catch (error) {
     return await ctx.runMutation(internal.ingestState.persistSourceFailure, {
@@ -276,11 +349,20 @@ function requireAdminSecret(suppliedSecret: string | undefined) {
   }
 }
 
-async function runIngestion(ctx: any, force: boolean, runType: RunType, reason?: string) {
+async function runIngestion(
+  ctx: any,
+  options: {
+    force: boolean;
+    runType: RunType;
+    reason?: string;
+    vendorSlug?: string;
+    sourceUrl?: string;
+  },
+) {
   const refreshStart = await ctx.runMutation(internal.ingestState.startRefreshRun, {
-    runType,
-    force,
-    reason,
+    runType: options.runType,
+    force: options.force,
+    reason: options.reason,
   });
 
   if (refreshStart.skipped || !refreshStart.refreshRunId) {
@@ -302,7 +384,9 @@ async function runIngestion(ctx: any, force: boolean, runType: RunType, reason?:
     await ctx.runMutation(internal.seed.syncRegistry, {});
 
     const sources = await ctx.runQuery(internal.ingestState.listDueSources, {
-      force,
+      force: options.force,
+      vendorSlug: options.vendorSlug,
+      sourceUrl: options.sourceUrl,
     });
 
     let itemsFetched = 0;
@@ -312,7 +396,7 @@ async function runIngestion(ctx: any, force: boolean, runType: RunType, reason?:
     let failures = 0;
 
     for (const source of sources) {
-      const result = await ingestSource(ctx, source, runType);
+      const result = await ingestSource(ctx, source, options.runType);
       itemsFetched += result.itemsFetched;
       itemsCreated += result.itemsCreated;
       itemsDeduped += result.itemsDeduped;
@@ -369,6 +453,8 @@ export const runManualIngestion: ReturnType<typeof action> = action({
   args: {
     adminSecret: v.string(),
     force: v.optional(v.boolean()),
+    vendorSlug: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
   },
   returns: v.object({
     sourcesProcessed: v.number(),
@@ -382,7 +468,17 @@ export const runManualIngestion: ReturnType<typeof action> = action({
   }),
   handler: async (ctx, args) => {
     requireAdminSecret(args.adminSecret);
-    return await runIngestion(ctx, args.force ?? true, "manual");
+    return await runIngestion(ctx, {
+      force: args.force ?? false,
+      runType: "manual",
+      vendorSlug: args.vendorSlug,
+      sourceUrl: args.sourceUrl,
+      reason: args.vendorSlug
+        ? `Manual refresh for vendor ${args.vendorSlug}.`
+        : args.sourceUrl
+          ? `Manual refresh for source ${args.sourceUrl}.`
+          : "Manual refresh for due sources.",
+    });
   },
 });
 
@@ -399,8 +495,11 @@ export const runScheduledIngestion: ReturnType<typeof internalAction> = internal
     skipReason: v.optional(v.string()),
   }),
   handler: async (ctx) => {
-    // Fixed-slot public refreshes can be skipped when another run is active.
-    return await runIngestion(ctx, true, "scheduled");
+    return await runIngestion(ctx, {
+      force: false,
+      runType: "scheduled",
+      reason: "Scheduled due-source refresh.",
+    });
   },
 });
 
@@ -417,7 +516,11 @@ export const runDeepDiff: ReturnType<typeof internalAction> = internalAction({
     skipReason: v.optional(v.string()),
   }),
   handler: async (ctx) => {
-    return await runIngestion(ctx, true, "deep_diff");
+    return await runIngestion(ctx, {
+      force: true,
+      runType: "deep_diff",
+      reason: "Daily deep-diff refresh.",
+    });
   },
 });
 
@@ -452,7 +555,11 @@ export const runRefreshWatchdog: ReturnType<typeof internalAction> = internalAct
       runningGraceMs: WATCHDOG_RUNNING_GRACE_MS,
     });
 
-    const result = await runIngestion(ctx, true, "watchdog", state.reason);
+    const result = await runIngestion(ctx, {
+      force: false,
+      runType: "watchdog",
+      reason: state.reason,
+    });
     const skipped = "skipped" in result && result.skipped === true;
     const skipReason = "skipReason" in result ? result.skipReason : undefined;
 
@@ -461,5 +568,82 @@ export const runRefreshWatchdog: ReturnType<typeof internalAction> = internalAct
       reason: skipReason ?? state.reason,
       ...result,
     };
+  },
+});
+
+export const requestVendorRefresh: ReturnType<typeof action> = action({
+  args: {
+    vendorSlug: v.string(),
+  },
+  returns: v.object({
+    queued: v.boolean(),
+    reason: v.string(),
+  }),
+  handler: async (ctx, args) => {
+    const request = await ctx.runMutation(internal.ingestState.enqueueVendorRefreshRequest, {
+      vendorSlug: args.vendorSlug,
+    });
+
+    if (request.queued && request.refreshRequestId) {
+      await ctx.scheduler.runAfter(0, internal.ingest.runQueuedVendorRefresh, {
+        refreshRequestId: request.refreshRequestId,
+      });
+    }
+
+    return {
+      queued: request.queued,
+      reason: request.reason,
+    };
+  },
+});
+
+export const runQueuedVendorRefresh: ReturnType<typeof internalAction> = internalAction({
+  args: {
+    refreshRequestId: v.id("refreshRequests"),
+  },
+  returns: v.object({
+    sourcesProcessed: v.number(),
+    itemsFetched: v.number(),
+    itemsCreated: v.number(),
+    itemsDeduped: v.number(),
+    published: v.number(),
+    failures: v.number(),
+    skipped: v.optional(v.boolean()),
+    skipReason: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const request = await ctx.runMutation(internal.ingestState.markRefreshRequestRunning, {
+      refreshRequestId: args.refreshRequestId,
+    });
+
+    try {
+      const result = await runIngestion(ctx, {
+        force: false,
+        runType: "manual",
+        vendorSlug: request.vendorSlug,
+        sourceUrl: request.sourceUrl,
+        reason: request.vendorSlug
+          ? `Request-aware refresh for vendor ${request.vendorSlug}.`
+          : "Request-aware refresh.",
+      });
+
+      const skipped = "skipped" in result && result.skipped === true;
+      const skipReason = "skipReason" in result ? result.skipReason : undefined;
+
+      await ctx.runMutation(internal.ingestState.completeRefreshRequest, {
+        refreshRequestId: args.refreshRequestId,
+        status: skipped ? "skipped" : "completed",
+        reason: skipReason,
+      });
+
+      return result;
+    } catch (error) {
+      await ctx.runMutation(internal.ingestState.failRefreshRequest, {
+        refreshRequestId: args.refreshRequestId,
+        errorMessage: error instanceof Error ? error.message : "Unknown refresh request error",
+      });
+
+      throw error;
+    }
   },
 });

@@ -5,8 +5,14 @@ import {
   classifyThrownError,
   SourceIngestionError,
 } from "../../../convex/ingestionErrors";
-import { findSameSourceCandidateByTitle, hasMeaningfulTitle, shouldPollSource } from "../../../convex/ingestState";
+import {
+  findSameSourceCandidateByTitle,
+  getFailureBackoffUntil,
+  hasMeaningfulTitle,
+  shouldPollSource,
+} from "../../../convex/ingestState";
 import { buildSourceRegistryPayload } from "../../../convex/seed";
+import { getFreshnessTier, getPollIntervalMinutesForFreshnessTier } from "../../../convex/sourceFreshness";
 import {
   getLifecycleStateAfterFailure,
   getLifecycleStateAfterSuccess,
@@ -105,6 +111,65 @@ describe("shouldPollSource", () => {
       ),
     ).toBe(false);
   });
+
+  it("uses next due time before falling back to poll intervals", () => {
+    expect(
+      shouldPollSource(
+        {
+          pollIntervalMinutes: 240,
+          nextDueAt: now + 20 * 60 * 1000,
+          lastSuccessAt: now - fourHoursMs,
+        },
+        now,
+        false,
+      ),
+    ).toBe(false);
+    expect(
+      shouldPollSource(
+        {
+          pollIntervalMinutes: 240,
+          nextDueAt: now - 1,
+        },
+        now,
+        false,
+      ),
+    ).toBe(true);
+  });
+
+  it("respects failure backoff unless a manual force run is requested", () => {
+    const source = {
+      pollIntervalMinutes: 30,
+      nextDueAt: now - 1,
+      backoffUntil: now + 30 * 60 * 1000,
+    };
+
+    expect(shouldPollSource(source, now, false)).toBe(false);
+    expect(shouldPollSource(source, now, true)).toBe(true);
+  });
+
+  it("extends repeated failures into circuit-breaker backoff", () => {
+    const normalBackoff = getFailureBackoffUntil({ _id: "src_1", freshnessTier: "critical" }, now, 1);
+    const circuitBackoff = getFailureBackoffUntil({ _id: "src_1", freshnessTier: "critical" }, now, 5);
+
+    expect(normalBackoff - now).toBeLessThan(2 * 60 * 60 * 1000);
+    expect(circuitBackoff - now).toBeGreaterThan(23 * 60 * 60 * 1000);
+  });
+});
+
+describe("source freshness tiers", () => {
+  it("assigns faster tiers to critical and high priority vendors", () => {
+    expect(getFreshnessTier("openai", "changelog_page")).toBe("critical");
+    expect(getFreshnessTier("openai", "docs_page")).toBe("high");
+    expect(getFreshnessTier("firebase", "changelog_page")).toBe("high");
+    expect(getFreshnessTier("pnpm", "docs_page")).toBe("long_tail");
+  });
+
+  it("maps tiers to explicit poll intervals", () => {
+    expect(getPollIntervalMinutesForFreshnessTier("critical")).toBe(30);
+    expect(getPollIntervalMinutesForFreshnessTier("high")).toBe(60);
+    expect(getPollIntervalMinutesForFreshnessTier("standard")).toBe(240);
+    expect(getPollIntervalMinutesForFreshnessTier("long_tail")).toBe(720);
+  });
 });
 
 describe("source lifecycle state", () => {
@@ -142,6 +207,8 @@ describe("source lifecycle state", () => {
     });
 
     expect(payload.lifecycleState).toBe("degraded");
+    expect(payload.freshnessTier).toBe("critical");
+    expect(payload.pollIntervalMinutes).toBe(30);
     expect(payload).not.toHaveProperty("consecutiveFailures");
     expect(payload).not.toHaveProperty("lastFailureAt");
     expect(payload).not.toHaveProperty("lastSuccessAt");

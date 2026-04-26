@@ -8,6 +8,11 @@ import {
   getLifecycleStateAfterSuccess,
   shouldPollLifecycleState,
 } from "./sourceLifecycle";
+import {
+  getEffectiveFreshnessTier,
+  getNextDueAt,
+  getPollIntervalMinutesForFreshnessTier,
+} from "./sourceFreshness";
 
 const normalizedEntryValidator = v.object({
   title: v.string(),
@@ -30,6 +35,14 @@ const runTypeValidator = v.union(
   v.literal("manual"),
   v.literal("deep_diff"),
   v.literal("watchdog"),
+);
+
+const refreshRequestStatusValidator = v.union(
+  v.literal("queued"),
+  v.literal("running"),
+  v.literal("completed"),
+  v.literal("skipped"),
+  v.literal("failure"),
 );
 
 const refreshRunStatusValidator = v.union(
@@ -65,24 +78,70 @@ function canonicalSourceUrl(value: string) {
   }
 }
 
-const POLL_DUE_GRACE_MS = 15 * 60 * 1000;
+const POLL_DUE_GRACE_MS = 60 * 1000;
+const BASE_BACKOFF_MS = 15 * 60 * 1000;
+const MAX_BACKOFF_MS = 6 * 60 * 60 * 1000;
+const CIRCUIT_BREAKER_BACKOFF_MS = 24 * 60 * 60 * 1000;
+
+function isFinitePositive(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
+}
+
+function deterministicJitterMs(key: string, maxJitterMs: number) {
+  let hash = 0;
+  for (let index = 0; index < key.length; index += 1) {
+    hash = (hash * 31 + key.charCodeAt(index)) >>> 0;
+  }
+
+  return hash % Math.max(1, maxJitterMs);
+}
+
+function getSourceNextDueAt(source: any, fromAt: number) {
+  const tier = getEffectiveFreshnessTier(source);
+  return getNextDueAt(fromAt, tier);
+}
+
+export function getFailureBackoffUntil(source: any, now: number, consecutiveFailures: number) {
+  const sourceKey = String(source?._id ?? source?.sourceId ?? source?.url ?? "source");
+  const tier = getEffectiveFreshnessTier(source);
+  const intervalMs = getPollIntervalMinutesForFreshnessTier(tier) * 60 * 1000;
+  const exponentialMs = BASE_BACKOFF_MS * 2 ** Math.max(0, consecutiveFailures - 1);
+  const cappedMs = consecutiveFailures >= 5
+    ? CIRCUIT_BREAKER_BACKOFF_MS
+    : Math.min(MAX_BACKOFF_MS, Math.max(intervalMs, exponentialMs));
+  const jitterMs = deterministicJitterMs(sourceKey, 5 * 60 * 1000);
+
+  return now + cappedMs + jitterMs;
+}
 
 export function shouldPollSource(source: any, now: number, force: boolean) {
   if (force) {
     return true;
   }
 
-  const lastAttemptAt = Math.max(source.lastSuccessAt ?? 0, source.lastFailureAt ?? 0);
+  if (isFinitePositive(source.backoffUntil) && now + POLL_DUE_GRACE_MS < source.backoffUntil) {
+    return false;
+  }
+
+  if (isFinitePositive(source.nextDueAt)) {
+    return now + POLL_DUE_GRACE_MS >= source.nextDueAt;
+  }
+
+  const lastAttemptAt = Math.max(source.lastAttemptAt ?? 0, source.lastSuccessAt ?? 0, source.lastFailureAt ?? 0);
   if (!lastAttemptAt) {
     return true;
   }
 
-  const pollIntervalMs = source.pollIntervalMinutes * 60 * 1000;
+  const pollIntervalMs = (source.pollIntervalMinutes || getPollIntervalMinutesForFreshnessTier("standard")) * 60 * 1000;
   return now - lastAttemptAt >= pollIntervalMs - POLL_DUE_GRACE_MS;
 }
 
 function getRefreshRunStatus(result: { sourcesProcessed: number; failures: number }) {
-  if (result.sourcesProcessed === 0 || result.failures >= result.sourcesProcessed) {
+  if (result.sourcesProcessed === 0) {
+    return "success" as const;
+  }
+
+  if (result.failures >= result.sourcesProcessed) {
     return "failure" as const;
   }
 
@@ -263,19 +322,32 @@ function shouldAutoPublishCandidate(item: any, vendor: any, source: any, now: nu
 }
 
 export const listDueSources = internalQuery({
-  args: { force: v.boolean() },
+  args: {
+    force: v.boolean(),
+    vendorSlug: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+  },
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const now = Date.now();
     const sources = await ctx.db.query("sources").collect();
-    const activeSources = sources.filter((source: any) => {
-      return source.isActive && shouldPollLifecycleState(source) && shouldPollSource(source, now, args.force);
-    });
 
     const hydrated = await Promise.all(
-      activeSources.map(async (source: any) => {
+      sources.map(async (source: any) => {
         const vendor: any = await ctx.db.get(source.vendorId as any);
         if (!vendor || !vendor.isActive) {
+          return null;
+        }
+
+        if (args.vendorSlug && vendor.slug !== args.vendorSlug) {
+          return null;
+        }
+
+        if (args.sourceUrl && source.url !== args.sourceUrl) {
+          return null;
+        }
+
+        if (!source.isActive || !shouldPollLifecycleState(source) || !shouldPollSource(source, now, args.force)) {
           return null;
         }
 
@@ -288,6 +360,10 @@ export const listDueSources = internalQuery({
           name: source.name,
           url: source.url,
           parserKey: source.parserKey,
+          freshnessTier: getEffectiveFreshnessTier(source),
+          etag: source.etag,
+          lastModified: source.lastModified,
+          contentHash: source.contentHash,
         };
       }),
     );
@@ -498,6 +574,9 @@ export const persistSourceEntries = internalMutation({
     startedAt: v.number(),
     runType: runTypeValidator,
     items: v.array(normalizedEntryValidator),
+    etag: v.optional(v.string()),
+    lastModified: v.optional(v.string()),
+    contentHash: v.optional(v.string()),
   },
   returns: v.object({
     itemsFetched: v.number(),
@@ -608,6 +687,11 @@ export const persistSourceEntries = internalMutation({
       lastAttemptAt: args.startedAt,
       lastSuccessAt: now,
       lifecycleState: getLifecycleStateAfterSuccess(source ?? {}),
+      nextDueAt: getSourceNextDueAt(source ?? {}, now),
+      backoffUntil: undefined,
+      etag: args.etag,
+      lastModified: args.lastModified,
+      contentHash: args.contentHash,
       lastErrorCode: undefined,
       lastErrorMessage: undefined,
       consecutiveFailures: 0,
@@ -636,6 +720,64 @@ export const persistSourceEntries = internalMutation({
   },
 });
 
+export const persistSourceUnchanged = internalMutation({
+  args: {
+    sourceId: v.id("sources"),
+    vendorId: v.id("vendors"),
+    startedAt: v.number(),
+    runType: runTypeValidator,
+    etag: v.optional(v.string()),
+    lastModified: v.optional(v.string()),
+    contentHash: v.optional(v.string()),
+  },
+  returns: v.object({
+    itemsFetched: v.number(),
+    itemsCreated: v.number(),
+    itemsDeduped: v.number(),
+    published: v.number(),
+    failed: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const source = await ctx.db.get(args.sourceId);
+
+    await ctx.db.patch(args.sourceId, {
+      lastAttemptAt: args.startedAt,
+      lastSuccessAt: now,
+      lifecycleState: getLifecycleStateAfterSuccess(source ?? {}),
+      nextDueAt: getSourceNextDueAt(source ?? {}, now),
+      backoffUntil: undefined,
+      etag: args.etag,
+      lastModified: args.lastModified,
+      contentHash: args.contentHash,
+      lastErrorCode: undefined,
+      lastErrorMessage: undefined,
+      consecutiveFailures: 0,
+      updatedAt: now,
+    });
+
+    await ctx.db.insert("ingestionRuns", {
+      sourceId: args.sourceId,
+      vendorId: args.vendorId,
+      startedAt: args.startedAt,
+      finishedAt: now,
+      status: "success",
+      itemsFetched: 0,
+      itemsCreated: 0,
+      itemsDeduped: 0,
+      runType: args.runType,
+    });
+
+    return {
+      itemsFetched: 0,
+      itemsCreated: 0,
+      itemsDeduped: 0,
+      published: 0,
+      failed: false,
+    };
+  },
+});
+
 export const persistSourceFailure = internalMutation({
   args: {
     sourceId: v.id("sources"),
@@ -656,14 +798,18 @@ export const persistSourceFailure = internalMutation({
     const source = await ctx.db.get(args.sourceId);
 
     const now = Date.now();
+    const consecutiveFailures = (source?.consecutiveFailures ?? 0) + 1;
+    const backoffUntil = getFailureBackoffUntil(source ?? {}, now, consecutiveFailures);
 
     await ctx.db.patch(args.sourceId, {
       lastAttemptAt: args.startedAt,
       lastFailureAt: now,
       lifecycleState: getLifecycleStateAfterFailure(source ?? {}),
+      nextDueAt: backoffUntil,
+      backoffUntil,
       lastErrorCode: args.errorCode,
       lastErrorMessage: args.errorMessage,
-      consecutiveFailures: (source?.consecutiveFailures ?? 0) + 1,
+      consecutiveFailures,
       updatedAt: now,
     });
 
@@ -688,5 +834,145 @@ export const persistSourceFailure = internalMutation({
       published: 0,
       failed: true,
     };
+  },
+});
+
+function isRefreshRequestOpen(request: any) {
+  return request.status === "queued" || request.status === "running";
+}
+
+export const enqueueVendorRefreshRequest = internalMutation({
+  args: {
+    vendorSlug: v.string(),
+  },
+  returns: v.object({
+    queued: v.boolean(),
+    reason: v.string(),
+    refreshRequestId: v.optional(v.id("refreshRequests")),
+  }),
+  handler: async (ctx, args) => {
+    const now = Date.now();
+    const vendor = await ctx.db
+      .query("vendors")
+      .withIndex("by_slug", (q) => q.eq("slug", args.vendorSlug))
+      .unique();
+
+    if (!vendor || !vendor.isActive) {
+      return {
+        queued: false,
+        reason: "Vendor is not tracked.",
+      };
+    }
+
+    const existingQueued = await ctx.db
+      .query("refreshRequests")
+      .withIndex("by_vendor_slug_and_status", (q) => q.eq("vendorSlug", args.vendorSlug).eq("status", "queued"))
+      .order("desc")
+      .first();
+    const existingRunning = await ctx.db
+      .query("refreshRequests")
+      .withIndex("by_vendor_slug_and_status", (q) => q.eq("vendorSlug", args.vendorSlug).eq("status", "running"))
+      .order("desc")
+      .first();
+    const existing = [existingQueued, existingRunning].filter(Boolean).find(isRefreshRequestOpen);
+
+    if (existing) {
+      return {
+        queued: false,
+        reason: "A refresh is already queued or running for this vendor.",
+      };
+    }
+
+    const sources = await ctx.db
+      .query("sources")
+      .withIndex("by_vendor", (q) => q.eq("vendorId", vendor._id))
+      .collect();
+    const dueSources = sources.filter((source) => {
+      return source.isActive && shouldPollLifecycleState(source) && shouldPollSource(source, now, false);
+    });
+
+    if (!dueSources.length) {
+      return {
+        queued: false,
+        reason: "Vendor sources are already fresh or currently backed off.",
+      };
+    }
+
+    const refreshRequestId = await ctx.db.insert("refreshRequests", {
+      vendorId: vendor._id,
+      vendorSlug: vendor.slug,
+      requestedAt: now,
+      status: "queued",
+      reason: "Public vendor-filtered API request found due source coverage.",
+    });
+
+    return {
+      queued: true,
+      reason: "Vendor refresh queued.",
+      refreshRequestId,
+    };
+  },
+});
+
+export const markRefreshRequestRunning = internalMutation({
+  args: {
+    refreshRequestId: v.id("refreshRequests"),
+  },
+  returns: v.object({
+    vendorSlug: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    const request = await ctx.db.get(args.refreshRequestId);
+    const now = Date.now();
+
+    if (!request) {
+      throw new Error("Refresh request not found.");
+    }
+
+    await ctx.db.patch(args.refreshRequestId, {
+      status: "running",
+      startedAt: now,
+    });
+
+    return {
+      vendorSlug: request.vendorSlug,
+      sourceUrl: request.sourceUrl,
+    };
+  },
+});
+
+export const completeRefreshRequest = internalMutation({
+  args: {
+    refreshRequestId: v.id("refreshRequests"),
+    status: refreshRequestStatusValidator,
+    reason: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.refreshRequestId, {
+      status: args.status,
+      reason: args.reason,
+      finishedAt: Date.now(),
+    });
+
+    return null;
+  },
+});
+
+export const failRefreshRequest = internalMutation({
+  args: {
+    refreshRequestId: v.id("refreshRequests"),
+    errorMessage: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.refreshRequestId, {
+      status: "failure",
+      errorMessage: args.errorMessage,
+      finishedAt: Date.now(),
+    });
+
+    return null;
   },
 });

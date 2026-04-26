@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
 import { sourceErrorCodeValidator } from "./ingestionErrors";
+import { sourceFreshnessTierValidator } from "./sourceFreshness";
 
 export default defineSchema({
   vendors: defineTable({
@@ -36,9 +37,15 @@ export default defineSchema({
     lifecycleState: v.optional(
       v.union(v.literal("active"), v.literal("degraded"), v.literal("paused"), v.literal("unsupported")),
     ),
+    freshnessTier: v.optional(sourceFreshnessTierValidator),
+    nextDueAt: v.optional(v.number()),
     lastAttemptAt: v.optional(v.number()),
     lastSuccessAt: v.optional(v.number()),
     lastFailureAt: v.optional(v.number()),
+    backoffUntil: v.optional(v.number()),
+    etag: v.optional(v.string()),
+    lastModified: v.optional(v.string()),
+    contentHash: v.optional(v.string()),
     lastErrorCode: v.optional(sourceErrorCodeValidator),
     lastErrorMessage: v.optional(v.string()),
     consecutiveFailures: v.number(),
@@ -166,6 +173,28 @@ export default defineSchema({
     .index("by_started_at", ["startedAt"])
     .index("by_status_and_started_at", ["status", "startedAt"])
     .index("by_run_type_and_started_at", ["runType", "startedAt"]),
+
+  refreshRequests: defineTable({
+    vendorId: v.optional(v.id("vendors")),
+    sourceId: v.optional(v.id("sources")),
+    vendorSlug: v.optional(v.string()),
+    sourceUrl: v.optional(v.string()),
+    requestedAt: v.number(),
+    startedAt: v.optional(v.number()),
+    finishedAt: v.optional(v.number()),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("running"),
+      v.literal("completed"),
+      v.literal("skipped"),
+      v.literal("failure"),
+    ),
+    reason: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+  })
+    .index("by_status_and_requested", ["status", "requestedAt"])
+    .index("by_vendor_slug_and_status", ["vendorSlug", "status"])
+    .index("by_source_url_and_status", ["sourceUrl", "status"]),
 
   feedbackSubmissions: defineTable({
     type: v.union(

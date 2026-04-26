@@ -38,9 +38,15 @@ One document per official source URL.
 - `parserKey`
 - `isActive`
 - `lifecycleState` with `active | degraded | paused | unsupported`
+- `freshnessTier` with `critical | high | standard | long_tail`
+- `nextDueAt`
 - `lastAttemptAt`
 - `lastSuccessAt`
 - `lastFailureAt`
+- `backoffUntil`
+- `etag`
+- `lastModified`
+- `contentHash`
 - `lastErrorCode`
 - `lastErrorMessage`
 - `consecutiveFailures`
@@ -186,6 +192,13 @@ Batch-level log of each full feed refresh cycle. This is the authoritative sourc
 - `paused`: not polled and not counted as active freshness debt
 - `unsupported`: known source without a reliable machine-readable surface
 
+### `source.freshnessTier`
+
+- `critical`: highest-value reliable sources, usually checked every 30 minutes
+- `high`: important platform sources, usually checked every 60 minutes
+- `standard`: normal monitored sources, usually checked every 4 hours
+- `long_tail`: low-frequency docs/blog sources, usually checked every 12 hours
+
 ### `source.errorCode`
 
 - `fetch_blocked`
@@ -194,6 +207,14 @@ Batch-level log of each full feed refresh cycle. This is the authoritative sourc
 - `parse_error`
 - `empty_result`
 - `unknown_error`
+
+### `refreshRequests.status`
+
+- `queued`
+- `running`
+- `completed`
+- `skipped`
+- `failure`
 
 ### `rawCandidate.status`
 

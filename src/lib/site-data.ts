@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { fetchQuery } from "convex/nextjs";
+import { fetchAction, fetchQuery } from "convex/nextjs";
 
 import { api } from "../../convex/_generated/api";
 import { scoreEvent } from "@/lib/classification/score";
@@ -124,6 +124,53 @@ export async function getProductionFreshnessReport(options: ProductionFreshnessO
         .slice(0, options.eventLimit ?? 24),
     }),
   );
+}
+
+function fallbackVendorFreshnessRecords(slug?: string) {
+  const filteredVendors = slug ? fallbackVendors.filter((vendor) => vendor.slug === slug) : fallbackVendors;
+  const now = new Date().toISOString();
+
+  return {
+    checkedAt: now,
+    vendors: filteredVendors.map((vendor) => ({
+      vendor: vendor.name,
+      vendorSlug: vendor.slug,
+      lifecycleState: vendor.slug === "railway" ? "unsupported" : "active",
+      freshnessTier: "standard",
+      latestAttemptAt: null,
+      latestSuccessAt: null,
+      latestFailureAt: null,
+      nextDueAt: null,
+      backoffUntil: null,
+      activeSourceCount: vendor.slug === "railway" ? 0 : vendor.sources.length,
+      degradedSourceCount: 0,
+      failingSourceCount: 0,
+      staleSourceCount: 0,
+      pausedSourceCount: 0,
+      unsupportedSourceCount: vendor.slug === "railway" ? vendor.sources.length : 0,
+      queuedRefresh: false,
+    })),
+  };
+}
+
+export async function getVendorFreshnessReport(slug?: string): Promise<any> {
+  return await readFromConvex<any>(
+    () => fetchQuery(api.ops.vendorFreshness, { slug }) as Promise<any>,
+    () => fallbackVendorFreshnessRecords(slug),
+  );
+}
+
+export async function requestVendorRefreshIfStale(vendorSlug: string) {
+  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
+    return null;
+  }
+
+  try {
+    return await fetchAction(api.ingest.requestVendorRefresh, { vendorSlug });
+  } catch (error) {
+    console.warn(`Could not enqueue refresh for ${vendorSlug}.`, error);
+    return null;
+  }
 }
 
 export async function getFreshnessSummary(): Promise<FreshnessSummary> {

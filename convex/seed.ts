@@ -12,14 +12,11 @@ import {
   getRegistryLifecycleState,
   type SourceLifecycleState,
 } from "./sourceLifecycle";
-
-function getPollIntervalMinutes(sourceType: string) {
-  if (sourceType === "github_release" || sourceType === "changelog_page") {
-    return 240;
-  }
-
-  return 720;
-}
+import {
+  getFreshnessTier,
+  getNextDueAt,
+  getPollIntervalMinutesForFreshnessTier,
+} from "./sourceFreshness";
 
 function getImportanceScore(band: "critical" | "high" | "medium" | "low") {
   if (band === "critical") return 90;
@@ -62,13 +59,21 @@ export function buildSourceRegistryPayload(args: {
 }) {
   const registryState = getRegistryLifecycleState(args.source.url);
   const lifecycleState = resolveSyncedLifecycleState(args.existingSource, registryState);
+  const freshnessTier = getFreshnessTier(args.vendorSlug, args.source.type);
+  const pollIntervalMinutes = getPollIntervalMinutesForFreshnessTier(freshnessTier);
+  const latestAttemptAt =
+    args.existingSource?.lastAttemptAt ??
+    args.existingSource?.lastSuccessAt ??
+    args.existingSource?.lastFailureAt ??
+    null;
   const payload: any = {
     vendorId: args.vendorId,
     name: args.source.name,
     sourceType: args.source.type,
     url: args.source.url,
     isPrimary: args.isPrimary,
-    pollIntervalMinutes: getPollIntervalMinutes(args.source.type),
+    freshnessTier,
+    pollIntervalMinutes,
     parserKey: `${args.vendorSlug}:${args.source.type}`,
     isActive: true,
     lifecycleState,
@@ -77,6 +82,10 @@ export function buildSourceRegistryPayload(args: {
 
   if (!args.existingSource) {
     payload.consecutiveFailures = 0;
+  }
+
+  if (!args.existingSource?.nextDueAt) {
+    payload.nextDueAt = latestAttemptAt ? getNextDueAt(latestAttemptAt, freshnessTier) : args.now;
   }
 
   return payload;
@@ -285,6 +294,7 @@ export const seedDemoData = internalMutation({
       await ctx.db.patch(sourceId, {
         consecutiveFailures:
           healthEntry.status === "healthy" ? 0 : healthEntry.status === "degraded" ? 1 : 3,
+        lastAttemptAt: Date.parse(healthEntry.lastSuccessAt),
         lastSuccessAt: Date.parse(healthEntry.lastSuccessAt),
         lastFailureAt:
           healthEntry.status === "healthy" ? undefined : Date.parse(healthEntry.lastSuccessAt) + 60 * 60 * 1000,
