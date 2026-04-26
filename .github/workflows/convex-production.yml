@@ -138,3 +138,6 @@ jobs:
 
       - name: Run production freshness check
         run: npm run health:production
+
+      - name: Run source link audit
+        run: npm run sources:production

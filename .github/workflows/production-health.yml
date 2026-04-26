@@ -11,6 +11,8 @@ on:
     paths:
       - ".github/workflows/production-health.yml"
       - "scripts/check-production-freshness.mjs"
+      - "scripts/check-source-links.mjs"
+      - "scripts/lib/source-link-audit.mjs"
       - "package.json"
       - "package-lock.json"
       - "convex/ops.ts"
@@ -59,3 +61,6 @@ jobs:
 
       - name: Run production freshness check
         run: npm run health:production
+
+      - name: Run source link audit
+        run: npm run sources:production
