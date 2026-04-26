@@ -41,6 +41,7 @@ const DOC_NAV = [
   { href: "#endpoints", label: "Endpoints" },
   { href: "#filters", label: "Filters" },
   { href: "#response", label: "Response shape" },
+  { href: "#skill", label: "Agent skill" },
   { href: "#integrations", label: "Integrations" },
   { href: "#coverage", label: "Platform coverage" },
   { href: "#roadmap", label: "What is next" },
@@ -64,6 +65,18 @@ const ENDPOINTS = [
     path: "/api/v1/vendors",
     title: "List vendors",
     description: "Tracked platforms and their official source surfaces.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/taxonomy",
+    title: "Read filter taxonomy",
+    description: "Valid severities, audiences, tags, source types, and vendor slugs for agent filters.",
+  },
+  {
+    method: "GET",
+    path: "/api/v1/openapi.json",
+    title: "OpenAPI contract",
+    description: "Machine-readable API contract for agents, custom tools, SDK generators, and test harnesses.",
   },
   {
     method: "GET",
@@ -94,6 +107,12 @@ const ENDPOINTS = [
     path: "/llms.txt",
     title: "LLM resource file",
     description: "Plain text map of public resources for LLM and crawler discovery.",
+  },
+  {
+    method: "GET",
+    path: "/skills/version-watch/SKILL.md",
+    title: "Agent skill",
+    description: "Portable Markdown operating procedure for agents using the Version Watch API.",
   },
 ] as const;
 
@@ -127,6 +146,11 @@ const FILTERS = [
     name: "limit",
     example: "25",
     behavior: "Defaults to 25 and clamps at 100.",
+  },
+  {
+    name: "cursor",
+    example: "eyJvZmZzZXQiOjI1fQ",
+    behavior: "Uses the opaque next_cursor value to fetch the next page of matching updates.",
   },
 ] as const;
 
@@ -171,8 +195,13 @@ const MACHINE_READABLE_SURFACES = [
   },
   {
     label: "OpenAPI schema",
-    status: "Next",
-    body: "Would let tools like Zapier, GPT Actions, and generated SDKs understand the API contract.",
+    status: "Live",
+    body: "Best for OpenAPI-aware agents, custom tools, SDK generators, and contract tests.",
+  },
+  {
+    label: "Version Watch skill",
+    status: "Live",
+    body: "Best for teaching agents when to use the API, how to filter, and how to cite sources.",
   },
   {
     label: "RSS and generic webhooks",
@@ -200,7 +229,7 @@ const INTEGRATIONS = [
   {
     icon: BellRing,
     title: "Automation platforms",
-    body: "Use Pipedream, Zapier, Make, n8n, Vercel Cron, Cloudflare Workers, or scheduled jobs to poll and route updates.",
+    body: "Use Pipedream, Make, n8n, Vercel Cron, Cloudflare Workers, or scheduled jobs to poll and route updates.",
   },
   {
     icon: Terminal,
@@ -245,6 +274,16 @@ const RESPONSE_FIELDS = [
   "source_url",
   "github_url",
   "version_watch_url",
+] as const;
+
+const WRAPPER_FIELDS = [
+  "schema_version",
+  "generated_at",
+  "count",
+  "total_count",
+  "next_cursor",
+  "filters",
+  "updates",
 ] as const;
 
 const FEATURED_VENDOR_SLUGS = [
@@ -361,6 +400,7 @@ export default async function AgentAccessPage() {
 
   const filteredUrl = `${baseUrl}/api/v1/updates?vendor=vercel&severity=high&audience=frontend&tag=deployment&limit=10`;
   const latestUrl = `${baseUrl}/api/v1/updates?limit=5`;
+  const skillUrl = `${baseUrl}/skills/version-watch/SKILL.md`;
 
   const jsonExample = `{
   "id": "openclaw-2026-04-25-openclaw-2026-4-24",
@@ -458,6 +498,12 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                   <Link href="/feed.md">
                     <FileText className="size-4" aria-hidden="true" />
                     Open Markdown feed
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="ghost">
+                  <Link href="/skills/version-watch/SKILL.md">
+                    <Bot className="size-4" aria-hidden="true" />
+                    Open agent skill
                   </Link>
                 </Button>
               </div>
@@ -566,8 +612,30 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                         </Badge>
                       ))}
                     </div>
+                    <div className="flex flex-wrap gap-2">
+                      {WRAPPER_FIELDS.map((field) => (
+                        <Badge key={field} variant="muted" className="font-mono">
+                          {field}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
                   <CodeBlock title="Public update object" language="json" code={jsonExample} />
+                </div>
+              </section>
+
+              <section id="skill" className="scroll-mt-28">
+                <div className="grid gap-8 xl:grid-cols-[0.82fr_1.18fr] xl:gap-10">
+                  <SectionIntro
+                    kicker="Agent skill"
+                    title="Give agents an operating procedure, not just endpoints"
+                    body="The skill explains when to use Version Watch, how to discover valid vendors and tags, how to filter updates, how to follow pagination, how to de-duplicate results, and how to cite official sources."
+                  />
+                  <CodeBlock
+                    title="Version Watch skill"
+                    language="bash"
+                    code={`curl "${skillUrl}"`}
+                  />
                 </div>
               </section>
 
@@ -654,9 +722,8 @@ await fetch(process.env.SLACK_WEBHOOK_URL, {
                       The API and Markdown feeds are live. Filtered notifications are the next layer.
                     </h2>
                     <p className="vw-copy max-w-3xl text-base">
-                      The next product step is native watchlists and generic webhook delivery, then
-                      Discord, Slack, Teams, email, RSS, OpenAPI, community relevance signals, and MCP
-                      once the public API proves useful.
+                      The next product step is watchlists and generic webhook delivery, then email,
+                      RSS, community relevance signals, and MCP once the public API proves useful.
                     </p>
                   </div>
                   <Button asChild variant="outline">

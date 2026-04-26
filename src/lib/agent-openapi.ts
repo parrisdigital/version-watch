@@ -1,0 +1,298 @@
+import { DEFAULT_UPDATE_LIMIT, MAX_UPDATE_LIMIT, PUBLIC_API_SCHEMA_VERSION } from "@/lib/agent-feed";
+
+export function buildOpenApiDocument(baseUrl: string) {
+  return {
+    openapi: "3.1.0",
+    info: {
+      title: "Version Watch Public API",
+      version: PUBLIC_API_SCHEMA_VERSION,
+      summary: "Agent-readable changelog intelligence for developer platforms.",
+      description:
+        "Version Watch exposes official platform changelogs, release notes, docs updates, RSS feeds, and GitHub releases as structured change intelligence.",
+    },
+    servers: [{ url: baseUrl }],
+    paths: {
+      "/api/v1/updates": {
+        get: {
+          operationId: "listUpdates",
+          summary: "List public updates",
+          description: "Return recent platform changes with optional filters and cursor pagination.",
+          parameters: updateFilterParameters(),
+          responses: {
+            "200": jsonResponse("Paginated public updates.", { $ref: "#/components/schemas/UpdatesResponse" }),
+            "400": jsonResponse("Invalid filter or cursor.", { $ref: "#/components/schemas/ErrorResponse" }),
+          },
+        },
+      },
+      "/api/v1/updates/{id}": {
+        get: {
+          operationId: "getUpdate",
+          summary: "Get one update",
+          description: "Return one public update by its Version Watch update id.",
+          parameters: [
+            {
+              name: "id",
+              in: "path",
+              required: true,
+              schema: { type: "string" },
+              description: "Public update id.",
+            },
+          ],
+          responses: {
+            "200": jsonResponse("Public update.", { $ref: "#/components/schemas/UpdateResponse" }),
+            "404": jsonResponse("Update not found.", { $ref: "#/components/schemas/ErrorResponse" }),
+          },
+        },
+      },
+      "/api/v1/vendors": {
+        get: {
+          operationId: "listVendors",
+          summary: "List vendors",
+          description: "Return tracked platforms and official source surfaces.",
+          responses: {
+            "200": jsonResponse("Vendor list.", { $ref: "#/components/schemas/VendorsResponse" }),
+          },
+        },
+      },
+      "/api/v1/taxonomy": {
+        get: {
+          operationId: "getTaxonomy",
+          summary: "Get filter taxonomy",
+          description: "Return valid severities, audiences, tags, source types, and vendor slugs for agent filters.",
+          responses: {
+            "200": jsonResponse("Public taxonomy.", { $ref: "#/components/schemas/TaxonomyResponse" }),
+          },
+        },
+      },
+      "/api/v1/feed.json": {
+        get: {
+          operationId: "getJsonFeed",
+          summary: "Get JSON feed",
+          description: "Return filtered updates in feed form with the same filters as /api/v1/updates.",
+          parameters: updateFilterParameters(),
+          responses: {
+            "200": jsonResponse("JSON feed.", { $ref: "#/components/schemas/FeedJsonResponse" }),
+            "400": jsonResponse("Invalid filter or cursor.", { $ref: "#/components/schemas/ErrorResponse" }),
+          },
+        },
+      },
+      "/api/v1/feed.md": textPath(
+        "getApiMarkdownFeed",
+        "Get Markdown feed",
+        "Markdown feed under the API namespace.",
+        true,
+      ),
+      "/feed.md": textPath("getMarkdownFeed", "Get root Markdown feed", "Markdown feed at the site root.", true),
+      "/agents.md": textPath("getAgentGuide", "Get agent guide", "Markdown guide for agents using Version Watch."),
+      "/llms.txt": textPath("getLlmsTxt", "Get LLM resource map", "Plain text resource map for LLM and crawler discovery."),
+      "/skills/version-watch/SKILL.md": textPath(
+        "getVersionWatchSkill",
+        "Get Version Watch skill",
+        "Portable Markdown skill that teaches agents how to use the Version Watch API.",
+      ),
+      "/api/v1/openapi.json": {
+        get: {
+          operationId: "getOpenApiDocument",
+          summary: "Get OpenAPI contract",
+          description: "Return the machine-readable OpenAPI contract for the public Version Watch API.",
+          responses: {
+            "200": jsonResponse("OpenAPI document.", { type: "object" }),
+          },
+        },
+      },
+    },
+    components: {
+      schemas: {
+        PublicUpdate: {
+          type: "object",
+          required: [
+            "id",
+            "vendor",
+            "vendor_slug",
+            "title",
+            "published_at",
+            "severity",
+            "signal_score",
+            "audience",
+            "tags",
+            "summary",
+            "why_it_matters",
+            "recommended_action",
+            "source_url",
+            "github_url",
+            "version_watch_url",
+          ],
+          properties: {
+            id: { type: "string" },
+            vendor: { type: "string" },
+            vendor_slug: { type: "string" },
+            title: { type: "string" },
+            published_at: { type: "string", format: "date-time" },
+            severity: { type: "string", enum: ["critical", "high", "medium", "low"] },
+            signal_score: { type: "integer" },
+            audience: { type: "array", items: { type: "string" } },
+            tags: { type: "array", items: { type: "string" } },
+            summary: { type: "string" },
+            why_it_matters: { type: "string" },
+            recommended_action: { type: "string" },
+            source_url: { type: "string", format: "uri" },
+            github_url: { anyOf: [{ type: "string", format: "uri" }, { type: "null" }] },
+            version_watch_url: { type: "string", format: "uri" },
+          },
+        },
+        UpdatesResponse: {
+          type: "object",
+          properties: {
+            schema_version: { type: "string" },
+            generated_at: { type: "string", format: "date-time" },
+            count: { type: "integer" },
+            total_count: { type: "integer" },
+            next_cursor: { anyOf: [{ type: "string" }, { type: "null" }] },
+            filters: { type: "object" },
+            updates: { type: "array", items: { $ref: "#/components/schemas/PublicUpdate" } },
+          },
+        },
+        UpdateResponse: {
+          type: "object",
+          properties: {
+            schema_version: { type: "string" },
+            update: { $ref: "#/components/schemas/PublicUpdate" },
+          },
+        },
+        PublicVendor: {
+          type: "object",
+          properties: {
+            slug: { type: "string" },
+            name: { type: "string" },
+            description: { type: "string" },
+            sources: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  name: { type: "string" },
+                  url: { type: "string", format: "uri" },
+                  type: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        VendorsResponse: {
+          type: "object",
+          properties: {
+            schema_version: { type: "string" },
+            generated_at: { type: "string", format: "date-time" },
+            count: { type: "integer" },
+            vendors: { type: "array", items: { $ref: "#/components/schemas/PublicVendor" } },
+          },
+        },
+        TaxonomyResponse: {
+          type: "object",
+          properties: {
+            schema_version: { type: "string" },
+            generated_at: { type: "string", format: "date-time" },
+            taxonomy: {
+              type: "object",
+              properties: {
+                severities: { type: "array", items: { type: "string" } },
+                audiences: { type: "array", items: { type: "string" } },
+                tags: { type: "array", items: { type: "string" } },
+                source_types: { type: "array", items: { type: "string" } },
+                vendors: {
+                  type: "array",
+                  items: {
+                    type: "object",
+                    properties: {
+                      slug: { type: "string" },
+                      name: { type: "string" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        FeedJsonResponse: {
+          type: "object",
+          properties: {
+            schema_version: { type: "string" },
+            generated_at: { type: "string", format: "date-time" },
+            feed_url: { type: "string", format: "uri" },
+            count: { type: "integer" },
+            total_count: { type: "integer" },
+            next_cursor: { anyOf: [{ type: "string" }, { type: "null" }] },
+            updates: { type: "array", items: { $ref: "#/components/schemas/PublicUpdate" } },
+          },
+        },
+        ErrorResponse: {
+          type: "object",
+          properties: {
+            error: { type: "string" },
+          },
+        },
+      },
+    },
+  };
+}
+
+function parameter(name: string, description: string, type = "string", format?: string, enumValues?: string[]) {
+  return {
+    name,
+    in: "query",
+    required: false,
+    description,
+    schema: {
+      type,
+      ...(format ? { format } : {}),
+      ...(enumValues ? { enum: enumValues } : {}),
+    },
+  };
+}
+
+function updateFilterParameters() {
+  return [
+    parameter("since", "ISO 8601 timestamp. Returns updates published at or after this time.", "string", "date-time"),
+    parameter("vendor", "Vendor slug such as openai, stripe, vercel, github, or cloudflare."),
+    parameter("severity", "Importance band.", "string", undefined, ["critical", "high", "medium", "low"]),
+    parameter("audience", "Audience label such as frontend, backend, infra, ai, product, security, or compliance."),
+    parameter("tag", "Category or affected stack tag such as api, auth, billing, sdk, agents, hosting, or deployments."),
+    parameter("limit", `Positive integer. Defaults to ${DEFAULT_UPDATE_LIMIT} and clamps at ${MAX_UPDATE_LIMIT}.`, "integer"),
+    parameter("cursor", "Opaque cursor returned by next_cursor."),
+  ];
+}
+
+function jsonResponse(description: string, schema: object) {
+  return {
+    description,
+    content: {
+      "application/json": {
+        schema,
+      },
+    },
+  };
+}
+
+function textPath(operationId: string, summary: string, description: string, acceptsUpdateFilters = false) {
+  return {
+    get: {
+      operationId,
+      summary,
+      description,
+      ...(acceptsUpdateFilters ? { parameters: updateFilterParameters() } : {}),
+      responses: {
+        "200": {
+          description: summary,
+          content: {
+            "text/plain": {
+              schema: { type: "string" },
+            },
+            "text/markdown": {
+              schema: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+  };
+}

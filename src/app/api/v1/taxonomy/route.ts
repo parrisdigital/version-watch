@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { PUBLIC_AGENT_HEADERS, PUBLIC_API_SCHEMA_VERSION, serializePublicVendor } from "@/lib/agent-feed";
-import { getVendors } from "@/lib/site-data";
+import { buildPublicTaxonomy, PUBLIC_API_SCHEMA_VERSION, PUBLIC_AGENT_HEADERS } from "@/lib/agent-feed";
+import { getAllPublicEvents, getVendors } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
@@ -10,14 +10,13 @@ export function OPTIONS() {
 }
 
 export async function GET() {
-  const vendors = (await getVendors()).map(serializePublicVendor);
+  const [events, vendors] = await Promise.all([getAllPublicEvents(), getVendors()]);
 
   return NextResponse.json(
     {
       schema_version: PUBLIC_API_SCHEMA_VERSION,
       generated_at: new Date().toISOString(),
-      count: vendors.length,
-      vendors,
+      taxonomy: buildPublicTaxonomy(events, vendors),
     },
     { headers: PUBLIC_AGENT_HEADERS },
   );
