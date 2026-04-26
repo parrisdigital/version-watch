@@ -2,17 +2,59 @@ import { query } from "./_generated/server";
 import { v } from "convex/values";
 
 import { isCompletedRefreshStatus } from "./ingestState";
+import { getEffectiveLifecycleState, isMonitoredLifecycleState } from "./sourceLifecycle";
 
 function getStatusForSource(source: any) {
+  const lifecycleState = getEffectiveLifecycleState(source);
+
+  if (!isMonitoredLifecycleState(lifecycleState)) {
+    return lifecycleState;
+  }
+
   if ((source.consecutiveFailures ?? 0) >= 3) {
     return "failing";
   }
 
-  if ((source.consecutiveFailures ?? 0) > 0) {
+  if (lifecycleState === "degraded" || (source.consecutiveFailures ?? 0) > 0) {
     return "degraded";
   }
 
   return "healthy";
+}
+
+function isMonitoredSource(source: any) {
+  return source.isActive && isMonitoredLifecycleState(getEffectiveLifecycleState(source));
+}
+
+function getVendorCoverageCounts(sources: any[]) {
+  const coverageByVendor = new Map<string, { monitored: boolean; paused: boolean; unsupported: boolean }>();
+
+  for (const source of sources) {
+    if (!source.isActive) {
+      continue;
+    }
+
+    const vendorId = String(source.vendorId);
+    const lifecycleState = getEffectiveLifecycleState(source);
+    const coverage = coverageByVendor.get(vendorId) ?? {
+      monitored: false,
+      paused: false,
+      unsupported: false,
+    };
+
+    coverage.monitored ||= isMonitoredLifecycleState(lifecycleState);
+    coverage.paused ||= lifecycleState === "paused";
+    coverage.unsupported ||= lifecycleState === "unsupported";
+    coverageByVendor.set(vendorId, coverage);
+  }
+
+  const values = Array.from(coverageByVendor.values());
+
+  return {
+    activeVendorCount: values.filter((coverage) => coverage.monitored).length,
+    pausedVendorCount: values.filter((coverage) => !coverage.monitored && coverage.paused).length,
+    unsupportedVendorCount: values.filter((coverage) => !coverage.monitored && coverage.unsupported).length,
+  };
 }
 
 function isCompletedRefreshRun(run: any) {
@@ -45,8 +87,10 @@ async function formatSourceHealth(ctx: any, source: any) {
 
   return {
     vendorName: vendor.name,
+    vendorSlug: vendor.slug,
     sourceName: source.name,
     sourceUrl: source.url,
+    lifecycleState: getEffectiveLifecycleState(source),
     status: getStatusForSource(source),
     lastSuccessAt: source.lastSuccessAt ? new Date(source.lastSuccessAt).toISOString() : null,
     lastFailureAt: source.lastFailureAt ? new Date(source.lastFailureAt).toISOString() : null,
@@ -63,7 +107,7 @@ export const sourceHealth = query({
 
     const items = await Promise.all(
       sources
-        .filter((source) => source.isActive)
+        .filter(isMonitoredSource)
         .map((source) => formatSourceHealth(ctx, source)),
     );
 
@@ -84,6 +128,11 @@ export const productionFreshness = query({
     const since = now - (args.sinceHours ?? 8) * 60 * 60 * 1000;
     const eventLimit = Math.max(1, Math.min(args.eventLimit ?? 24, 100));
     const sources = await ctx.db.query("sources").collect();
+    const activeSources = sources.filter((source) => source.isActive);
+    const monitoredSources = activeSources.filter(isMonitoredSource);
+    const pausedSources = activeSources.filter((source) => getEffectiveLifecycleState(source) === "paused");
+    const unsupportedSources = activeSources.filter((source) => getEffectiveLifecycleState(source) === "unsupported");
+    const vendorCoverage = getVendorCoverageCounts(sources);
     const sourceById = new Map(sources.map((source) => [source._id, source]));
     const vendorIds = Array.from(new Set(sources.map((source) => source.vendorId)));
     const vendorEntries = await Promise.all(vendorIds.map(async (vendorId) => [vendorId, await ctx.db.get(vendorId)] as const));
@@ -97,8 +146,7 @@ export const productionFreshness = query({
     const refreshRuns = await ctx.db.query("refreshRuns").withIndex("by_started_at").order("desc").take(100);
 
     const sourceHealth = await Promise.all(
-      sources
-        .filter((source) => source.isActive)
+      monitoredSources
         .map((source) => formatSourceHealth(ctx, source)),
     );
 
@@ -129,6 +177,7 @@ export const productionFreshness = query({
           vendorName: vendor?.name ?? "Unknown vendor",
           sourceName: source?.name ?? "Unknown source",
           sourceUrl: source?.url ?? null,
+          sourceLifecycleState: source ? getEffectiveLifecycleState(source) : null,
           status: run.status,
           runType: run.runType,
           startedAt: new Date(run.startedAt).toISOString(),
@@ -156,6 +205,12 @@ export const productionFreshness = query({
         return a!.vendorName.localeCompare(b!.vendorName) || a!.sourceName.localeCompare(b!.sourceName);
       }),
       latestFeedRefresh,
+      coverage: {
+        activeSourceCount: monitoredSources.length,
+        pausedSourceCount: pausedSources.length,
+        unsupportedSourceCount: unsupportedSources.length,
+        ...vendorCoverage,
+      },
       recentRefreshRuns,
       recentRefreshFailureCount: recentRefreshRuns.filter((run) => run.status === "failure").length,
       recentRuns,

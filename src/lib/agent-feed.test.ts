@@ -283,6 +283,64 @@ describe("agent API status", () => {
     expect(status.recent_refresh_failures).toBe(1);
   });
 
+  it("does not count paused or unsupported sources as public freshness debt", () => {
+    const status = buildPublicApiStatus(
+      {
+        latestFeedRefresh: {
+          status: "success",
+          startedAt: "2026-04-25T23:40:00.000Z",
+          finishedAt: "2026-04-25T23:45:00.000Z",
+        },
+        recentRefreshRuns: [
+          {
+            status: "partial_failure",
+            startedAt: "2026-04-25T23:40:00.000Z",
+            finishedAt: "2026-04-25T23:45:00.000Z",
+          },
+        ],
+        recentRuns: [
+          {
+            status: "failure",
+            sourceUrl: "https://railway.com/changelog",
+          },
+        ],
+        sources: [
+          {
+            lifecycleState: "unsupported",
+            status: "unsupported",
+            sourceUrl: "https://railway.com/changelog",
+            lastSuccessAt: null,
+            pollIntervalMinutes: 240,
+          },
+          {
+            lifecycleState: "paused",
+            status: "paused",
+            lastSuccessAt: null,
+            pollIntervalMinutes: 240,
+          },
+        ],
+        coverage: {
+          activeVendorCount: 44,
+          pausedVendorCount: 1,
+          unsupportedVendorCount: 1,
+        },
+      },
+      now,
+    );
+
+    expect(status).toMatchObject({
+      status: "healthy",
+      active_source_count: 0,
+      stale_source_count: 0,
+      recent_refresh_failures: 0,
+      coverage: {
+        active_vendors: 44,
+        paused_vendors: 1,
+        unsupported_vendors: 1,
+      },
+    });
+  });
+
   it("reports stale status when the latest refresh is beyond the public window", () => {
     const status = buildPublicApiStatus(
       {

@@ -2,6 +2,11 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 import { publishRawCandidate } from "./lib/publish";
+import {
+  getLifecycleStateAfterFailure,
+  getLifecycleStateAfterSuccess,
+  shouldPollLifecycleState,
+} from "./sourceLifecycle";
 
 const normalizedEntryValidator = v.object({
   title: v.string(),
@@ -262,7 +267,9 @@ export const listDueSources = internalQuery({
   handler: async (ctx, args) => {
     const now = Date.now();
     const sources = await ctx.db.query("sources").collect();
-    const activeSources = sources.filter((source: any) => source.isActive && shouldPollSource(source, now, args.force));
+    const activeSources = sources.filter((source: any) => {
+      return source.isActive && shouldPollLifecycleState(source) && shouldPollSource(source, now, args.force);
+    });
 
     const hydrated = await Promise.all(
       activeSources.map(async (source: any) => {
@@ -598,6 +605,7 @@ export const persistSourceEntries = internalMutation({
 
     await ctx.db.patch(args.sourceId, {
       lastSuccessAt: now,
+      lifecycleState: getLifecycleStateAfterSuccess(source ?? {}),
       consecutiveFailures: 0,
       updatedAt: now,
     });
@@ -642,17 +650,20 @@ export const persistSourceFailure = internalMutation({
   handler: async (ctx, args) => {
     const source = await ctx.db.get(args.sourceId);
 
+    const now = Date.now();
+
     await ctx.db.patch(args.sourceId, {
-      lastFailureAt: Date.now(),
+      lastFailureAt: now,
+      lifecycleState: getLifecycleStateAfterFailure(source ?? {}),
       consecutiveFailures: (source?.consecutiveFailures ?? 0) + 1,
-      updatedAt: Date.now(),
+      updatedAt: now,
     });
 
     await ctx.db.insert("ingestionRuns", {
       sourceId: args.sourceId,
       vendorId: args.vendorId,
       startedAt: args.startedAt,
-      finishedAt: Date.now(),
+      finishedAt: now,
       status: "failure",
       itemsFetched: 0,
       itemsCreated: 0,

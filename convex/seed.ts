@@ -7,6 +7,11 @@ import {
   sourceHealth as mockSourceHealth,
   vendors as vendorRegistry,
 } from "../src/lib/mock-data";
+import {
+  getEffectiveLifecycleState,
+  getRegistryLifecycleState,
+  type SourceLifecycleState,
+} from "./sourceLifecycle";
 
 function getPollIntervalMinutes(sourceType: string) {
   if (sourceType === "github_release" || sourceType === "changelog_page") {
@@ -35,9 +40,52 @@ function getCandidateScore(confidence: "high" | "medium" | "low") {
   return 16;
 }
 
+function resolveSyncedLifecycleState(existingSource: any, registryState: SourceLifecycleState) {
+  if (!existingSource) {
+    return registryState;
+  }
+
+  if (registryState === "paused" || registryState === "unsupported") {
+    return registryState;
+  }
+
+  return getEffectiveLifecycleState(existingSource);
+}
+
+export function buildSourceRegistryPayload(args: {
+  existingSource?: any;
+  vendorId: any;
+  vendorSlug: string;
+  source: { name: string; type: string; url: string };
+  isPrimary: boolean;
+  now: number;
+}) {
+  const registryState = getRegistryLifecycleState(args.source.url);
+  const lifecycleState = resolveSyncedLifecycleState(args.existingSource, registryState);
+  const payload: any = {
+    vendorId: args.vendorId,
+    name: args.source.name,
+    sourceType: args.source.type,
+    url: args.source.url,
+    isPrimary: args.isPrimary,
+    pollIntervalMinutes: getPollIntervalMinutes(args.source.type),
+    parserKey: `${args.vendorSlug}:${args.source.type}`,
+    isActive: true,
+    lifecycleState,
+    updatedAt: args.now,
+  };
+
+  if (!args.existingSource) {
+    payload.consecutiveFailures = 0;
+  }
+
+  return payload;
+}
+
 async function syncVendorRegistryRecords(ctx: any) {
   let vendorCount = 0;
   let sourceCount = 0;
+  const now = Date.now();
 
   const vendorIds = new Map<string, any>();
   const sourceIds = new Map<string, any>();
@@ -55,14 +103,14 @@ async function syncVendorRegistryRecords(ctx: any) {
       homepageUrl: vendor.sources[0]?.url ?? "",
       isActive: true,
       sortOrder: index + 1,
-      updatedAt: Date.now(),
+      updatedAt: now,
     };
 
     const vendorId =
       existingVendor?._id ??
       (await ctx.db.insert("vendors", {
         ...vendorPayload,
-        createdAt: Date.now(),
+        createdAt: now,
       }));
 
     if (existingVendor) {
@@ -81,24 +129,20 @@ async function syncVendorRegistryRecords(ctx: any) {
         .withIndex("by_vendor_and_url", (q: any) => q.eq("vendorId", vendorId).eq("url", source.url))
         .unique();
 
-      const sourcePayload = {
+      const sourcePayload = buildSourceRegistryPayload({
+        existingSource,
         vendorId,
-        name: source.name,
-        sourceType: source.type,
-        url: source.url,
+        vendorSlug: vendor.slug,
+        source,
         isPrimary: source.url === vendor.sources[0]?.url,
-        pollIntervalMinutes: getPollIntervalMinutes(source.type),
-        parserKey: `${vendor.slug}:${source.type}`,
-        isActive: true,
-        consecutiveFailures: 0,
-        updatedAt: Date.now(),
-      };
+        now,
+      });
 
       const sourceId =
         existingSource?._id ??
         (await ctx.db.insert("sources", {
           ...sourcePayload,
-          createdAt: Date.now(),
+          createdAt: now,
         }));
 
       if (existingSource) {
@@ -119,7 +163,8 @@ async function syncVendorRegistryRecords(ctx: any) {
       if (!allowedSourceUrls.has(source.url) && source.isActive) {
         await ctx.db.patch(source._id, {
           isActive: false,
-          updatedAt: Date.now(),
+          lifecycleState: "paused",
+          updatedAt: now,
         });
       }
     }
