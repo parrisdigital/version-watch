@@ -797,7 +797,10 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
   }
 
   if (parserKey === "xai:docs_page") {
-    return parseMonthGroupedMarkdownEntries(sourceUrl, lines, "https://docs.x.ai/developers/release-notes");
+    return parseMonthGroupedMarkdownEntries(
+      sliceDelimitedMarkdownSection(lines, "===/developers/release-notes==="),
+      "https://docs.x.ai/developers/release-notes",
+    );
   }
 
   if (parserKey === "warp:docs_page") {
@@ -1118,7 +1121,20 @@ function slugifyHeading(value: string) {
     .replace(/^-|-$/g, "");
 }
 
-function parseMonthGroupedMarkdownEntries(sourceUrl: string, lines: string[], detailBaseUrl: string) {
+function sliceDelimitedMarkdownSection(lines: string[], marker: string) {
+  const startIndex = lines.findIndex((line) => line.trim() === marker);
+  if (startIndex < 0) {
+    return lines;
+  }
+
+  const nextSectionIndex = lines.findIndex((line, index) => {
+    return index > startIndex && /^===[^=]+===$/.test(line.trim());
+  });
+
+  return lines.slice(startIndex + 1, nextSectionIndex > startIndex ? nextSectionIndex : undefined);
+}
+
+function parseMonthGroupedMarkdownEntries(lines: string[], detailBaseUrl: string) {
   const entries: ParsedSourceEntry[] = [];
   let activeDate: number | null = null;
 

@@ -135,6 +135,11 @@ describe("parseHtmlEntries", () => {
 
   it("parses xAI Markdown release notes from the official docs file", () => {
     const markdown = `
+      ===/overview===
+      # Overview
+      # April 2026
+      ### Ignore this unrelated heading
+      ===/developers/release-notes===
       #### Release Notes
       # Release Notes
       # April 2026
@@ -147,7 +152,7 @@ describe("parseHtmlEntries", () => {
 
     const entries = parseHtmlEntries({
       parserKey: "xai:docs_page",
-      sourceUrl: "https://docs.x.ai/developers/release-notes.md",
+      sourceUrl: "https://docs.x.ai/llms.txt",
       html: markdown,
     });
 
