@@ -12,6 +12,7 @@ const ALLOWED_DETAIL_PATTERNS = {
   ],
   "better-auth": [/^https:\/\/github\.com\/better-auth\/better-auth\/releases/i],
   supabase: [/^https:\/\/github\.com\/orgs\/supabase\/discussions\//i],
+  warp: [/^https:\/\/docs\.warp\.dev\/changelog/i],
 };
 
 function normalizeHost(value) {
