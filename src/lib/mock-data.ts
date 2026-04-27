@@ -198,7 +198,7 @@ export const vendors: VendorRecord[] = [
   {
     slug: "google-antigravity",
     name: "Google Antigravity",
-    description: "Agentic development environment coverage placeholder until server-rendered release notes are available.",
+    description: "Agentic development environment releases, changelog updates, and AI coding workflow changes.",
     sources: [{ name: "Antigravity Changelog", url: "https://antigravity.google/changelog", type: "changelog_page" }],
   },
   {

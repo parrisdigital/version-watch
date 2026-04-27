@@ -46,7 +46,8 @@ function resolveSyncedLifecycleState(existingSource: any, registryState: SourceL
     return registryState;
   }
 
-  return getEffectiveLifecycleState(existingSource);
+  const currentState = getEffectiveLifecycleState(existingSource);
+  return currentState === "unsupported" ? registryState : currentState;
 }
 
 export function buildSourceRegistryPayload(args: {

@@ -42,7 +42,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   linear: { logoUrl: "https://cdn.simpleicons.org/linear" },
   warp: { logoUrl: "https://cdn.simpleicons.org/warp" },
   vscode: { logoUrl: "https://code.visualstudio.com/favicon.ico", renderMode: "image", fill: true },
-  zed: { logoUrl: "https://zed.dev/favicon.ico", renderMode: "image", fill: true },
+  zed: { logoUrl: "https://cdn.simpleicons.org/zedindustries" },
   dia: { logoUrl: "https://www.diabrowser.com/favicon.svg", renderMode: "image", fill: true },
   brave: { logoUrl: "https://cdn.simpleicons.org/brave" },
   windsurf: { logoUrl: "https://windsurf.com/favicon.ico", renderMode: "image", fill: true },

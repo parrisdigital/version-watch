@@ -13,6 +13,7 @@ import {
   SourceIngestionError,
 } from "./ingestionErrors";
 import {
+  discoverAntigravityBundleUrl,
   discoverFeedUrl,
   normalizeParsedEntry,
   parseHtmlEntries,
@@ -160,6 +161,7 @@ const FEED_PARSER_KEYS = new Set([
   "vite:changelog_page",
   "workos:changelog_page",
   "workos:github_release",
+  "zed:changelog_page",
 ]);
 
 async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
@@ -312,6 +314,24 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
         }
       } catch {
         parsedEntries = [];
+      }
+    }
+
+    if (parsedEntries.length === 0 && source.parserKey === "google-antigravity:changelog_page") {
+      const bundleUrl = discoverAntigravityBundleUrl(sourceResponse.body, sourceResponse.url);
+      if (bundleUrl) {
+        try {
+          const bundleResponse = await fetchText(bundleUrl);
+          if (bundleResponse.ok) {
+            parsedEntries = parseSourceEntries({
+              parserKey: source.parserKey,
+              sourceUrl: sourceResponse.url,
+              body: bundleResponse.body,
+            });
+          }
+        } catch {
+          parsedEntries = [];
+        }
       }
     }
 

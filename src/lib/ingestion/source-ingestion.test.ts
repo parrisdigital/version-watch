@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  discoverAntigravityBundleUrl,
   discoverFeedUrl,
   normalizeParsedEntry,
   parseHtmlEntries,
@@ -38,6 +39,14 @@ describe("discoverFeedUrl", () => {
 
     expect(discoverFeedUrl(html, "https://github.com/shadcn-ui/ui/releases")).toBe(
       "https://github.com/shadcn-ui/ui/releases.atom",
+    );
+  });
+
+  it("discovers Antigravity's official app bundle from the changelog shell", () => {
+    const html = '<script src="main-5LR4F4TY.js" type="module"></script>';
+
+    expect(discoverAntigravityBundleUrl(html, "https://antigravity.google/changelog")).toBe(
+      "https://antigravity.google/main-5LR4F4TY.js",
     );
   });
 });
@@ -278,6 +287,32 @@ describe("parseHtmlEntries", () => {
 
     expect(entries.map((entry) => entry.title)).toEqual(["Zed 0.233.10", "Zed 0.232.7"]);
     expect(entries[0]?.excerpt).toContain("Added support for GPT 5.5");
+  });
+
+  it("parses Antigravity changelog data from the official app bundle", () => {
+    const html = `
+      var u7={title:"Google Antigravity Changelog",sections:[
+        {version:"1.23.2<br>Apr 16, 2026",description:"Bug Fixes",accordion:{changes:"<p>Fixed bug that prevented MCP servers from loading.</p>",items:[]}},
+        {version:"1.22.2<br>Apr 7, 2026",description:"Agent Permissions",accordion:{changes:"<p>New unified <a href='/docs/agent-permissions'>permissions system</a> to control agent actions.</p>",items:[]}}
+      ]};
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "google-antigravity:changelog_page",
+      sourceUrl: "https://antigravity.google/changelog",
+      html,
+    });
+
+    expect(entries.map((entry) => entry.title)).toEqual([
+      "Google Antigravity 1.23.2",
+      "Google Antigravity 1.22.2",
+    ]);
+    expect(entries[0]).toMatchObject({
+      url: "https://antigravity.google/changelog#1.23.2",
+      excerpt: "Fixed bug that prevented MCP servers from loading.",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-16T00:00:00.000Z"));
   });
 
   it("parses Dia article changelog entries", () => {

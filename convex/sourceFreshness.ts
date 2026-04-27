@@ -42,6 +42,7 @@ const highVendorSlugs = new Set([
   "dia",
   "firebase",
   "firecrawl",
+  "google-antigravity",
   "exa",
   "clerk",
   "linear",

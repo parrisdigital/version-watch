@@ -653,6 +653,49 @@ function parseZedStableEntries(sourceUrl: string, html: string) {
   return dedupeEntries(entries);
 }
 
+function decodeJavaScriptStringLiteral(value: string) {
+  try {
+    return JSON.parse(`"${value.replace(/"/g, '\\"')}"`) as string;
+  } catch {
+    return value.replace(/\\n/g, "\n").replace(/\\"/g, '"').replace(/\\'/g, "'");
+  }
+}
+
+function parseAntigravityEntries(sourceUrl: string, html: string) {
+  const entries: ParsedSourceEntry[] = [];
+  const sectionPattern =
+    /\{version:"((?:\\.|[^"\\])*)",description:"((?:\\.|[^"\\])*)",accordion:\{changes:"((?:\\.|[^"\\])*)"/g;
+
+  for (const match of html.matchAll(sectionPattern)) {
+    const versionText = decodeJavaScriptStringLiteral(match[1] ?? "");
+    const description = decodeJavaScriptStringLiteral(match[2] ?? "");
+    const changesHtml = decodeJavaScriptStringLiteral(match[3] ?? "");
+    const versionMatch = versionText.match(/(\d+\.\d+\.\d+)\s*<br>\s*([A-Z][a-z]{2}\s+\d{1,2},\s+20\d{2})/i);
+
+    if (!versionMatch) {
+      continue;
+    }
+
+    const publishedAt = parseDateText(versionMatch[2]!, null);
+    if (!publishedAt) {
+      continue;
+    }
+
+    const version = versionMatch[1]!;
+    const excerpt = truncateSentence(cleanText(load(changesHtml).text()) || description);
+
+    entries.push({
+      title: `Google Antigravity ${version}`,
+      url: `${sourceUrl.split("#")[0]}#${encodeURIComponent(version)}`,
+      excerpt: excerpt || `${description || "Google Antigravity"} release notes.`,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
 function parseDiaEntries(sourceUrl: string, html: string) {
   const $ = load(html);
   const entries: ParsedSourceEntry[] = [];
@@ -1961,6 +2004,12 @@ export function discoverFeedUrl(html: string, sourceUrl: string) {
   return null;
 }
 
+export function discoverAntigravityBundleUrl(html: string, sourceUrl: string) {
+  const $ = load(html);
+  const script = $('script[type="module"][src*="main-"], script[src*="main-"]').first().attr("src");
+  return script ? toAbsoluteUrl(script, sourceUrl) : null;
+}
+
 export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput) {
   if (isLikelyMarkdownDocument(html) || /\.(?:md|txt)$/i.test(new URL(sourceUrl).pathname)) {
     const markdownEntries = parseMarkdownEntries(sourceUrl, html, parserKey);
@@ -2102,6 +2151,13 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "zed:changelog_page") {
     const entries = parseZedStableEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "google-antigravity:changelog_page") {
+    const entries = parseAntigravityEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }

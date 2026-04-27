@@ -39,8 +39,6 @@ const STALE_SOURCE_GRACE_MINUTES = 60;
 const unsupportedSourceUrls = new Set([
   "https://railway.com/changelog",
   "https://windsurf.com/changelog",
-  "https://antigravity.google/changelog",
-  "https://docs.x.ai/developers/release-notes",
 ]);
 
 function minutesBetween(now: number, isoTimestamp: string | null | undefined) {

@@ -215,6 +215,27 @@ describe("source lifecycle state", () => {
     expect(payload).not.toHaveProperty("lastSuccessAt");
   });
 
+  it("reactivates formerly unsupported sources once the registry marks them active", () => {
+    const payload = buildSourceRegistryPayload({
+      existingSource: {
+        lifecycleState: "unsupported",
+        consecutiveFailures: 0,
+      },
+      vendorId: "vendor_xai",
+      vendorSlug: "xai",
+      source: {
+        name: "Grok API Release Notes",
+        type: "docs_page",
+        url: "https://docs.x.ai/developers/release-notes",
+      },
+      isPrimary: true,
+      now: Date.UTC(2026, 3, 25, 16),
+    });
+
+    expect(payload.lifecycleState).toBe("active");
+    expect(payload).not.toHaveProperty("consecutiveFailures");
+  });
+
   it("marks Railway as unsupported during registry sync", () => {
     const payload = buildSourceRegistryPayload({
       existingSource: {
