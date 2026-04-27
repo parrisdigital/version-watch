@@ -133,6 +133,35 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-15T00:00:00.000Z"));
   });
 
+  it("parses xAI Markdown release notes from the official docs file", () => {
+    const markdown = `
+      #### Release Notes
+      # Release Notes
+      # April 2026
+      ### Speech to Text is available
+      The xAI Speech to Text API is now generally available.
+      # March 2026
+      ### Text-to-Speech is available
+      The Text-to-Speech API is now generally available.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "xai:docs_page",
+      sourceUrl: "https://docs.x.ai/developers/release-notes.md",
+      html: markdown,
+    });
+
+    expect(entries.map((entry) => entry.title)).toEqual([
+      "Speech to Text is available",
+      "Text-to-Speech is available",
+    ]);
+    expect(entries[0]).toMatchObject({
+      url: "https://docs.x.ai/developers/release-notes#speech-to-text-is-available",
+      parseConfidence: "medium",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-01T00:00:00.000Z"));
+  });
+
   it("parses Groq date-led changelog entries and cleans run-together verbs", () => {
     const html = `
       <main>
@@ -199,6 +228,31 @@ describe("parseHtmlEntries", () => {
       url: "https://docs.warp.dev/changelog#id-2026.04.22-v0.2026.04.22.08.46",
     });
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-22T00:00:00.000Z"));
+  });
+
+  it("parses Warp changelog entries from the official llms-full feed", () => {
+    const markdown = `
+      # Getting started
+      # Changelog
+      ### 2026.04.22 (v0.2026.04.22.08.46)
+      Warp added new agent mode controls for terminal workflows.
+      ### 2026.04.15 (v0.2026.04.15.08.45)
+      Warp fixed terminal launch behavior.
+      # Other docs
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "warp:docs_page",
+      sourceUrl: "https://docs.warp.dev/llms-full.txt",
+      html: markdown,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Warp 2026.04.22 (v0.2026.04.22.08.46)",
+      url: "https://docs.warp.dev/changelog#id-2026.04.22-v0.2026.04.22.08.46",
+      parseConfidence: "high",
+    });
+    expect(entries).toHaveLength(2);
   });
 
   it("parses Zed stable release text blocks", () => {

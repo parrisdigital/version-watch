@@ -99,7 +99,7 @@ export const vendors: VendorRecord[] = [
     slug: "xai",
     name: "xAI / Grok",
     description: "Grok model, API, voice, tools, and platform release notes.",
-    sources: [{ name: "xAI Release Notes", url: "https://docs.x.ai/developers/release-notes", type: "docs_page" }],
+    sources: [{ name: "xAI Release Notes", url: "https://docs.x.ai/developers/release-notes.md", type: "docs_page" }],
   },
   {
     slug: "meta-ai",
@@ -163,7 +163,7 @@ export const vendors: VendorRecord[] = [
     slug: "warp",
     name: "Warp",
     description: "Agentic terminal, developer workflow, and desktop release notes.",
-    sources: [{ name: "Warp Changelog", url: "https://docs.warp.dev/changelog", type: "docs_page" }],
+    sources: [{ name: "Warp Docs LLM Feed", url: "https://docs.warp.dev/llms-full.txt", type: "docs_page" }],
   },
   {
     slug: "vscode",

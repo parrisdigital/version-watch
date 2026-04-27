@@ -796,6 +796,14 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
     return parseRailwayMarkdownEntries(sourceUrl, lines);
   }
 
+  if (parserKey === "xai:docs_page") {
+    return parseMonthGroupedMarkdownEntries(sourceUrl, lines, "https://docs.x.ai/developers/release-notes");
+  }
+
+  if (parserKey === "warp:docs_page") {
+    return parseWarpMarkdownEntries(sourceUrl, lines);
+  }
+
   if (parserKey === "neon:changelog_page") {
     return parseNeonMarkdownEntries(sourceUrl, lines);
   }
@@ -1096,6 +1104,99 @@ function parseNeonMarkdownEntries(sourceUrl: string, lines: string[]) {
       url: sourceUrl,
       excerpt: collectMarkdownExcerpt(lines, index + 1) || title,
       publishedAt: activeDate,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function slugifyHeading(value: string) {
+  return cleanText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function parseMonthGroupedMarkdownEntries(sourceUrl: string, lines: string[], detailBaseUrl: string) {
+  const entries: ParsedSourceEntry[] = [];
+  let activeDate: number | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    const monthHeading = line.match(/^#\s+(.+)$/);
+    if (monthHeading) {
+      const context = parseMonthYearContext(monthHeading[1]!);
+      activeDate = context ? Date.UTC(context.year, context.month ?? 0, 1) : null;
+      continue;
+    }
+
+    const entryHeading = line.match(/^#{2,4}\s+(.+)$/);
+    if (!entryHeading || !activeDate) {
+      continue;
+    }
+
+    const title = stripMarkdown(entryHeading[1]!);
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: `${detailBaseUrl}#${slugifyHeading(title)}`,
+      excerpt: collectMarkdownExcerpt(lines, index + 1) || title,
+      publishedAt: activeDate,
+      parseConfidence: "medium",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseWarpMarkdownEntries(_sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  let inChangelog = false;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    if (/^#\s+Changelog$/i.test(line)) {
+      inChangelog = true;
+      continue;
+    }
+
+    if (inChangelog && /^#\s+/.test(line)) {
+      break;
+    }
+
+    if (!inChangelog) {
+      continue;
+    }
+
+    const heading = line.match(/^#{2,4}\s+(.+)$/);
+    if (!heading) {
+      continue;
+    }
+
+    const rawTitle = stripMarkdown(heading[1]!);
+    const match = rawTitle.match(/\b(20\d{2})\.(\d{2})\.(\d{2})\b(?:\s*\((v[^)]+)\))?/i);
+    if (!match) {
+      continue;
+    }
+
+    const publishedAt = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+    const releaseDate = `${match[1]}.${match[2]}.${match[3]}`;
+    const version = match[4];
+    const title = `Warp ${releaseDate}${version ? ` (${version})` : ""}`;
+    const anchor = `id-${releaseDate}${version ? `-${version}` : ""}`
+      .toLowerCase()
+      .replace(/[^a-z0-9.]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    entries.push({
+      title,
+      url: `https://docs.warp.dev/changelog#${encodeURIComponent(anchor)}`,
+      excerpt: collectMarkdownExcerpt(lines, index + 1) || title,
+      publishedAt,
       parseConfidence: "high",
     });
   }
@@ -1845,7 +1946,7 @@ export function discoverFeedUrl(html: string, sourceUrl: string) {
 }
 
 export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput) {
-  if (isLikelyMarkdownDocument(html)) {
+  if (isLikelyMarkdownDocument(html) || /\.(?:md|txt)$/i.test(new URL(sourceUrl).pathname)) {
     const markdownEntries = parseMarkdownEntries(sourceUrl, html, parserKey);
     if (markdownEntries.length > 0) {
       return markdownEntries.slice(0, 12);
