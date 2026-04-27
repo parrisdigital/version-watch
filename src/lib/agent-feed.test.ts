@@ -408,6 +408,11 @@ describe("agent API status", () => {
             startedAt: "2026-04-25T23:40:00.000Z",
             finishedAt: "2026-04-25T23:45:00.000Z",
           },
+          {
+            status: "failure",
+            startedAt: "2026-04-25T23:20:00.000Z",
+            finishedAt: "2026-04-25T23:21:00.000Z",
+          },
         ],
         sources: [
           {
@@ -422,7 +427,7 @@ describe("agent API status", () => {
 
     expect(status.status).toBe("degraded");
     expect(status.failing_source_count).toBe(1);
-    expect(status.recent_refresh_failures).toBe(1);
+    expect(status.recent_refresh_failures).toBe(2);
   });
 
   it("does not count paused or unsupported sources as public freshness debt", () => {

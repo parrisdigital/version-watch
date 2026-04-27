@@ -98,9 +98,11 @@ export function buildPublicApiStatus(report: any, now = Date.now()): PublicApiSt
     degradedSources.length > 0 ||
     failingSources.length > 0 ||
     staleSources.length > 0;
-  const recentRefreshFailures = (report.recentRefreshRuns ?? []).filter((run: any) => {
-    return run.status === "failure" || (run.status === "partial_failure" && hasMonitoredSourceDebt);
-  }).length;
+  const recentRefreshFailures = hasMonitoredSourceDebt
+    ? (report.recentRefreshRuns ?? []).filter((run: any) => {
+        return run.status === "failure" || run.status === "partial_failure";
+      }).length
+    : 0;
 
   let status: PublicApiStatus["status"] = "healthy";
   if (latestRefreshAgeMinutes === null || latestRefreshAgeMinutes > MAX_EXPECTED_REFRESH_AGE_MINUTES) {
