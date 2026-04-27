@@ -97,12 +97,9 @@ export const vendors: VendorRecord[] = [
   },
   {
     slug: "xai",
-    name: "xAI / Grok",
+    name: "Grok",
     description: "Grok model, API, voice, tools, and platform release notes.",
-    sources: [
-      { name: "xAI Python SDK Releases", url: "https://github.com/xai-org/xai-sdk-python/releases.atom", type: "rss" },
-      { name: "xAI Release Notes", url: "https://docs.x.ai/developers/release-notes", type: "docs_page" },
-    ],
+    sources: [{ name: "Grok API Release Notes", url: "https://docs.x.ai/developers/release-notes", type: "docs_page" }],
   },
   {
     slug: "meta-ai",

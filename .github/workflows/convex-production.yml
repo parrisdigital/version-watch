@@ -108,8 +108,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: deploy-production
+    environment:
+      name: production
 
     env:
+      ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
       CONVEX_URL: https://joyous-mole-525.convex.cloud
       EVENT_LIMIT: "24"
       MAX_FUTURE_SKEW_HOURS: "1"
@@ -135,6 +138,28 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate admin secret
+        run: |
+          if [ -z "$ADMIN_SECRET" ]; then
+            echo "::error::ADMIN_SECRET is not configured for the production GitHub environment."
+            exit 1
+          fi
+
+      - name: Run production due-source refresh
+        run: |
+          node --input-type=module <<'NODE'
+          import { ConvexHttpClient } from "convex/browser";
+          import { api } from "./convex/_generated/api.js";
+
+          const client = new ConvexHttpClient(process.env.CONVEX_URL);
+          const result = await client.action(api.ingest.runManualIngestion, {
+            adminSecret: process.env.ADMIN_SECRET,
+            force: false,
+          });
+
+          console.log(JSON.stringify(result, null, 2));
+          NODE
 
       - name: Wait for production deploy window
         run: sleep 180
