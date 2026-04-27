@@ -7,11 +7,19 @@ const maxPages = Number(process.env.MAX_PAGES ?? "20");
 const limit = Number(process.env.LIMIT ?? "100");
 
 async function fetchJson(path) {
-  const response = await fetch(new URL(path, baseUrl));
+  const url = new URL(path, baseUrl);
+  url.searchParams.set("_health_check", `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  const response = await fetch(url, {
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
   const body = await response.json();
 
   if (!response.ok) {
-    throw new Error(`GET ${path} failed with ${response.status}: ${JSON.stringify(body)}`);
+    throw new Error(`GET ${url.pathname}${url.search} failed with ${response.status}: ${JSON.stringify(body)}`);
   }
 
   return body;

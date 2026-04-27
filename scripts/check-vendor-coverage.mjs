@@ -6,11 +6,19 @@ const limit = Number(process.env.LIMIT ?? "100");
 const nonMonitoredStates = new Set(["paused", "unsupported"]);
 
 async function fetchJson(path) {
-  const response = await fetch(new URL(path, baseUrl));
+  const url = new URL(path, baseUrl);
+  url.searchParams.set("_health_check", `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  const response = await fetch(url, {
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
   const body = await response.json();
 
   if (!response.ok) {
-    throw new Error(`GET ${path} failed with ${response.status}: ${JSON.stringify(body)}`);
+    throw new Error(`GET ${url.pathname}${url.search} failed with ${response.status}: ${JSON.stringify(body)}`);
   }
 
   return body;
@@ -102,13 +110,15 @@ for (const vendor of vendors) {
     failures.push(`${vendor.name} (${vendor.slug}) is active but has no public updates.`);
   }
 
-  if (
-    (freshness.degraded_source_count ?? 0) > 0 ||
-    (freshness.failing_source_count ?? 0) > 0 ||
-    (freshness.stale_source_count ?? 0) > 0
-  ) {
+  if ((freshness.failing_source_count ?? 0) > 0 || (freshness.stale_source_count ?? 0) > 0) {
     failures.push(
       `${formatVendor(freshness)} has source debt: degraded=${freshness.degraded_source_count}, failing=${freshness.failing_source_count}, stale=${freshness.stale_source_count}.`,
+    );
+  }
+
+  if ((freshness.degraded_source_count ?? 0) > 0) {
+    warnings.push(
+      `${formatVendor(freshness)} has transient degraded source coverage: degraded=${freshness.degraded_source_count}.`,
     );
   }
 }

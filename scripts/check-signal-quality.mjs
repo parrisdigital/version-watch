@@ -1,9 +1,17 @@
 const BASE_URL = process.env.VERSION_WATCH_URL ?? "https://versionwatch.dev";
 
 async function getJson(path) {
-  const response = await fetch(new URL(path, BASE_URL));
+  const url = new URL(path, BASE_URL);
+  url.searchParams.set("_health_check", `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
+  const response = await fetch(url, {
+    headers: {
+      "Cache-Control": "no-cache",
+      Pragma: "no-cache",
+    },
+  });
   if (!response.ok) {
-    throw new Error(`${path} returned ${response.status}`);
+    throw new Error(`${url.pathname}${url.search} returned ${response.status}`);
   }
   return await response.json();
 }
