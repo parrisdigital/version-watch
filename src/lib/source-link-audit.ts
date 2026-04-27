@@ -14,6 +14,7 @@ const ALLOWED_DETAIL_PATTERNS: Record<string, RegExp[]> = {
   ],
   "better-auth": [/^https:\/\/github\.com\/better-auth\/better-auth\/releases/i],
   supabase: [/^https:\/\/github\.com\/orgs\/supabase\/discussions\//i],
+  warp: [/^https:\/\/docs\.warp\.dev\/changelog/i],
 };
 
 export type SourceLinkAuditSource = {

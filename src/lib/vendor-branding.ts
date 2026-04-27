@@ -35,7 +35,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   firecrawl: { logoUrl: "/logos/firecrawl.svg", fill: true },
   // Exa's mark is a blue app-style tile, so preserve the color instead of masking it.
   exa: { logoUrl: "/logos/exa.svg", renderMode: "image", fill: true },
-  cline: { logoUrl: "https://cline.bot/favicon.ico", renderMode: "image", fill: true },
+  cline: { logoUrl: "https://cdn.simpleicons.org/cline" },
   "augment-code": { logoUrl: "https://www.augmentcode.com/favicon.ico", renderMode: "image", fill: true },
   clerk: { logoUrl: "https://cdn.simpleicons.org/clerk" },
   resend: { logoUrl: "https://cdn.simpleicons.org/resend" },

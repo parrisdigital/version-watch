@@ -489,6 +489,56 @@ describe("agent API status", () => {
     });
   });
 
+  it("does not degrade public status for recovered recent source failures", () => {
+    const status = buildPublicApiStatus(
+      {
+        latestFeedRefresh: {
+          status: "success",
+          startedAt: "2026-04-25T23:50:00.000Z",
+          finishedAt: "2026-04-25T23:55:00.000Z",
+        },
+        recentRefreshRuns: [
+          {
+            status: "success",
+            startedAt: "2026-04-25T23:50:00.000Z",
+            finishedAt: "2026-04-25T23:55:00.000Z",
+          },
+          {
+            status: "partial_failure",
+            startedAt: "2026-04-25T22:50:00.000Z",
+            finishedAt: "2026-04-25T22:55:00.000Z",
+          },
+        ],
+        recentRuns: [
+          {
+            status: "failure",
+            sourceLifecycleState: "active",
+            sourceUrl: "https://docs.x.ai/developers/release-notes",
+          },
+        ],
+        sources: [
+          {
+            lifecycleState: "active",
+            status: "healthy",
+            sourceUrl: "https://docs.x.ai/developers/release-notes",
+            lastSuccessAt: "2026-04-25T23:55:00.000Z",
+            pollIntervalMinutes: 60,
+          },
+        ],
+      },
+      now,
+    );
+
+    expect(status).toMatchObject({
+      status: "healthy",
+      recent_refresh_failures: 0,
+      active_source_count: 1,
+      degraded_source_count: 0,
+      failing_source_count: 0,
+      stale_source_count: 0,
+    });
+  });
+
   it("reports stale status when the latest refresh is beyond the public window", () => {
     const status = buildPublicApiStatus(
       {

@@ -12,7 +12,8 @@
     "test:e2e": "playwright test",
     "health:production": "node scripts/check-production-freshness.mjs",
     "signal:production": "node scripts/check-signal-quality.mjs",
-    "sources:production": "node scripts/check-source-links.mjs"
+    "sources:production": "node scripts/check-source-links.mjs",
+    "vendors:production": "node scripts/check-vendor-coverage.mjs"
   },
   "dependencies": {
     "@convex-dev/eslint-plugin": "^1.0.0",

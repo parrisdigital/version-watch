@@ -27,6 +27,11 @@ describe("hasMeaningfulTitle", () => {
     expect(hasMeaningfulTitle("Bun v1.3.13", "https://github.com/oven-sh/bun/releases")).toBe(true);
   });
 
+  it("allows short vendor-version release titles from official changelog pages", () => {
+    expect(hasMeaningfulTitle("Zed 0.233.9", "https://zed.dev/releases/stable")).toBe(true);
+    expect(hasMeaningfulTitle("Dia 1.16.0", "https://www.diabrowser.com/changelog")).toBe(true);
+  });
+
   it("still rejects short generic titles outside GitHub releases", () => {
     expect(hasMeaningfulTitle("v1.14.21", "https://developers.openai.com/api/docs/changelog")).toBe(false);
     expect(hasMeaningfulTitle("update", "https://github.com/anomalyco/opencode/releases")).toBe(false);

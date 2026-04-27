@@ -12,6 +12,7 @@ on:
       - ".github/workflows/production-health.yml"
       - "scripts/check-production-freshness.mjs"
       - "scripts/check-source-links.mjs"
+      - "scripts/check-vendor-coverage.mjs"
       - "scripts/lib/source-link-audit.mjs"
       - "package.json"
       - "package-lock.json"
@@ -64,3 +65,6 @@ jobs:
 
       - name: Run source link audit
         run: npm run sources:production
+
+      - name: Run vendor coverage audit
+        run: npm run vendors:production

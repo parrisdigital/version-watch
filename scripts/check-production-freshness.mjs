@@ -315,7 +315,14 @@ if (partialRefreshRuns.length && recentRuns.some((run) => run.status === "failur
 
 const recentFailureRuns = recentRuns.filter((run) => run.status === "failure");
 const recentFailureGroups = groupFailureRuns(recentFailureRuns);
-const actionableFailureGroups = recentFailureGroups;
+const currentProblemSourceKeys = new Set(
+  [...failingSources, ...repeatedDegradedSources, ...actionableStaleSources].map((source) => getRunSourceKey(source)),
+);
+const actionableFailureGroups = recentFailureGroups.filter((group) => {
+  const latestFailure = group.runs[0];
+  return latestFailure && currentProblemSourceKeys.has(getRunSourceKey(latestFailure));
+});
+const recoveredFailureGroups = recentFailureGroups.filter((group) => !actionableFailureGroups.includes(group));
 const actionableRepeatedFailureGroups = actionableFailureGroups.filter((group) => {
   return group.runs.length > maxRecentFailuresPerSource;
 });
@@ -337,6 +344,21 @@ if (actionableFailureGroups.length > maxRecentFailureSourceCount) {
 } else if (recentFailureRuns.length && actionableFailureGroups.length) {
   warnings.push(
     `Transient ingestion failure in the last ${sinceHours}h: ${actionableFailureGroups
+      .map((group) => {
+        const latestFailure = group.runs[0];
+        const failedAt = latestFailure.finishedAt ?? latestFailure.startedAt;
+        const code = latestFailure.errorCode ? ` [${latestFailure.errorCode}]` : "";
+        const message = latestFailure.errorMessage ? `: ${latestFailure.errorMessage}` : "";
+        return `${group.label} at ${failedAt}${code}${message}`;
+      })
+      .join("; ")}.`,
+  );
+}
+
+if (recoveredFailureGroups.length) {
+  warnings.push(
+    `Recovered ingestion failure in the last ${sinceHours}h: ${recoveredFailureGroups
+      .slice(0, 5)
       .map((group) => {
         const latestFailure = group.runs[0];
         const failedAt = latestFailure.finishedAt ?? latestFailure.startedAt;

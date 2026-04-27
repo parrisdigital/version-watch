@@ -248,6 +248,8 @@ const SHORT_MEANINGFUL_TITLES = new Set(["canvases"]);
 const SHORT_MEANINGFUL_SUFFIXES = new Set(["api", "cli", "sdk", "mcp"]);
 const GITHUB_RELEASE_TAG_TITLE_PATTERN =
   /^(?:[a-z0-9][a-z0-9+._/-]*[@ ]+)?v?\d+\.\d+(?:\.\d+)?(?:[-+.][a-z0-9]+)*(?:\.[a-z0-9]+)*$/i;
+const VENDOR_VERSION_TITLE_PATTERN =
+  /^[a-z][a-z0-9+._/-]{1,24}\s+v?\d+\.\d+(?:\.\d+)?(?:[-+.][a-z0-9]+)*(?:\.[a-z0-9]+)*$/i;
 
 const OFFICIAL_HOSTS_BY_VENDOR: Record<string, string[]> = {
   anthropic: ["anthropic.com", "claude.com", "docs.claude.com", "platform.claude.com", "support.claude.com"],
@@ -317,11 +319,12 @@ export function hasMeaningfulTitle(title: string, sourceUrl?: string) {
   if (normalized.length < 12 && !SHORT_MEANINGFUL_TITLES.has(normalizedLower)) {
     const isGitHubReleaseTitle =
       sourceUrl?.includes("github.com/") && GITHUB_RELEASE_TAG_TITLE_PATTERN.test(normalized);
+    const isVendorVersionTitle = VENDOR_VERSION_TITLE_PATTERN.test(normalized);
     const titleTokens = normalizedLower.split(/\s+/).filter(Boolean);
     const hasMeaningfulShortSuffix =
       titleTokens.length >= 2 && SHORT_MEANINGFUL_SUFFIXES.has(titleTokens[titleTokens.length - 1]!);
 
-    if (!isGitHubReleaseTitle && !hasMeaningfulShortSuffix) {
+    if (!isGitHubReleaseTitle && !isVendorVersionTitle && !hasMeaningfulShortSuffix) {
       return false;
     }
   }

@@ -88,15 +88,10 @@ export function buildPublicApiStatus(report: any, now = Date.now()): PublicApiSt
     const ageMinutes = minutesBetween(now, source.lastSuccessAt);
     return ageMinutes === null || ageMinutes > getSourceLagLimitMinutes(source);
   });
-  const recentMonitoredSourceFailures = (report.recentRuns ?? []).filter((run: any) => {
-    return run.status === "failure" && isMonitoredSource(run);
-  });
-  const hasMonitoredSourceDebt =
-    recentMonitoredSourceFailures.length > 0 ||
-    degradedSources.length > 0 ||
-    failingSources.length > 0 ||
-    staleSources.length > 0;
-  const recentRefreshFailures = hasMonitoredSourceDebt
+  const latestRefreshStatus = latestRefresh?.status ?? null;
+  const latestRefreshIncomplete = latestRefreshStatus === "failure" || latestRefreshStatus === "partial_failure";
+  const hasCurrentSourceDebt = degradedSources.length > 0 || failingSources.length > 0 || staleSources.length > 0;
+  const recentRefreshFailures = hasCurrentSourceDebt || latestRefreshIncomplete
     ? (report.recentRefreshRuns ?? []).filter((run: any) => {
         return run.status === "failure" || run.status === "partial_failure";
       }).length
@@ -105,7 +100,7 @@ export function buildPublicApiStatus(report: any, now = Date.now()): PublicApiSt
   let status: PublicApiStatus["status"] = "healthy";
   if (latestRefreshAgeMinutes === null || latestRefreshAgeMinutes > MAX_EXPECTED_REFRESH_AGE_MINUTES) {
     status = "stale";
-  } else if (degradedSources.length || failingSources.length || staleSources.length || recentRefreshFailures) {
+  } else if (hasCurrentSourceDebt || latestRefreshIncomplete) {
     status = "degraded";
   }
 

@@ -169,3 +169,6 @@ jobs:
 
       - name: Run source link audit
         run: npm run sources:production
+
+      - name: Run vendor coverage audit
+        run: npm run vendors:production
