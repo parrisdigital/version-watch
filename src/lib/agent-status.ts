@@ -70,7 +70,7 @@ function getSourceLagLimitMinutes(source: any) {
 }
 
 function isMonitoredSource(source: any) {
-  const state = source.lifecycleState ?? source.lifecycle_state;
+  const state = source.sourceLifecycleState ?? source.lifecycleState ?? source.lifecycle_state;
   const sourceUrl = source.sourceUrl ?? source.source_url;
   return state !== "paused" && state !== "unsupported" && !unsupportedSourceUrls.has(sourceUrl);
 }

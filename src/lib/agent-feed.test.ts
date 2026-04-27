@@ -448,6 +448,7 @@ describe("agent API status", () => {
         recentRuns: [
           {
             status: "failure",
+            sourceLifecycleState: "unsupported",
             sourceUrl: "https://railway.com/changelog",
           },
         ],
