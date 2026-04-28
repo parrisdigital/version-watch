@@ -5,6 +5,16 @@ import { ADMIN_COOKIE_NAME, isValidAdminCookieValue } from "@/lib/admin/session"
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const accept = request.headers.get("accept") ?? "";
+  const wantsMarkdown = accept.toLowerCase().includes("text/markdown");
+
+  if (wantsMarkdown && pathname === "/") {
+    return NextResponse.rewrite(new URL("/llms-full.txt", request.url));
+  }
+
+  if (wantsMarkdown && pathname === "/agent-access") {
+    return NextResponse.rewrite(new URL("/llms-full.txt", request.url));
+  }
 
   if (pathname.startsWith("/review/login")) {
     return NextResponse.next();
@@ -26,5 +36,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/review/:path*", "/ops/:path*"],
+  matcher: ["/", "/agent-access", "/review/:path*", "/ops/:path*"],
 };

@@ -1,16 +1,16 @@
-import { buildAgentTextHeaders, getPublicBaseUrl, renderLlmsTxt } from "@/lib/agent-feed";
+import { buildAgentTextHeaders, getPublicBaseUrl, renderLlmsFullTxt } from "@/lib/agent-feed";
 
 export const dynamic = "force-dynamic";
 
 export function GET(request: Request) {
   const baseUrl = getPublicBaseUrl(request.url);
-  const content = renderLlmsTxt(baseUrl);
+  const content = renderLlmsFullTxt(baseUrl);
 
   return new Response(content, {
     headers: buildAgentTextHeaders({
       baseUrl,
       content,
-      contentType: "text/plain; charset=utf-8",
+      contentType: "text/markdown; charset=utf-8",
     }),
   });
 }

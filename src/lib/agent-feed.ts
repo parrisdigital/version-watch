@@ -1,3 +1,5 @@
+import { createHash } from "crypto";
+
 import {
   deriveSignalMetadata,
   IMPACT_CONFIDENCES,
@@ -18,7 +20,9 @@ export const PUBLIC_AGENT_HEADERS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   "Cache-Control": "public, max-age=60, s-maxage=300",
+  "Content-Signal": "ai-input=yes, search=yes, ai-train=no",
 };
+export const AGENT_TEXT_CACHE_CONTROL = "public, max-age=300, s-maxage=600";
 
 export const PUBLIC_SEVERITIES = ["critical", "high", "medium", "low"] as const satisfies readonly ImportanceBand[];
 const severityBands = new Set<ImportanceBand>(PUBLIC_SEVERITIES);
@@ -101,6 +105,24 @@ export type PublicTaxonomy = {
   }>;
 };
 
+export type AgentResource = {
+  name: string;
+  description: string;
+  type: "api" | "docs" | "feed" | "skill" | "status";
+  method?: "GET" | "POST";
+  url: string;
+};
+
+export type AgentReadinessCheck = {
+  id: string;
+  label: string;
+  category: "content" | "discoverability" | "protocol" | "api";
+  status: "pass" | "warn" | "fail";
+  points: number;
+  max_points: number;
+  detail?: string;
+};
+
 type ParseResult =
   | { ok: true; filters: UpdateFilters }
   | { ok: false; error: PublicApiError };
@@ -137,6 +159,55 @@ function normalizeBaseUrl(value: string | undefined | null) {
   } catch {
     return null;
   }
+}
+
+function estimateMarkdownTokens(content: string) {
+  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+  return String(Math.max(1, Math.ceil(wordCount * 1.33)));
+}
+
+function etagForContent(content: string) {
+  return `"${createHash("sha256").update(content).digest("hex")}"`;
+}
+
+export function buildAgentDiscoveryLinks(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const resources = [
+    { path: "/llms.txt", type: "text/plain", title: "Version Watch llms.txt" },
+    { path: "/llms-full.txt", type: "text/markdown", title: "Version Watch full LLM context" },
+    { path: "/agents.md", type: "text/markdown", title: "Version Watch agent guide" },
+    { path: "/skills/version-watch/SKILL.md", type: "text/markdown", title: "Version Watch skill" },
+    { path: "/api/v1/openapi.json", type: "application/json", title: "Version Watch OpenAPI" },
+    { path: "/.well-known/agent-skills", type: "application/json", title: "Version Watch agent skills" },
+  ];
+
+  return resources
+    .map(({ path, type, title }) => {
+      const url = new URL(path, normalizedBaseUrl).toString();
+      return `<${url}>; rel="alternate"; type="${type}"; title="${title}"`;
+    })
+    .join(", ");
+}
+
+export function buildAgentTextHeaders({
+  baseUrl = DEFAULT_PUBLIC_BASE_URL,
+  content,
+  contentType,
+  cacheControl = AGENT_TEXT_CACHE_CONTROL,
+}: {
+  baseUrl?: string;
+  content: string;
+  contentType: string;
+  cacheControl?: string;
+}) {
+  return {
+    ...PUBLIC_AGENT_HEADERS,
+    "Cache-Control": cacheControl,
+    "Content-Type": contentType,
+    ETag: etagForContent(content),
+    Link: buildAgentDiscoveryLinks(baseUrl),
+    "x-markdown-tokens": estimateMarkdownTokens(content),
+  };
 }
 
 export function getPublicBaseUrl(requestUrl?: string) {
@@ -677,7 +748,11 @@ Base URL: ${normalizedBaseUrl}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
 - API documentation: ${new URL("/agent-access", normalizedBaseUrl).toString()}
 - LLM resource map: ${new URL("/llms.txt", normalizedBaseUrl).toString()}
+- Full LLM context: ${new URL("/llms-full.txt", normalizedBaseUrl).toString()}
 - Version Watch skill: ${new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString()}
+- Agent skills manifest: ${new URL("/.well-known/agent-skills", normalizedBaseUrl).toString()}
+- Agent status: ${new URL("/llms-status", normalizedBaseUrl).toString()}
+- Agent readiness: ${new URL("/llms-readiness", normalizedBaseUrl).toString()}
 
 ## Filters
 
@@ -854,6 +929,7 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 
 - API docs: ${new URL("/agent-access", normalizedBaseUrl).toString()}
 - Agent guide: ${new URL("/agents.md", normalizedBaseUrl).toString()}
+- Full LLM context: ${new URL("/llms-full.txt", normalizedBaseUrl).toString()}
 - Version Watch skill: ${new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString()}
 - Updates API: ${new URL("/api/v1/updates", normalizedBaseUrl).toString()}
 - Clustered updates API: ${new URL("/api/v1/clusters", normalizedBaseUrl).toString()}
@@ -863,6 +939,9 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 - Taxonomy API: ${new URL("/api/v1/taxonomy", normalizedBaseUrl).toString()}
 - Relevance signal API: ${new URL("/api/v1/relevance", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
+- Agent skills manifest: ${new URL("/.well-known/agent-skills", normalizedBaseUrl).toString()}
+- Agent readiness: ${new URL("/llms-readiness", normalizedBaseUrl).toString()}
+- Agent status: ${new URL("/llms-status", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
 
@@ -896,6 +975,410 @@ For notification workers, prefer /api/v1/clusters over /api/v1/updates so relate
 Native integrations should wait until the BYO alert contract keeps proving reliable. The intended order is Discord webhook first, Slack second, email and RSS after that, then MCP.
 
 Only submit /api/v1/relevance when a human explicitly confirms whether an update impacted them, needs review, or had no impact.
+`;
+}
+
+export function buildAgentResources(baseUrl = DEFAULT_PUBLIC_BASE_URL): AgentResource[] {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const url = (path: string) => new URL(path, normalizedBaseUrl).toString();
+
+  return [
+    {
+      name: "API documentation",
+      description: "Human-readable developer docs for using Version Watch as a public changelog intelligence API.",
+      type: "docs",
+      method: "GET",
+      url: url("/agent-access"),
+    },
+    {
+      name: "LLM resource map",
+      description: "Concise discovery map for LLMs and crawlers.",
+      type: "docs",
+      method: "GET",
+      url: url("/llms.txt"),
+    },
+    {
+      name: "Full LLM context",
+      description: "Long-form operating contract, endpoint map, freshness guidance, examples, and guardrails.",
+      type: "docs",
+      method: "GET",
+      url: url("/llms-full.txt"),
+    },
+    {
+      name: "Agent guide",
+      description: "Operational Markdown guide for agents using Version Watch.",
+      type: "docs",
+      method: "GET",
+      url: url("/agents.md"),
+    },
+    {
+      name: "Version Watch skill",
+      description: "Portable skill that teaches agents when and how to use the public API safely.",
+      type: "skill",
+      method: "GET",
+      url: url("/skills/version-watch/SKILL.md"),
+    },
+    {
+      name: "OpenAPI contract",
+      description: "Machine-readable public API contract for OpenAPI-aware agents, SDK generators, and tests.",
+      type: "api",
+      method: "GET",
+      url: url("/api/v1/openapi.json"),
+    },
+    {
+      name: "Latest updates",
+      description: "Raw paginated update records with filters for vendor, severity, audience, tag, release class, and time.",
+      type: "api",
+      method: "GET",
+      url: url("/api/v1/updates"),
+    },
+    {
+      name: "Clustered updates",
+      description: "Digest-friendly grouped update records for notifications and alert workers.",
+      type: "api",
+      method: "GET",
+      url: url("/api/v1/clusters"),
+    },
+    {
+      name: "Vendor list",
+      description: "Tracked vendors and their official source surfaces.",
+      type: "api",
+      method: "GET",
+      url: url("/api/v1/vendors"),
+    },
+    {
+      name: "Freshness status",
+      description: "Global API freshness contract for the Convex-backed snapshot.",
+      type: "status",
+      method: "GET",
+      url: url("/api/v1/status"),
+    },
+    {
+      name: "Vendor freshness",
+      description: "Per-vendor lifecycle, freshness tier, source health, backoff, and queued refresh state.",
+      type: "status",
+      method: "GET",
+      url: url("/api/v1/status/vendors"),
+    },
+    {
+      name: "Taxonomy",
+      description: "Valid severities, release classes, audiences, tags, source types, and vendor slugs.",
+      type: "api",
+      method: "GET",
+      url: url("/api/v1/taxonomy"),
+    },
+    {
+      name: "JSON feed",
+      description: "Filtered JSON feed for custom tools and polling workers.",
+      type: "feed",
+      method: "GET",
+      url: url("/api/v1/feed.json"),
+    },
+    {
+      name: "Markdown feed",
+      description: "Readable Markdown update feed for LLM context windows and plain-text digests.",
+      type: "feed",
+      method: "GET",
+      url: url("/feed.md"),
+    },
+    {
+      name: "Structured relevance signal",
+      description: "Public endpoint for human-confirmed impact, review-needed, or no-impact feedback.",
+      type: "api",
+      method: "POST",
+      url: url("/api/v1/relevance"),
+    },
+  ];
+}
+
+export function buildAgentSkillsManifest(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+
+  return {
+    schema_version: PUBLIC_API_SCHEMA_VERSION,
+    generated_at: new Date().toISOString(),
+    name: "Version Watch",
+    description:
+      "Agent-readable changelog intelligence for official developer platform changes, freshness status, source provenance, and notification-ready update clusters.",
+    homepage_url: normalizedBaseUrl,
+    llms_txt_url: new URL("/llms.txt", normalizedBaseUrl).toString(),
+    llms_full_txt_url: new URL("/llms-full.txt", normalizedBaseUrl).toString(),
+    agents_md_url: new URL("/agents.md", normalizedBaseUrl).toString(),
+    skill_url: new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString(),
+    openapi_url: new URL("/api/v1/openapi.json", normalizedBaseUrl).toString(),
+    status_url: new URL("/api/v1/status", normalizedBaseUrl).toString(),
+    resources: buildAgentResources(normalizedBaseUrl),
+  };
+}
+
+export function buildLlmsStatus(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+
+  return {
+    schema_version: PUBLIC_API_SCHEMA_VERSION,
+    generated_at: new Date().toISOString(),
+    app_name: "Version Watch",
+    app_url: normalizedBaseUrl,
+    public_read_api: true,
+    convex_backed_snapshot_api: true,
+    live_scrape_on_request: false,
+    content_signal: PUBLIC_AGENT_HEADERS["Content-Signal"],
+    discovery_headers: true,
+    markdown_negotiation: true,
+    etag_supported: true,
+    resources: {
+      llms_txt: new URL("/llms.txt", normalizedBaseUrl).toString(),
+      llms_full_txt: new URL("/llms-full.txt", normalizedBaseUrl).toString(),
+      agents_md: new URL("/agents.md", normalizedBaseUrl).toString(),
+      agent_skills: new URL("/.well-known/agent-skills", normalizedBaseUrl).toString(),
+      skill: new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString(),
+      openapi: new URL("/api/v1/openapi.json", normalizedBaseUrl).toString(),
+      api_status: new URL("/api/v1/status", normalizedBaseUrl).toString(),
+      vendor_freshness: new URL("/api/v1/status/vendors", normalizedBaseUrl).toString(),
+      taxonomy: new URL("/api/v1/taxonomy", normalizedBaseUrl).toString(),
+      updates: new URL("/api/v1/updates", normalizedBaseUrl).toString(),
+      clusters: new URL("/api/v1/clusters", normalizedBaseUrl).toString(),
+    },
+    guidance:
+      "Agents should check api_status before high-confidence operational summaries, use clustered updates for notifications, de-duplicate by update id, and cite source_detail_url plus version_watch_url.",
+  };
+}
+
+export function buildLlmsReadiness(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const checks: AgentReadinessCheck[] = [
+    {
+      id: "llms_txt_present",
+      label: "llms.txt served",
+      category: "content",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "llms_full_txt_present",
+      label: "llms-full.txt served",
+      category: "content",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "agents_md_present",
+      label: "agents.md served",
+      category: "content",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "version_watch_skill_present",
+      label: "Version Watch skill served",
+      category: "content",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "openapi_contract_present",
+      label: "OpenAPI contract served",
+      category: "api",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "freshness_status_present",
+      label: "Freshness status endpoint served",
+      category: "api",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "agent_skills_manifest",
+      label: "/.well-known/agent-skills served",
+      category: "protocol",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "robots_txt_present",
+      label: "robots.txt served",
+      category: "discoverability",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "sitemap_xml_present",
+      label: "sitemap.xml served",
+      category: "discoverability",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "discovery_headers",
+      label: "Discovery Link and Content-Signal headers",
+      category: "discoverability",
+      status: "pass",
+      points: 5,
+      max_points: 5,
+      detail: PUBLIC_AGENT_HEADERS["Content-Signal"],
+    },
+    {
+      id: "markdown_negotiation",
+      label: "Markdown content negotiation",
+      category: "content",
+      status: "pass",
+      points: 5,
+      max_points: 5,
+      detail: "Requests for text/markdown at / are routed to the LLM resource map.",
+    },
+  ];
+  const score = checks.reduce((sum, check) => sum + check.points, 0);
+  const maxScore = checks.reduce((sum, check) => sum + check.max_points, 0);
+
+  return {
+    schema_version: PUBLIC_API_SCHEMA_VERSION,
+    generated_at: new Date().toISOString(),
+    app_name: "Version Watch",
+    app_url: normalizedBaseUrl,
+    score,
+    max_score: maxScore,
+    status: score >= 85 ? "agent_ready" : "needs_attention",
+    checks,
+    resources: {
+      llms_txt: new URL("/llms.txt", normalizedBaseUrl).toString(),
+      llms_full_txt: new URL("/llms-full.txt", normalizedBaseUrl).toString(),
+      agents_md: new URL("/agents.md", normalizedBaseUrl).toString(),
+      agent_skills: new URL("/.well-known/agent-skills", normalizedBaseUrl).toString(),
+      openapi: new URL("/api/v1/openapi.json", normalizedBaseUrl).toString(),
+      status: new URL("/api/v1/status", normalizedBaseUrl).toString(),
+    },
+  };
+}
+
+export function renderLlmsFullTxt(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+
+  return `# Version Watch Full Agent Context
+
+> Version Watch is a public, read-only changelog intelligence layer for official developer platform changes.
+
+Version Watch ingests official developer platform changelogs, release notes, docs updates, RSS feeds, and GitHub releases into Convex-backed snapshots. Public API requests read those snapshots. They do not scrape vendor sites live per request.
+
+Use Version Watch when a user needs current context about platform changes, release risk, dependency upgrades, API or SDK changes, model launches, deprecations, security updates, pricing changes, policy changes, or source-linked changelog records.
+
+## Core Resources
+
+- API docs: ${new URL("/agent-access", normalizedBaseUrl).toString()}
+- OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
+- Agent guide: ${new URL("/agents.md", normalizedBaseUrl).toString()}
+- LLM resource map: ${new URL("/llms.txt", normalizedBaseUrl).toString()}
+- Version Watch skill: ${new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString()}
+- Agent skills manifest: ${new URL("/.well-known/agent-skills", normalizedBaseUrl).toString()}
+- Agent status: ${new URL("/llms-status", normalizedBaseUrl).toString()}
+- Agent readiness: ${new URL("/llms-readiness", normalizedBaseUrl).toString()}
+
+## Public API
+
+- GET /api/v1/updates: raw paginated updates.
+- GET /api/v1/clusters: digest-friendly grouped updates for notifications and alert workers.
+- GET /api/v1/updates/{id}: one update by public id.
+- GET /api/v1/vendors: tracked vendors and official source surfaces.
+- GET /api/v1/status: global freshness contract.
+- GET /api/v1/status/vendors: per-vendor freshness records.
+- GET /api/v1/status/vendors/{slug}: freshness for one vendor.
+- GET /api/v1/taxonomy: valid filters and taxonomy values.
+- GET /api/v1/feed.json: JSON feed.
+- GET /api/v1/feed.md and GET /feed.md: Markdown feed.
+- POST /api/v1/relevance: structured relevance signal only when a human explicitly provides impact feedback.
+
+## Filters
+
+Use the narrowest useful query:
+
+- since: ISO 8601 timestamp.
+- vendor: vendor slug.
+- severity: critical, high, medium, or low.
+- release_class: breaking, security, model_launch, pricing, policy, api_change, sdk_release, cli_patch, beta_release, docs_update, or routine_release.
+- audience: frontend, backend, infra, ai, product, security, compliance, or other audience labels from taxonomy.
+- tag: category, topic tag, or affected stack tag.
+- limit: defaults to 25 and clamps to 100.
+- cursor: opaque value from next_cursor.
+
+Call /api/v1/taxonomy when you need valid values instead of guessing.
+
+## Freshness Contract
+
+Version Watch is snapshot-based. If freshness matters, call /api/v1/status before treating results as complete.
+
+- healthy: the public Convex snapshot refreshed inside the expected window and active sources are clean.
+- degraded: the snapshot is recent, but one or more active sources failed, are stale, backed off, or the latest refresh was partial.
+- stale: no acceptable refresh completed within the freshness window.
+
+For one platform, call /api/v1/status/vendors/{slug}. Paused and unsupported sources are coverage states and do not count as global freshness debt.
+
+## Pagination
+
+Treat next_cursor as opaque. Pass it back as cursor to fetch the next page. Store update ids and de-duplicate by id before reporting, saving, or notifying. Do not decode cursors or assume offset pagination.
+
+## Provenance
+
+Each update includes:
+
+- source_detail_url: exact official entry or detail URL.
+- source_surface_url: official changelog, docs, RSS, or GitHub source surface Version Watch monitors.
+- source_surface_name: registered tracked source name.
+- source_surface_type: source type.
+- source_url: backward-compatible alias for source_detail_url.
+- version_watch_url: normalized Version Watch event page.
+
+Agents should cite source_detail_url for the official vendor entry and version_watch_url for the normalized Version Watch record.
+
+## Signal Model
+
+Severity is urgency. release_class is change type. signal_reasons explains why an update received its score.
+
+High-impact classes include breaking, security, model_launch, pricing, policy, and API contract changes. Routine patch, CLI, beta, and docs updates should not be treated as urgent unless signal_reasons or recommended_action show real operational impact.
+
+## Notification Workers
+
+Users can connect Version Watch to Discord, Slack, Teams, Telegram, CI/CD, dashboards, issue trackers, internal agents, and knowledge bases with their own HTTP worker. Version Watch does not require a native integration for this.
+
+Recommended flow:
+
+1. Poll /api/v1/status when freshness matters.
+2. Query /api/v1/clusters with watchlist filters.
+3. De-duplicate by every update id inside each cluster.
+4. Include vendor, title, severity, release_class, recommended_action, source_detail_url, and version_watch_url.
+5. Include a degraded or stale caveat when /api/v1/status is not healthy.
+
+Use /api/v1/updates only when the workflow needs individual records instead of grouped digests.
+
+## Read-Only Guardrails
+
+Version Watch should be treated as read-only changelog intelligence. Do not modify code, update dependencies, deploy, create issues, post notifications, or submit relevance feedback unless the user explicitly asks for that action. recommended_action is an action hint, not permission to act.
+
+## Recommended Agent Workflow
+
+1. Identify project vendors, dependencies, and stack areas.
+2. Call /api/v1/status for operational decisions.
+3. Call /api/v1/vendors and /api/v1/taxonomy if valid slugs or filters are unclear.
+4. Query /api/v1/updates or /api/v1/clusters with narrow filters.
+5. Follow next_cursor when more results are needed.
+6. De-duplicate by id.
+7. Summarize only relevant records.
+8. Include recommended_action.
+9. Cite source_detail_url and version_watch_url.
+10. Mention degraded or stale status when coverage may be incomplete.
+
+## Embedded Agent Guide
+
+${renderAgentsMarkdown(normalizedBaseUrl)}
 `;
 }
 
@@ -935,6 +1418,8 @@ This skill is for retrieving, filtering, citing, and summarizing changelog intel
 - Markdown feed: ${new URL("/feed.md", normalizedBaseUrl).toString()}
 - Agent guide: ${new URL("/agents.md", normalizedBaseUrl).toString()}
 - LLM map: ${new URL("/llms.txt", normalizedBaseUrl).toString()}
+- Full LLM context: ${new URL("/llms-full.txt", normalizedBaseUrl).toString()}
+- Agent skills manifest: ${new URL("/.well-known/agent-skills", normalizedBaseUrl).toString()}
 
 ## Operating Procedure
 

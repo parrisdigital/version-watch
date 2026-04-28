@@ -1,4 +1,5 @@
 import {
+  buildAgentTextHeaders,
   getPublicBaseUrl,
   paginateEventsForPublicUpdates,
   parseUpdateFilters,
@@ -25,11 +26,14 @@ export async function GET(request: Request) {
   const events = await getAllPublicEvents();
   const page = paginateEventsForPublicUpdates(events, parsed.filters);
   const updates = serializePublicUpdates(page.events, baseUrl);
+  const content = renderUpdatesMarkdown(updates, generatedAt, baseUrl, page.next_cursor);
 
-  return new Response(renderUpdatesMarkdown(updates, generatedAt, baseUrl, page.next_cursor), {
-    headers: {
-      ...PUBLIC_AGENT_HEADERS,
-      "Content-Type": "text/markdown; charset=utf-8",
-    },
+  return new Response(content, {
+    headers: buildAgentTextHeaders({
+      baseUrl,
+      content,
+      contentType: "text/markdown; charset=utf-8",
+      cacheControl: PUBLIC_AGENT_HEADERS["Cache-Control"],
+    }),
   });
 }

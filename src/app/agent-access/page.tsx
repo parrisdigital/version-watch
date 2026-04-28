@@ -141,9 +141,33 @@ const ENDPOINTS = [
   },
   {
     method: "GET",
+    path: "/llms-full.txt",
+    title: "Full LLM context",
+    description: "Long-form agent context with API guidance, freshness rules, pagination, provenance, and guardrails.",
+  },
+  {
+    method: "GET",
     path: "/skills/version-watch/SKILL.md",
     title: "Agent skill",
     description: "Portable Markdown operating procedure for agents using the Version Watch API.",
+  },
+  {
+    method: "GET",
+    path: "/.well-known/agent-skills",
+    title: "Agent skills manifest",
+    description: "Machine-readable list of Version Watch agent resources, APIs, feeds, status routes, and skill files.",
+  },
+  {
+    method: "GET",
+    path: "/llms-status",
+    title: "Agent resource status",
+    description: "Lightweight JSON status for agent-facing discovery files and public API resources.",
+  },
+  {
+    method: "GET",
+    path: "/llms-readiness",
+    title: "Agent readiness check",
+    description: "Self-check summary for agent discoverability, headers, sitemap, robots, skill, and docs resources.",
   },
 ] as const;
 
@@ -256,9 +280,9 @@ const MACHINE_READABLE_SURFACES = [
     body: "Best for agents, LLM context windows, team digests, and plain text automation.",
   },
   {
-    label: "agents.md and llms.txt",
+    label: "agents.md, llms.txt, and llms-full.txt",
     status: "Live",
-    body: "Best for agent discovery and crawler-friendly resource mapping.",
+    body: "Best for concise discovery, full-context loading, and crawler-friendly resource mapping.",
   },
   {
     label: "OpenAPI schema",
@@ -284,6 +308,11 @@ const MACHINE_READABLE_SURFACES = [
     label: "Notification worker recipes",
     status: "Live",
     body: "Best for building user-owned polling workers that post grouped updates into chat, CI, issue trackers, dashboards, and agents.",
+  },
+  {
+    label: "Agent discovery manifest",
+    status: "Live",
+    body: "Best for tools that look for /.well-known/agent-skills, llms-status, llms-readiness, robots.txt, and sitemap.xml.",
   },
   {
     label: "Native webhooks and RSS",
