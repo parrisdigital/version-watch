@@ -3,6 +3,25 @@ import { NextResponse } from "next/server";
 
 import { ADMIN_COOKIE_NAME, isValidAdminCookieValue } from "@/lib/admin/session";
 
+const CONTENT_SIGNAL = "ai-train=no, search=yes, ai-input=yes";
+
+function buildHomepageAgentLinks() {
+  return [
+    '</.well-known/api-catalog>; rel="api-catalog"; type="application/linkset+json"; title="Version Watch API catalog"',
+    '</api/v1/openapi.json>; rel="service-desc"; type="application/json"; title="Version Watch OpenAPI"',
+    '</agent-access>; rel="service-doc"; type="text/html"; title="Version Watch API documentation"',
+    '</api/v1/status>; rel="status"; type="application/json"; title="Version Watch API status"',
+    '</llms-full.txt>; rel="describedby"; type="text/markdown"; title="Version Watch full LLM context"',
+    '</.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"; title="Version Watch agent skills index"',
+  ].join(", ");
+}
+
+function withHomepageAgentHeaders(response: NextResponse) {
+  response.headers.append("Link", buildHomepageAgentLinks());
+  response.headers.set("Content-Signal", CONTENT_SIGNAL);
+  return response;
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const accept = request.headers.get("accept") ?? "";
@@ -14,6 +33,10 @@ export async function proxy(request: NextRequest) {
 
   if (wantsMarkdown && pathname === "/agent-access") {
     return NextResponse.rewrite(new URL("/llms-full.txt", request.url));
+  }
+
+  if (pathname === "/") {
+    return withHomepageAgentHeaders(NextResponse.next());
   }
 
   if (pathname.startsWith("/review/login")) {

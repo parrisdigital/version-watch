@@ -20,7 +20,7 @@ export const PUBLIC_AGENT_HEADERS = {
   "Access-Control-Allow-Methods": "GET, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
   "Cache-Control": "public, max-age=60, s-maxage=300",
-  "Content-Signal": "ai-input=yes, search=yes, ai-train=no",
+  "Content-Signal": "ai-train=no, search=yes, ai-input=yes",
 };
 export const AGENT_TEXT_CACHE_CONTROL = "public, max-age=300, s-maxage=600";
 
@@ -166,13 +166,37 @@ function estimateMarkdownTokens(content: string) {
   return String(Math.max(1, Math.ceil(wordCount * 1.33)));
 }
 
+export function sha256Hex(content: string) {
+  return createHash("sha256").update(content).digest("hex");
+}
+
 function etagForContent(content: string) {
-  return `"${createHash("sha256").update(content).digest("hex")}"`;
+  return `"${sha256Hex(content)}"`;
 }
 
 export function buildAgentDiscoveryLinks(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
   const resources = [
+    {
+      path: "/.well-known/api-catalog",
+      rel: "api-catalog",
+      type: "application/linkset+json",
+      title: "Version Watch API catalog",
+    },
+    {
+      path: "/api/v1/openapi.json",
+      rel: "service-desc",
+      type: "application/json",
+      title: "Version Watch OpenAPI",
+    },
+    {
+      path: "/agent-access",
+      rel: "service-doc",
+      type: "text/html",
+      title: "Version Watch API documentation",
+    },
+    { path: "/api/v1/status", rel: "status", type: "application/json", title: "Version Watch API status" },
+    { path: "/llms-full.txt", rel: "describedby", type: "text/markdown", title: "Version Watch full LLM context" },
     { path: "/llms.txt", type: "text/plain", title: "Version Watch llms.txt" },
     { path: "/llms-full.txt", type: "text/markdown", title: "Version Watch full LLM context" },
     { path: "/agents.md", type: "text/markdown", title: "Version Watch agent guide" },
@@ -182,9 +206,9 @@ export function buildAgentDiscoveryLinks(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
   ];
 
   return resources
-    .map(({ path, type, title }) => {
+    .map(({ path, type, title, rel = "alternate" }) => {
       const url = new URL(path, normalizedBaseUrl).toString();
-      return `<${url}>; rel="alternate"; type="${type}"; title="${title}"`;
+      return `<${url}>; rel="${rel}"; type="${type}"; title="${title}"`;
     })
     .join(", ");
 }
@@ -751,6 +775,8 @@ Base URL: ${normalizedBaseUrl}
 - Full LLM context: ${new URL("/llms-full.txt", normalizedBaseUrl).toString()}
 - Version Watch skill: ${new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString()}
 - Agent skills manifest: ${new URL("/.well-known/agent-skills", normalizedBaseUrl).toString()}
+- Agent skills index: ${new URL("/.well-known/agent-skills/index.json", normalizedBaseUrl).toString()}
+- API catalog: ${new URL("/.well-known/api-catalog", normalizedBaseUrl).toString()}
 - Agent status: ${new URL("/llms-status", normalizedBaseUrl).toString()}
 - Agent readiness: ${new URL("/llms-readiness", normalizedBaseUrl).toString()}
 
@@ -940,6 +966,8 @@ The public API reads from Convex-backed snapshots. It is not a live scrape-on-re
 - Relevance signal API: ${new URL("/api/v1/relevance", normalizedBaseUrl).toString()}
 - OpenAPI contract: ${new URL("/api/v1/openapi.json", normalizedBaseUrl).toString()}
 - Agent skills manifest: ${new URL("/.well-known/agent-skills", normalizedBaseUrl).toString()}
+- Agent skills index: ${new URL("/.well-known/agent-skills/index.json", normalizedBaseUrl).toString()}
+- API catalog: ${new URL("/.well-known/api-catalog", normalizedBaseUrl).toString()}
 - Agent readiness: ${new URL("/llms-readiness", normalizedBaseUrl).toString()}
 - Agent status: ${new URL("/llms-status", normalizedBaseUrl).toString()}
 - JSON feed: ${new URL("/api/v1/feed.json", normalizedBaseUrl).toString()}
@@ -1010,6 +1038,20 @@ export function buildAgentResources(baseUrl = DEFAULT_PUBLIC_BASE_URL): AgentRes
       type: "docs",
       method: "GET",
       url: url("/agents.md"),
+    },
+    {
+      name: "API catalog",
+      description: "RFC 9727 API catalog with links to the OpenAPI contract, docs, status endpoint, and API members.",
+      type: "api",
+      method: "GET",
+      url: url("/.well-known/api-catalog"),
+    },
+    {
+      name: "Agent skills index",
+      description: "Agent Skills Discovery index with the portable Version Watch skill and SHA-256 digest.",
+      type: "skill",
+      method: "GET",
+      url: url("/.well-known/agent-skills/index.json"),
     },
     {
       name: "Version Watch skill",
@@ -1111,6 +1153,75 @@ export function buildAgentSkillsManifest(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
   };
 }
 
+export function buildApiCatalog(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const apiRoot = new URL("/api/v1", normalizedBaseUrl).toString();
+
+  return {
+    linkset: [
+      {
+        anchor: apiRoot,
+        "service-desc": [
+          {
+            href: new URL("/api/v1/openapi.json", normalizedBaseUrl).toString(),
+            type: "application/json",
+            title: "Version Watch Public API OpenAPI contract",
+          },
+        ],
+        "service-doc": [
+          {
+            href: new URL("/agent-access", normalizedBaseUrl).toString(),
+            type: "text/html",
+            title: "Version Watch API documentation",
+          },
+          {
+            href: new URL("/agents.md", normalizedBaseUrl).toString(),
+            type: "text/markdown",
+            title: "Version Watch agent guide",
+          },
+        ],
+        status: [
+          {
+            href: new URL("/api/v1/status", normalizedBaseUrl).toString(),
+            type: "application/json",
+            title: "Version Watch API freshness status",
+          },
+        ],
+        item: [
+          { href: new URL("/api/v1/updates", normalizedBaseUrl).toString(), title: "Public updates" },
+          { href: new URL("/api/v1/clusters", normalizedBaseUrl).toString(), title: "Clustered updates" },
+          { href: new URL("/api/v1/vendors", normalizedBaseUrl).toString(), title: "Vendors" },
+          { href: new URL("/api/v1/taxonomy", normalizedBaseUrl).toString(), title: "Filter taxonomy" },
+          { href: new URL("/api/v1/status/vendors", normalizedBaseUrl).toString(), title: "Vendor freshness" },
+          { href: new URL("/api/v1/feed.json", normalizedBaseUrl).toString(), title: "JSON feed" },
+          { href: new URL("/feed.md", normalizedBaseUrl).toString(), title: "Markdown feed" },
+        ],
+      },
+    ],
+  };
+}
+
+export function buildAgentSkillsIndex(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const skillMarkdown = renderVersionWatchSkillMarkdown(normalizedBaseUrl);
+
+  return {
+    $schema: "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+    schema_version: "0.2.0",
+    generated_at: new Date().toISOString(),
+    skills: [
+      {
+        name: "version-watch",
+        type: "skill-md",
+        description:
+          "Use Version Watch to retrieve current developer-platform changelog intelligence, filter it to a project stack, cite official sources, and produce actionable release-risk summaries.",
+        url: new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString(),
+        digest: `sha256:${sha256Hex(skillMarkdown)}`,
+      },
+    ],
+  };
+}
+
 export function buildLlmsStatus(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
   const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
 
@@ -1131,6 +1242,8 @@ export function buildLlmsStatus(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
       llms_full_txt: new URL("/llms-full.txt", normalizedBaseUrl).toString(),
       agents_md: new URL("/agents.md", normalizedBaseUrl).toString(),
       agent_skills: new URL("/.well-known/agent-skills", normalizedBaseUrl).toString(),
+      agent_skills_index: new URL("/.well-known/agent-skills/index.json", normalizedBaseUrl).toString(),
+      api_catalog: new URL("/.well-known/api-catalog", normalizedBaseUrl).toString(),
       skill: new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString(),
       openapi: new URL("/api/v1/openapi.json", normalizedBaseUrl).toString(),
       api_status: new URL("/api/v1/status", normalizedBaseUrl).toString(),
@@ -1204,6 +1317,22 @@ export function buildLlmsReadiness(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
       max_points: 10,
     },
     {
+      id: "agent_skills_index",
+      label: "/.well-known/agent-skills/index.json served",
+      category: "protocol",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
+      id: "api_catalog",
+      label: "/.well-known/api-catalog served",
+      category: "api",
+      status: "pass",
+      points: 10,
+      max_points: 10,
+    },
+    {
       id: "robots_txt_present",
       label: "robots.txt served",
       category: "discoverability",
@@ -1255,6 +1384,8 @@ export function buildLlmsReadiness(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
       llms_full_txt: new URL("/llms-full.txt", normalizedBaseUrl).toString(),
       agents_md: new URL("/agents.md", normalizedBaseUrl).toString(),
       agent_skills: new URL("/.well-known/agent-skills", normalizedBaseUrl).toString(),
+      agent_skills_index: new URL("/.well-known/agent-skills/index.json", normalizedBaseUrl).toString(),
+      api_catalog: new URL("/.well-known/api-catalog", normalizedBaseUrl).toString(),
       openapi: new URL("/api/v1/openapi.json", normalizedBaseUrl).toString(),
       status: new URL("/api/v1/status", normalizedBaseUrl).toString(),
     },
@@ -1280,6 +1411,8 @@ Use Version Watch when a user needs current context about platform changes, rele
 - LLM resource map: ${new URL("/llms.txt", normalizedBaseUrl).toString()}
 - Version Watch skill: ${new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString()}
 - Agent skills manifest: ${new URL("/.well-known/agent-skills", normalizedBaseUrl).toString()}
+- Agent skills index: ${new URL("/.well-known/agent-skills/index.json", normalizedBaseUrl).toString()}
+- API catalog: ${new URL("/.well-known/api-catalog", normalizedBaseUrl).toString()}
 - Agent status: ${new URL("/llms-status", normalizedBaseUrl).toString()}
 - Agent readiness: ${new URL("/llms-readiness", normalizedBaseUrl).toString()}
 
@@ -1420,6 +1553,8 @@ This skill is for retrieving, filtering, citing, and summarizing changelog intel
 - LLM map: ${new URL("/llms.txt", normalizedBaseUrl).toString()}
 - Full LLM context: ${new URL("/llms-full.txt", normalizedBaseUrl).toString()}
 - Agent skills manifest: ${new URL("/.well-known/agent-skills", normalizedBaseUrl).toString()}
+- Agent skills index: ${new URL("/.well-known/agent-skills/index.json", normalizedBaseUrl).toString()}
+- API catalog: ${new URL("/.well-known/api-catalog", normalizedBaseUrl).toString()}
 
 ## Operating Procedure
 

@@ -159,6 +159,18 @@ const ENDPOINTS = [
   },
   {
     method: "GET",
+    path: "/.well-known/agent-skills/index.json",
+    title: "Agent skills index",
+    description: "Agent Skills Discovery index with the Version Watch skill file and SHA-256 digest.",
+  },
+  {
+    method: "GET",
+    path: "/.well-known/api-catalog",
+    title: "API catalog",
+    description: "RFC 9727 linkset catalog advertising the OpenAPI contract, docs, status route, and public API members.",
+  },
+  {
+    method: "GET",
     path: "/llms-status",
     title: "Agent resource status",
     description: "Lightweight JSON status for agent-facing discovery files and public API resources.",
@@ -312,7 +324,7 @@ const MACHINE_READABLE_SURFACES = [
   {
     label: "Agent discovery manifest",
     status: "Live",
-    body: "Best for tools that look for /.well-known/agent-skills, llms-status, llms-readiness, robots.txt, and sitemap.xml.",
+    body: "Best for tools that look for /.well-known/agent-skills, agent-skills/index.json, api-catalog, llms-status, llms-readiness, robots.txt, and sitemap.xml.",
   },
   {
     label: "Native webhooks and RSS",

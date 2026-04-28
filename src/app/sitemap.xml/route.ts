@@ -42,6 +42,8 @@ export async function GET(request: Request) {
     "/feed.md",
     "/api/v1/openapi.json",
     "/.well-known/agent-skills",
+    "/.well-known/agent-skills/index.json",
+    "/.well-known/api-catalog",
     "/llms-status",
     "/llms-readiness",
   ];

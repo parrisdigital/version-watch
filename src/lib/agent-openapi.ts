@@ -191,6 +191,34 @@ export function buildOpenApiDocument(baseUrl: string) {
           },
         },
       },
+      "/.well-known/agent-skills/index.json": {
+        get: {
+          operationId: "getAgentSkillsIndex",
+          summary: "Get agent skills discovery index",
+          description: "Return the Agent Skills Discovery index with the Version Watch SKILL.md and SHA-256 digest.",
+          responses: {
+            "200": jsonResponse("Agent skills discovery index.", { $ref: "#/components/schemas/AgentSkillsIndex" }),
+          },
+        },
+      },
+      "/.well-known/api-catalog": {
+        get: {
+          operationId: "getApiCatalog",
+          summary: "Get API catalog",
+          description:
+            "Return the RFC 9727 API catalog as application/linkset+json with service-desc, service-doc, status, and API member links.",
+          responses: {
+            "200": {
+              description: "API catalog linkset.",
+              content: {
+                "application/linkset+json": {
+                  schema: { $ref: "#/components/schemas/ApiCatalog" },
+                },
+              },
+            },
+          },
+        },
+      },
       "/llms-status": {
         get: {
           operationId: "getLlmsStatus",
@@ -804,6 +832,58 @@ export function buildOpenApiDocument(baseUrl: string) {
             openapi_url: { type: "string", format: "uri" },
             status_url: { type: "string", format: "uri" },
             resources: { type: "array", items: { $ref: "#/components/schemas/AgentResource" } },
+          },
+        },
+        AgentSkillsIndex: {
+          type: "object",
+          required: ["$schema", "schema_version", "generated_at", "skills"],
+          properties: {
+            $schema: { type: "string", format: "uri" },
+            schema_version: { type: "string" },
+            generated_at: { type: "string", format: "date-time" },
+            skills: {
+              type: "array",
+              items: {
+                type: "object",
+                required: ["name", "type", "description", "url", "digest"],
+                properties: {
+                  name: { type: "string" },
+                  type: { type: "string", enum: ["skill-md", "archive"] },
+                  description: { type: "string" },
+                  url: { type: "string", format: "uri" },
+                  digest: { type: "string", pattern: "^sha256:[a-f0-9]{64}$" },
+                },
+              },
+            },
+          },
+        },
+        ApiCatalog: {
+          type: "object",
+          required: ["linkset"],
+          properties: {
+            linkset: {
+              type: "array",
+              items: {
+                type: "object",
+                required: ["anchor", "service-desc", "service-doc", "status", "item"],
+                properties: {
+                  anchor: { type: "string", format: "uri" },
+                  "service-desc": { type: "array", items: { $ref: "#/components/schemas/LinksetLink" } },
+                  "service-doc": { type: "array", items: { $ref: "#/components/schemas/LinksetLink" } },
+                  status: { type: "array", items: { $ref: "#/components/schemas/LinksetLink" } },
+                  item: { type: "array", items: { $ref: "#/components/schemas/LinksetLink" } },
+                },
+              },
+            },
+          },
+        },
+        LinksetLink: {
+          type: "object",
+          required: ["href"],
+          properties: {
+            href: { type: "string", format: "uri" },
+            type: { type: "string" },
+            title: { type: "string" },
           },
         },
         LlmsStatusResponse: {

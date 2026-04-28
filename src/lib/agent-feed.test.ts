@@ -18,7 +18,9 @@ import {
   POST as postAdminWatchlists,
 } from "@/app/api/admin/watchlists/route";
 import { POST as postAdminWatchlistDispatch } from "@/app/api/admin/watchlists/dispatch/route";
+import { GET as getAgentSkillsIndex } from "@/app/.well-known/agent-skills/index.json/route";
 import { GET as getAgentSkillsManifest } from "@/app/.well-known/agent-skills/route";
+import { GET as getApiCatalog } from "@/app/.well-known/api-catalog/route";
 import { GET as getLlmsFullTxt } from "@/app/llms-full.txt/route";
 import { GET as getLlmsReadiness } from "@/app/llms-readiness/route";
 import { GET as getLlmsStatus } from "@/app/llms-status/route";
@@ -26,7 +28,9 @@ import { GET as getRobotsTxt } from "@/app/robots.txt/route";
 import { GET as getSkill } from "@/app/skills/version-watch/SKILL.md/route";
 import { GET as getSitemapXml } from "@/app/sitemap.xml/route";
 import {
+  buildAgentSkillsIndex,
   buildAgentSkillsManifest,
+  buildApiCatalog,
   buildRecommendedAction,
   buildLlmsReadiness,
   buildLlmsStatus,
@@ -42,6 +46,7 @@ import {
   renderUpdatesMarkdown,
   renderVersionWatchSkillMarkdown,
   serializePublicUpdate,
+  sha256Hex,
 } from "@/lib/agent-feed";
 import { buildPublicApiStatus } from "@/lib/agent-status";
 import { events } from "@/lib/mock-data";
@@ -318,6 +323,8 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("source_detail_url");
     expect(markdown).toContain("/llms-full.txt");
     expect(markdown).toContain("/.well-known/agent-skills");
+    expect(markdown).toContain("/.well-known/agent-skills/index.json");
+    expect(markdown).toContain("/.well-known/api-catalog");
     expect(markdown).toContain("/llms-readiness");
     expect(markdown).toContain("Build Your Own Read-Only Changelog System");
     expect(markdown).toContain("Watchlist Filter Model");
@@ -338,6 +345,8 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("/api/v1/relevance");
     expect(markdown).toContain("/llms-full.txt");
     expect(markdown).toContain("/.well-known/agent-skills");
+    expect(markdown).toContain("/.well-known/agent-skills/index.json");
+    expect(markdown).toContain("/.well-known/api-catalog");
     expect(markdown).toContain("/llms-status");
     expect(markdown).toContain("Convex-backed snapshots");
     expect(markdown).toContain("follow next_cursor as an opaque value");
@@ -371,6 +380,8 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("source_detail_url");
     expect(markdown).toContain("/llms-full.txt");
     expect(markdown).toContain("/.well-known/agent-skills");
+    expect(markdown).toContain("/.well-known/agent-skills/index.json");
+    expect(markdown).toContain("/.well-known/api-catalog");
     expect(markdown).toContain("Read-Only Changelog Dashboard");
     expect(markdown).toContain("Cluster-First Notification Worker");
     expect(markdown).toContain("Store every delivered update id");
@@ -388,10 +399,14 @@ describe("agent markdown feed", () => {
     expect(markdown).toContain("Read-Only Guardrails");
     expect(markdown).toContain("/api/v1/openapi.json");
     expect(markdown).toContain("/.well-known/agent-skills");
+    expect(markdown).toContain("/.well-known/agent-skills/index.json");
+    expect(markdown).toContain("/.well-known/api-catalog");
   });
 
   it("builds agent skills and readiness metadata", () => {
     const manifest = buildAgentSkillsManifest("https://version-watch.example");
+    const catalog = buildApiCatalog("https://version-watch.example");
+    const skillsIndex = buildAgentSkillsIndex("https://version-watch.example");
     const status = buildLlmsStatus("https://version-watch.example");
     const readiness = buildLlmsReadiness("https://version-watch.example");
 
@@ -400,13 +415,40 @@ describe("agent markdown feed", () => {
       expect.arrayContaining([
         expect.objectContaining({ name: "OpenAPI contract" }),
         expect.objectContaining({ url: "https://version-watch.example/api/v1/status" }),
+        expect.objectContaining({ url: "https://version-watch.example/.well-known/api-catalog" }),
+        expect.objectContaining({ url: "https://version-watch.example/.well-known/agent-skills/index.json" }),
       ]),
     );
+    expect(catalog.linkset[0]).toMatchObject({
+      anchor: "https://version-watch.example/api/v1",
+      "service-desc": expect.arrayContaining([
+        expect.objectContaining({ href: "https://version-watch.example/api/v1/openapi.json" }),
+      ]),
+      "service-doc": expect.arrayContaining([
+        expect.objectContaining({ href: "https://version-watch.example/agent-access" }),
+      ]),
+      status: expect.arrayContaining([
+        expect.objectContaining({ href: "https://version-watch.example/api/v1/status" }),
+      ]),
+    });
+    expect(skillsIndex.skills[0]).toMatchObject({
+      name: "version-watch",
+      url: "https://version-watch.example/skills/version-watch/SKILL.md",
+      digest: `sha256:${sha256Hex(renderVersionWatchSkillMarkdown("https://version-watch.example"))}`,
+    });
     expect(status.content_signal).toContain("ai-train=no");
     expect(status.resources.llms_full_txt).toBe("https://version-watch.example/llms-full.txt");
+    expect(status.resources.agent_skills_index).toBe(
+      "https://version-watch.example/.well-known/agent-skills/index.json",
+    );
+    expect(status.resources.api_catalog).toBe("https://version-watch.example/.well-known/api-catalog");
     expect(readiness.score).toBeGreaterThanOrEqual(85);
     expect(readiness.checks).toEqual(
-      expect.arrayContaining([expect.objectContaining({ id: "agent_skills_manifest", status: "pass" })]),
+      expect.arrayContaining([
+        expect.objectContaining({ id: "agent_skills_manifest", status: "pass" }),
+        expect.objectContaining({ id: "agent_skills_index", status: "pass" }),
+        expect.objectContaining({ id: "api_catalog", status: "pass" }),
+      ]),
     );
   });
 });
@@ -695,7 +737,7 @@ describe("agent route handlers", () => {
   });
 
   it("serves taxonomy JSON", async () => {
-    const response = await getTaxonomy(new Request("https://version-watch.example/api/v1/taxonomy"));
+    const response = await getTaxonomy();
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -727,6 +769,8 @@ describe("agent route handlers", () => {
     expect(body.paths["/api/v1/relevance"]).toBeDefined();
     expect(body.paths["/llms-full.txt"]).toBeDefined();
     expect(body.paths["/.well-known/agent-skills"]).toBeDefined();
+    expect(body.paths["/.well-known/agent-skills/index.json"]).toBeDefined();
+    expect(body.paths["/.well-known/api-catalog"]).toBeDefined();
     expect(body.paths["/llms-status"]).toBeDefined();
     expect(body.paths["/llms-readiness"]).toBeDefined();
     expect(body.paths["/robots.txt"]).toBeDefined();
@@ -756,6 +800,9 @@ describe("agent route handlers", () => {
     );
     expect(body.components.schemas.ClustersResponse).toBeDefined();
     expect(body.components.schemas.AgentSkillsManifest).toBeDefined();
+    expect(body.components.schemas.AgentSkillsIndex).toBeDefined();
+    expect(body.components.schemas.ApiCatalog).toBeDefined();
+    expect(body.components.schemas.LinksetLink).toBeDefined();
     expect(body.components.schemas.LlmsStatusResponse).toBeDefined();
     expect(body.components.schemas.LlmsReadinessResponse).toBeDefined();
     expect(body.components.schemas.RelevanceSignalRequest.required).toEqual(["event_id", "signal", "area"]);
@@ -790,7 +837,7 @@ describe("agent route handlers", () => {
   });
 
   it("serves public API status JSON", async () => {
-    const response = await getStatus(new Request("https://version-watch.example/api/v1/status"));
+    const response = await getStatus();
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -811,7 +858,7 @@ describe("agent route handlers", () => {
   });
 
   it("serves public vendor freshness JSON", async () => {
-    const response = await getVendorFreshness(new Request("https://version-watch.example/api/v1/status/vendors"));
+    const response = await getVendorFreshness();
     const body = await response.json();
 
     expect(response.status).toBe(200);
@@ -940,6 +987,12 @@ describe("agent route handlers", () => {
     const manifestResponse = await getAgentSkillsManifest(
       new Request("https://version-watch.example/.well-known/agent-skills"),
     );
+    const skillsIndexResponse = await getAgentSkillsIndex(
+      new Request("https://version-watch.example/.well-known/agent-skills/index.json"),
+    );
+    const apiCatalogResponse = await getApiCatalog(
+      new Request("https://version-watch.example/.well-known/api-catalog"),
+    );
     const statusResponse = await getLlmsStatus(new Request("https://version-watch.example/llms-status"));
     const readinessResponse = await getLlmsReadiness(new Request("https://version-watch.example/llms-readiness"));
 
@@ -952,6 +1005,36 @@ describe("agent route handlers", () => {
     expect((await manifestResponse.json()).resources).toEqual(
       expect.arrayContaining([expect.objectContaining({ name: "Full LLM context" })]),
     );
+
+    expect(skillsIndexResponse.status).toBe(200);
+    expect(skillsIndexResponse.headers.get("content-type")).toContain("application/json");
+    expect(skillsIndexResponse.headers.get("link")).toContain("/.well-known/api-catalog");
+    const skillsIndex = await skillsIndexResponse.json();
+    expect(skillsIndex.$schema).toContain("agentskills");
+    expect(skillsIndex.skills[0]).toMatchObject({
+      name: "version-watch",
+      digest: expect.stringMatching(/^sha256:[a-f0-9]{64}$/),
+    });
+
+    expect(apiCatalogResponse.status).toBe(200);
+    expect(apiCatalogResponse.headers.get("content-type")).toContain("application/linkset+json");
+    expect(apiCatalogResponse.headers.get("link")).toContain("rel=\"api-catalog\"");
+    expect(await apiCatalogResponse.json()).toMatchObject({
+      linkset: [
+        {
+          anchor: "https://version-watch.example/api/v1",
+          "service-desc": expect.arrayContaining([
+            expect.objectContaining({ href: "https://version-watch.example/api/v1/openapi.json" }),
+          ]),
+          "service-doc": expect.arrayContaining([
+            expect.objectContaining({ href: "https://version-watch.example/agent-access" }),
+          ]),
+          status: expect.arrayContaining([
+            expect.objectContaining({ href: "https://version-watch.example/api/v1/status" }),
+          ]),
+        },
+      ],
+    });
 
     expect(statusResponse.status).toBe(200);
     expect((await statusResponse.json()).resources.llms_full_txt).toBe("https://version-watch.example/llms-full.txt");
@@ -969,12 +1052,15 @@ describe("agent route handlers", () => {
     expect(robotsResponse.status).toBe(200);
     expect(robotsResponse.headers.get("content-type")).toContain("text/plain");
     expect(robotsResponse.headers.get("content-signal")).toContain("ai-train=no");
+    expect(robots).toContain("Content-Signal: ai-train=no, search=yes, ai-input=yes");
     expect(robots).toContain("Sitemap: https://version-watch.example/sitemap.xml");
 
     expect(sitemapResponse.status).toBe(200);
     expect(sitemapResponse.headers.get("content-type")).toContain("application/xml");
     expect(sitemap).toContain("<loc>https://version-watch.example/llms-full.txt</loc>");
     expect(sitemap).toContain("<loc>https://version-watch.example/.well-known/agent-skills</loc>");
+    expect(sitemap).toContain("<loc>https://version-watch.example/.well-known/agent-skills/index.json</loc>");
+    expect(sitemap).toContain("<loc>https://version-watch.example/.well-known/api-catalog</loc>");
   });
 
   it("serves Markdown feed responses", async () => {
