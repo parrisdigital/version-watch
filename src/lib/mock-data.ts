@@ -11,6 +11,7 @@ export type VendorSource = {
   name: string;
   url: string;
   type: SourceType;
+  isActive?: boolean;
 };
 
 export type VendorRecord = {
@@ -18,6 +19,7 @@ export type VendorRecord = {
   name: string;
   description: string;
   sources: VendorSource[];
+  isActive?: boolean;
 };
 
 export type MockEvent = {
@@ -300,7 +302,15 @@ export const vendors: VendorRecord[] = [
     slug: "railway",
     name: "Railway",
     description: "Hosting, managed database, and platform workflow updates.",
-    sources: [{ name: "Railway Changelog", url: "https://railway.com/changelog", type: "changelog_page" }],
+    isActive: false,
+    sources: [
+      {
+        name: "Railway Changelog",
+        url: "https://railway.com/changelog",
+        type: "changelog_page",
+        isActive: false,
+      },
+    ],
   },
   {
     slug: "prisma",

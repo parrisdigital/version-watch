@@ -41,8 +41,10 @@ async function syncVendorRegistryRecords(ctx: any) {
 
   const vendorIds = new Map<string, any>();
   const sourceIds = new Map<string, any>();
+  const registryVendorSlugs = new Set(vendorRegistry.map((vendor) => vendor.slug));
 
   for (const [index, vendor] of vendorRegistry.entries()) {
+    const vendorIsActive = vendor.isActive !== false;
     const existingVendor = await ctx.db
       .query("vendors")
       .withIndex("by_slug", (q: any) => q.eq("slug", vendor.slug))
@@ -53,7 +55,7 @@ async function syncVendorRegistryRecords(ctx: any) {
       name: vendor.name,
       description: vendor.description,
       homepageUrl: vendor.sources[0]?.url ?? "",
-      isActive: true,
+      isActive: vendorIsActive,
       sortOrder: index + 1,
       updatedAt: Date.now(),
     };
@@ -76,6 +78,7 @@ async function syncVendorRegistryRecords(ctx: any) {
     const allowedSourceUrls = new Set(vendor.sources.map((source) => source.url));
 
     for (const source of vendor.sources) {
+      const sourceIsActive = vendorIsActive && source.isActive !== false;
       const existingSource = await ctx.db
         .query("sources")
         .withIndex("by_vendor_and_url", (q: any) => q.eq("vendorId", vendorId).eq("url", source.url))
@@ -89,8 +92,7 @@ async function syncVendorRegistryRecords(ctx: any) {
         isPrimary: source.url === vendor.sources[0]?.url,
         pollIntervalMinutes: getPollIntervalMinutes(source.type),
         parserKey: `${vendor.slug}:${source.type}`,
-        isActive: true,
-        consecutiveFailures: 0,
+        isActive: sourceIsActive,
         updatedAt: Date.now(),
       };
 
@@ -98,6 +100,7 @@ async function syncVendorRegistryRecords(ctx: any) {
         existingSource?._id ??
         (await ctx.db.insert("sources", {
           ...sourcePayload,
+          consecutiveFailures: 0,
           createdAt: Date.now(),
         }));
 
@@ -117,6 +120,32 @@ async function syncVendorRegistryRecords(ctx: any) {
 
     for (const source of existingSources) {
       if (!allowedSourceUrls.has(source.url) && source.isActive) {
+        await ctx.db.patch(source._id, {
+          isActive: false,
+          updatedAt: Date.now(),
+        });
+      }
+    }
+  }
+
+  const existingVendors = await ctx.db.query("vendors").collect();
+  for (const vendor of existingVendors) {
+    if (registryVendorSlugs.has(vendor.slug) || !vendor.isActive) {
+      continue;
+    }
+
+    await ctx.db.patch(vendor._id, {
+      isActive: false,
+      updatedAt: Date.now(),
+    });
+
+    const sources = await ctx.db
+      .query("sources")
+      .withIndex("by_vendor", (q: any) => q.eq("vendorId", vendor._id))
+      .collect();
+
+    for (const source of sources) {
+      if (source.isActive) {
         await ctx.db.patch(source._id, {
           isActive: false,
           updatedAt: Date.now(),
