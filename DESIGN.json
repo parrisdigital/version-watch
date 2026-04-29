@@ -1,0 +1,422 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-28T00:00:00.000Z",
+  "title": "Design System: Version Watch",
+  "extensions": {
+    "colorMeta": {
+      "splash": {
+        "role": "primary",
+        "displayName": "Cool Splash Blue",
+        "canonical": "oklch(66% 0.14 230)",
+        "tonalRamp": [
+          "oklch(15% 0.05 230)",
+          "oklch(25% 0.08 230)",
+          "oklch(35% 0.1 230)",
+          "oklch(48% 0.13 230)",
+          "oklch(58% 0.14 230)",
+          "oklch(66% 0.14 230)",
+          "oklch(78% 0.12 230)",
+          "oklch(92% 0.05 230)"
+        ]
+      },
+      "splash-soft": {
+        "role": "primary",
+        "displayName": "Splash Soft",
+        "canonical": "oklch(34% 0.1 230)",
+        "tonalRamp": [
+          "oklch(15% 0.05 230)",
+          "oklch(22% 0.08 230)",
+          "oklch(34% 0.1 230)",
+          "oklch(46% 0.12 230)",
+          "oklch(58% 0.13 230)",
+          "oklch(72% 0.12 230)",
+          "oklch(85% 0.08 230)",
+          "oklch(94% 0.04 230)"
+        ]
+      },
+      "background": {
+        "role": "neutral",
+        "displayName": "Cool Charcoal",
+        "canonical": "oklch(13% 0.008 260)",
+        "tonalRamp": [
+          "oklch(9% 0.005 260)",
+          "oklch(13% 0.008 260)",
+          "oklch(18% 0.01 260)",
+          "oklch(25% 0.012 260)",
+          "oklch(38% 0.014 260)",
+          "oklch(56% 0.012 260)",
+          "oklch(74% 0.008 260)",
+          "oklch(92% 0.005 260)"
+        ]
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "Premium Ink",
+        "canonical": "oklch(97% 0.003 260)",
+        "tonalRamp": [
+          "oklch(17% 0.008 260)",
+          "oklch(32% 0.01 260)",
+          "oklch(48% 0.01 260)",
+          "oklch(60% 0.008 260)",
+          "oklch(72% 0.006 260)",
+          "oklch(84% 0.004 260)",
+          "oklch(92% 0.003 260)",
+          "oklch(97% 0.003 260)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Surface Card",
+        "canonical": "oklch(16% 0.009 260)",
+        "tonalRamp": [
+          "oklch(10% 0.006 260)",
+          "oklch(13% 0.008 260)",
+          "oklch(16% 0.009 260)",
+          "oklch(20% 0.011 260)",
+          "oklch(28% 0.013 260)",
+          "oklch(48% 0.012 260)",
+          "oklch(70% 0.008 260)",
+          "oklch(92% 0.005 260)"
+        ]
+      },
+      "surface-raised": {
+        "role": "neutral",
+        "displayName": "Surface Raised",
+        "canonical": "oklch(20% 0.011 260)"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Surface Muted",
+        "canonical": "oklch(19% 0.01 260)"
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "oklch(66% 0.012 260)"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Quiet Line",
+        "canonical": "oklch(24% 0.012 260)"
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Spoken Line",
+        "canonical": "oklch(32% 0.014 260)"
+      },
+      "ring": {
+        "role": "primary",
+        "displayName": "Focus Ring",
+        "canonical": "oklch(66% 0.14 230)"
+      },
+      "critical": {
+        "role": "tertiary",
+        "displayName": "Critical Ember",
+        "canonical": "oklch(70% 0.2 22)",
+        "tonalRamp": [
+          "oklch(22% 0.08 22)",
+          "oklch(32% 0.12 22)",
+          "oklch(45% 0.18 22)",
+          "oklch(55% 0.21 22)",
+          "oklch(62% 0.22 22)",
+          "oklch(70% 0.2 22)",
+          "oklch(80% 0.16 22)",
+          "oklch(92% 0.08 22)"
+        ]
+      },
+      "high": {
+        "role": "tertiary",
+        "displayName": "Watch Amber",
+        "canonical": "oklch(80% 0.15 68)",
+        "tonalRamp": [
+          "oklch(25% 0.06 68)",
+          "oklch(38% 0.1 68)",
+          "oklch(50% 0.13 68)",
+          "oklch(60% 0.14 68)",
+          "oklch(70% 0.15 68)",
+          "oklch(80% 0.15 68)",
+          "oklch(88% 0.12 68)",
+          "oklch(95% 0.06 68)"
+        ]
+      },
+      "medium": {
+        "role": "tertiary",
+        "displayName": "Steady Cobalt",
+        "canonical": "oklch(72% 0.13 230)",
+        "tonalRamp": [
+          "oklch(20% 0.06 230)",
+          "oklch(32% 0.09 230)",
+          "oklch(45% 0.12 230)",
+          "oklch(58% 0.13 230)",
+          "oklch(72% 0.13 230)",
+          "oklch(82% 0.11 230)",
+          "oklch(90% 0.08 230)",
+          "oklch(96% 0.04 230)"
+        ]
+      },
+      "low": {
+        "role": "tertiary",
+        "displayName": "Quiet Ink",
+        "canonical": "oklch(66% 0.008 260)"
+      },
+      "green": {
+        "role": "secondary",
+        "displayName": "Live Pulse Green",
+        "canonical": "oklch(74% 0.14 158)",
+        "tonalRamp": [
+          "oklch(22% 0.06 158)",
+          "oklch(35% 0.1 158)",
+          "oklch(48% 0.13 158)",
+          "oklch(60% 0.14 158)",
+          "oklch(74% 0.14 158)",
+          "oklch(84% 0.12 158)",
+          "oklch(92% 0.08 158)",
+          "oklch(97% 0.04 158)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headlines on the homepage, About hero, canonical event titles. Tight letter-spacing carries the editorial register at scale."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section-leading H2. Latest updates, How it works, Vendor coverage, About section heads."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card-level heading. Event records, vendor headers, panel titles."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default reading copy with cv11 + ss01 OpenType features. Capped at 65 to 75ch via shell containers."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase mono kicker. Section overlines, dl-term elements, severity pill text."
+      },
+      "tag": {
+        "displayName": "Tag",
+        "purpose": "Lowercase mono. Categories, audience labels, affected stack tokens."
+      }
+    },
+    "shadows": [
+      {
+        "name": "splash-glow",
+        "value": "0 18px 44px -26px color-mix(in oklch, oklch(66% 0.14 230) 70%, transparent), 0 2px 10px -4px color-mix(in oklch, black 70%, transparent), inset 0 0 0 1px color-mix(in oklch, black 18%, transparent)",
+        "purpose": "Dark-mode primary CTA only. Layered colored halo plus ambient depth plus inset highlight. The single chromatic shadow in the system."
+      },
+      {
+        "name": "ambient-lift",
+        "value": "0 1px 2px color-mix(in oklch, black 12%, transparent), inset 0 0 0 1px color-mix(in oklch, white 12%, transparent)",
+        "purpose": "Light-mode primary CTA, light-mode secondary buttons. Quiet structural lift, never decorative."
+      },
+      {
+        "name": "focus-halo",
+        "value": "0 0 0 3px color-mix(in oklch, oklch(66% 0.14 230) 22%, transparent)",
+        "purpose": "Input focus state. Drawn via box-shadow so no layout shift."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Default easing. Used on color, border, and shadow transitions across all interactive elements."
+      },
+      {
+        "name": "ease-spring",
+        "value": "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        "purpose": "Reserved for the rare spring-like interaction. Not used on any current component."
+      },
+      {
+        "name": "duration-fast",
+        "value": "120ms",
+        "purpose": "Input focus, nav-link state changes."
+      },
+      {
+        "name": "duration-default",
+        "value": "150ms",
+        "purpose": "Button hover, color and border transitions."
+      },
+      {
+        "name": "duration-slow",
+        "value": "300ms",
+        "purpose": "Panel hover lift (border and background)."
+      },
+      {
+        "name": "vw-pulse",
+        "value": "@keyframes vw-pulse { 0% { transform: scale(0.6); opacity: 1; } 80%, 100% { transform: scale(1.3); opacity: 0; } } 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite",
+        "purpose": "Live-feed dot halo. The signature ambient motion. Used once on the homepage."
+      },
+      {
+        "name": "vw-bounce",
+        "value": "@keyframes vw-bounce { 0%, 100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(3px); opacity: 1; } } 2s ease-in-out infinite",
+        "purpose": "Hero scroll affordance arrow."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The signature CTA. Near-black canvas with the cobalt splash glow underneath in dark mode.",
+      "html": "<button class=\"ds-btn-primary\">Open the feed</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; background: #080b12; color: #ffffff; border: 1px solid #2b3342; border-radius: 0.5rem; padding: 0.75rem 1.125rem; font-size: 0.875rem; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; box-shadow: 0 18px 44px -26px color-mix(in oklch, oklch(66% 0.14 230) 70%, transparent), 0 2px 10px -4px color-mix(in oklch, black 70%, transparent), inset 0 0 0 1px color-mix(in oklch, black 18%, transparent); transition: background-color 150ms cubic-bezier(0.16,1,0.3,1), border-color 150ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-primary:hover { background: #121724; border-color: #3a4355; } .ds-btn-primary:focus-visible { outline: 2px solid oklch(66% 0.14 230); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Outline button for second-tier actions. 1px border on canvas background.",
+      "html": "<button class=\"ds-btn-secondary\">Browse vendors</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; align-items: center; gap: 0.5rem; background: oklch(13% 0.008 260); color: oklch(97% 0.003 260); border: 1px solid oklch(24% 0.012 260); border-radius: 0.5rem; padding: 0.5rem 0.875rem; font-size: 0.8125rem; font-weight: 500; line-height: 1; cursor: pointer; transition: background-color 150ms cubic-bezier(0.16,1,0.3,1), border-color 150ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-secondary:hover { background: oklch(19% 0.01 260); border-color: oklch(32% 0.014 260); }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Tertiary action. Transparent until hover.",
+      "html": "<button class=\"ds-btn-ghost\">How it works</button>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: oklch(66% 0.012 260); border: 1px solid transparent; border-radius: 0.5rem; padding: 0.5rem 0.875rem; font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: color 150ms cubic-bezier(0.16,1,0.3,1), background-color 150ms cubic-bezier(0.16,1,0.3,1); } .ds-btn-ghost:hover { color: oklch(97% 0.003 260); background: oklch(19% 0.01 260); }"
+    },
+    {
+      "name": "Severity Pill (Critical)",
+      "kind": "chip",
+      "refersTo": "severity-critical",
+      "description": "Critical importance band. Tinted ember pill with leading dot.",
+      "html": "<span class=\"ds-severity ds-severity-critical\"><span class=\"ds-severity-dot\"></span>Critical</span>",
+      "css": ".ds-severity { display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.25rem 0.5rem; border-radius: 999px; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 0.6875rem; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1; } .ds-severity-critical { background: color-mix(in oklch, oklch(70% 0.2 22) 14%, transparent); color: oklch(70% 0.2 22); border: 1px solid color-mix(in oklch, oklch(70% 0.2 22) 35%, transparent); } .ds-severity-dot { width: 0.375rem; height: 0.375rem; border-radius: 999px; background: currentColor; }"
+    },
+    {
+      "name": "Tag",
+      "kind": "chip",
+      "refersTo": "tag",
+      "description": "Mono lowercase token for categories, audience labels, and affected stack.",
+      "html": "<span class=\"ds-tag\">api</span>",
+      "css": ".ds-tag { display: inline-flex; align-items: center; gap: 0.375rem; border: 1px solid oklch(24% 0.012 260); border-radius: 0.25rem; padding: 0.25rem 0.5rem; background: oklch(13% 0.008 260); color: oklch(66% 0.012 260); font-family: 'Geist Mono', ui-monospace, monospace; font-size: 0.75rem; text-transform: lowercase; line-height: 1.3; }"
+    },
+    {
+      "name": "Event Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "The canonical event-record surface. Tonal lift on hover, no shadow.",
+      "html": "<article class=\"ds-panel\"><h3 class=\"ds-panel-title\">Stripe shipped a webhook signing change.</h3><p class=\"ds-panel-copy\">A one-sentence distillation of the actual change.</p></article>",
+      "css": ".ds-panel { border: 1px solid oklch(24% 0.012 260); border-radius: 0.625rem; background: oklch(16% 0.009 260); padding: 1.5rem; color: oklch(97% 0.003 260); transition: border-color 300ms cubic-bezier(0.16,1,0.3,1), background-color 300ms cubic-bezier(0.16,1,0.3,1); } .ds-panel:hover { border-color: oklch(32% 0.014 260); background: oklch(20% 0.011 260); } .ds-panel-title { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; color: oklch(97% 0.003 260); margin: 0 0 1rem 0; } .ds-panel-copy { color: oklch(66% 0.012 260); line-height: 1.65; font-size: 0.9375rem; margin: 0; }"
+    },
+    {
+      "name": "Vendor Mark",
+      "kind": "custom",
+      "refersTo": "vendor-mark",
+      "description": "Square monochrome vendor identity tile. Logo inherits currentColor via mask-image alpha.",
+      "html": "<span class=\"ds-vendor-mark\"><svg viewBox=\"0 0 24 24\" width=\"62%\" height=\"62%\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M12 2 L22 12 L12 22 L2 12 Z\"/></svg></span>",
+      "css": ".ds-vendor-mark { display: inline-flex; align-items: center; justify-content: center; width: 2.5rem; height: 2.5rem; border-radius: 0.5rem; border: 1px solid oklch(24% 0.012 260); background: oklch(16% 0.009 260); color: oklch(97% 0.003 260); flex-shrink: 0; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Default text input. Focus draws a 3px halo via box-shadow so layout never shifts.",
+      "html": "<input class=\"ds-input\" placeholder=\"Search the feed\" />",
+      "css": ".ds-input { width: 100%; border: 1px solid oklch(28% 0.013 260); border-radius: 0.5rem; background: oklch(13% 0.008 260); color: oklch(97% 0.003 260); padding: 0.625rem 0.875rem; font-size: 0.875rem; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; outline: none; transition: border-color 120ms cubic-bezier(0.16,1,0.3,1), box-shadow 120ms cubic-bezier(0.16,1,0.3,1); } .ds-input::placeholder { color: oklch(66% 0.012 260); } .ds-input:focus { border-color: oklch(66% 0.14 230); box-shadow: 0 0 0 3px color-mix(in oklch, oklch(66% 0.14 230) 22%, transparent); }"
+    },
+    {
+      "name": "Freshness Chip",
+      "kind": "custom",
+      "refersTo": "panel-flat",
+      "description": "Live freshness indicator. The one ambient motion in the system. Single instance per page.",
+      "html": "<div class=\"ds-freshness\"><span class=\"ds-live-dot\"></span><span class=\"ds-freshness-label\">Feed refreshed 12 minutes ago</span><span class=\"ds-freshness-divider\">·</span><span class=\"ds-freshness-meta\">57 official sources</span></div>",
+      "css": ".ds-freshness { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.375rem 0.75rem; border: 1px solid oklch(24% 0.012 260); border-radius: 999px; background: color-mix(in oklch, oklch(16% 0.009 260) 72%, transparent); color: oklch(91% 0.004 260); font-size: 0.75rem; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); } .ds-live-dot { position: relative; width: 0.5rem; height: 0.5rem; border-radius: 999px; background: oklch(74% 0.14 158); flex-shrink: 0; } .ds-live-dot::after { content: ''; position: absolute; inset: -0.25rem; border-radius: 999px; border: 1px solid color-mix(in oklch, oklch(74% 0.14 158) 45%, transparent); animation: ds-pulse 2.2s cubic-bezier(0.16, 1, 0.3, 1) infinite; } @keyframes ds-pulse { 0% { transform: scale(0.6); opacity: 1; } 80%, 100% { transform: scale(1.3); opacity: 0; } } .ds-freshness-divider { color: oklch(66% 0.012 260); } .ds-freshness-meta { font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Nav Link",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Header navigation pill. Quiet at rest, lifts to foreground on hover, fills to muted on active.",
+      "html": "<a class=\"ds-nav-link\" href=\"#\">Vendors</a>",
+      "css": ".ds-nav-link { display: inline-flex; align-items: center; border-radius: 0.25rem; padding: 0.375rem 0.625rem; color: oklch(66% 0.012 260); font-size: 0.8125rem; text-decoration: none; transition: color 120ms cubic-bezier(0.16,1,0.3,1), background-color 120ms cubic-bezier(0.16,1,0.3,1); } .ds-nav-link:hover { color: oklch(97% 0.003 260); } .ds-nav-link[aria-current='page'] { color: oklch(97% 0.003 260); background: oklch(19% 0.01 260); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Intelligence Terminal",
+    "overview": "Version Watch is a developer-grade reading surface that fuses two sensibilities. The first is a working terminal: dense, monospace-flavored, scan-first, comfortable at high information density. The second is editorial print, with generous type, restrained color, deliberate hierarchy, the discipline of a wire service. The tool earns its trust by reading like both at once. Cinematic on the homepage where atmosphere clarifies value; restrained and efficient on every utility surface where atmosphere would get in the way. The system rejects the visual vocabulary of consumer SaaS. There are no decorative illustrations, no rainbow charts, no glassmorphic stat cards floating over hero gradients. The palette is mostly cool neutrals with a single accent (a cool cobalt splash at hue 230) that appears almost nowhere except where it must. Severity is encoded in three additional hues, used only when reporting state.",
+    "keyCharacteristics": [
+      "Cool charcoal canvas (oklch(13% 0.008 260)), premium ink (oklch(97% 0.003 260)), single cobalt splash accent (oklch(66% 0.14 230)).",
+      "Geist sans for everything readable; Geist Mono for labels, kickers, severity pills, tags.",
+      "Tight letter-spacing (-0.02em) on display and headline; generous tracking (0.14em upper) on labels.",
+      "Flat surfaces by default. The only signature elevation is the splash glow under the primary CTA in dark mode and the live-pulse halo on the freshness dot.",
+      "Cards exist only when structurally necessary. Never decorative filler.",
+      "Density is the feature. List rows beat grid cards on most utility surfaces."
+    ],
+    "rules": [
+      {
+        "name": "The One Splash Rule",
+        "body": "The cobalt splash appears on under 10% of any given surface. Focus rings, link hover, the primary CTA glow, the freshness pulse, and almost nowhere else. Its rarity is the point. If you find yourself reaching for splash to make a section pop, reach for type weight or hierarchy instead.",
+        "section": "colors"
+      },
+      {
+        "name": "The Severity Sobriety Rule",
+        "body": "Severity colors appear only when reporting importanceBand. Never decorative. Never as a section accent. Never as a chart palette. A red dot in this system means something is critical. If everyone uses red, no one acts on red.",
+        "section": "colors"
+      },
+      {
+        "name": "The No Pure Black Rule",
+        "body": "Pure black and pure white are forbidden. Every neutral is tinted toward hue 260 with chroma 0.005 to 0.014. Pure black on a dark surface looks dead. Pure white on a light surface burns. The cool tint is the trust signal.",
+        "section": "colors"
+      },
+      {
+        "name": "The Mono-as-Voice Rule",
+        "body": "Geist Mono is reserved for things that are labels, codes, or monospace data: kickers, severity pills, tags, signal scores, source-type chips. It is never used as a display face for hero copy, never as a stylistic flourish on body text. Mono is voice, not decoration.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tight-Display Rule",
+        "body": "Display and headline always carry letter-spacing -0.02em. The tight tracking is what gives the editorial typography its confident, slightly cinematic register. Loose tracking on display type reads as marketing.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-Until-Earned Rule",
+        "body": "Surfaces are flat. Shadows appear only when they communicate something: the primary CTA's click-me energy, the live dot's the-feed-is-breathing pulse. Decorative shadow on a card, a stat strip, or a hero image is forbidden.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Tonal-Layering-First Rule",
+        "body": "When a panel needs to read as raised, lighten it by 3% luminance. Do not add a shadow. The eye learns the system in one card and reads it everywhere.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use the cobalt splash (oklch(66% 0.14 230)) only for focus rings, primary CTA glow, link hover, and the freshness pulse. If you can replace splash with type weight or hierarchy, replace it.",
+      "Do tint every neutral toward hue 260 with chroma 0.005 to 0.014. The cool cast is the trust signal.",
+      "Do use Geist Mono for kickers, severity pills, tags, signal scores. Never as display type.",
+      "Do apply letter-spacing -0.02em to display and headline. Tight tracking carries the editorial register.",
+      "Do convey elevation through tonal layering: oklch(13%) canvas to oklch(16%) card to oklch(20%) raised. 3% luminance steps in the same hue.",
+      "Do keep body copy at 65 to 75ch via vw-narrow (58rem) or vw-shell (80rem) containers.",
+      "Do vary spacing for rhythm. 1.25rem, 1.5rem, 1.75rem, 2rem, not 1.5rem everywhere.",
+      "Do keep severity color encoding semantic. A red pill means critical."
+    ],
+    "donts": [
+      "Don't use #000 or #fff. Both are forbidden. Use the OKLCH neutrals.",
+      "Don't add gradient text. background-clip: text over a gradient is banned. Use a single color and weight contrast.",
+      "Don't use border-left greater than 1px as a colored stripe on cards, list items, callouts, or alerts. Severity is encoded in pills, not in side stripes.",
+      "Don't add glassmorphism or backdrop-blur as decoration. The freshness chip's blur is the only authorized instance and it serves a specific purpose.",
+      "Don't ship the SaaS hero-metric template: big number, small label, supporting stats, gradient accent.",
+      "Don't ship identical card grids: same-sized cards with icon plus heading plus text repeated endlessly. Use list rows for utility surfaces.",
+      "Don't nest vw-panel inside vw-panel. Use vw-panel-flat for the inner element.",
+      "Don't make this look like a generic SaaS dashboard, press site, blog, or analytics template (the four anti-references named in PRODUCT.md).",
+      "Don't use decorative cards or repeated stat blocks (PRODUCT.md anti-reference).",
+      "Don't introduce a second chromatic accent. The splash is the only one.",
+      "Don't animate CSS layout properties. The system uses cubic-bezier(0.16, 1, 0.3, 1) ease-out on color, border, and shadow only. No bounce, no elastic.",
+      "Don't use modals as a first thought. Exhaust inline and progressive alternatives first.",
+      "Don't use em dashes in copy. Commas, colons, semicolons, periods, parentheses. Also not double-hyphen."
+    ]
+  }
+}

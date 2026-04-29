@@ -12,10 +12,10 @@ test("feedback page submits through the lightweight form", async ({ page }) => {
   await page.goto("/feedback?type=suggest_vendor&url=/search");
 
   await expect(page.getByRole("heading", { name: "Help tune the feed." })).toBeVisible();
-  await expect(page.getByLabel("Feedback type")).toHaveValue("suggest_vendor");
+  await expect(page.getByLabel("What is this about?")).toHaveValue("suggest_vendor");
 
   await page.getByLabel("Message").fill("Please track Example Cloud release notes.");
-  await page.getByRole("button", { name: /Send suggest vendor/i }).click();
+  await page.getByRole("button", { name: /Send.*suggest a vendor/i }).click();
 
   await expect(page.getByText("Feedback sent. Thank you.")).toBeVisible();
 });
