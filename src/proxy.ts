@@ -6,17 +6,17 @@ import { ADMIN_COOKIE_NAME, isValidAdminCookieValue } from "@/lib/admin/session"
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  if (pathname.startsWith("/review/login")) {
+  if (pathname.startsWith("/admin/login")) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith("/review") || pathname.startsWith("/ops")) {
+  if (pathname.startsWith("/admin")) {
     const cookieValue = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
     const isValid = await isValidAdminCookieValue(cookieValue);
 
     if (!isValid) {
       const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/review/login";
+      loginUrl.pathname = "/admin/login";
       loginUrl.searchParams.set("from", pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -26,5 +26,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/review/:path*", "/ops/:path*"],
+  matcher: ["/admin/:path*"],
 };

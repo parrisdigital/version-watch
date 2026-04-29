@@ -8,7 +8,11 @@ import { approveCandidate, rejectCandidate, suppressCandidate } from "./actions"
 
 export const dynamic = "force-dynamic";
 
-export default async function ReviewCandidatePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AdminReviewCandidatePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const candidate = await getReviewCandidateById(id);
 
@@ -23,7 +27,7 @@ export default async function ReviewCandidatePage({ params }: { params: Promise<
       <section className="px-4 pb-12 pt-28 sm:px-6 md:pb-16 md:pt-32">
         <div className="vw-narrow">
           <Link
-            href="/review"
+            href="/admin/review"
             className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
           >
             ← Review queue
@@ -62,7 +66,9 @@ export default async function ReviewCandidatePage({ params }: { params: Promise<
               <div className="mt-4 flex flex-wrap gap-2">
                 <form action={approveCandidate}>
                   <input type="hidden" name="rawCandidateId" value={candidate.id} />
-                  <button type="submit" className="vw-button vw-button-primary">Approve</button>
+                  <button type="submit" className="vw-button vw-button-primary">
+                    Approve
+                  </button>
                 </form>
                 <form action={rejectCandidate}>
                   <input type="hidden" name="rawCandidateId" value={candidate.id} />

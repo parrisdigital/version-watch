@@ -11,8 +11,8 @@ const routes = [
   { name: "event", path: "/events/openai-2026-03-16-codex-app-26-313" },
   { name: "search", path: "/search" },
   { name: "about", path: "/about" },
-  { name: "ops-health", path: "/ops/health" },
-  { name: "review-login", path: "/review/login" },
+  { name: "admin-login", path: "/admin/login" },
+  { name: "feedback", path: "/feedback" },
 ];
 
 const viewports = [

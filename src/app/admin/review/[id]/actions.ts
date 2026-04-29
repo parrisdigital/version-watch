@@ -6,8 +6,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { ADMIN_COOKIE_NAME, isValidAdminCookieValue } from "@/lib/admin/session";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import { api } from "../../../../../convex/_generated/api";
+import type { Id } from "../../../../../convex/_generated/dataModel";
 
 async function requireAdminSecret() {
   const cookieStore = await cookies();
@@ -15,7 +15,7 @@ async function requireAdminSecret() {
   const isValid = await isValidAdminCookieValue(cookieValue);
 
   if (!isValid) {
-    redirect("/review/login");
+    redirect("/admin/login");
   }
 
   const adminSecret = process.env.ADMIN_SECRET;
@@ -45,8 +45,8 @@ export async function approveCandidate(formData: FormData) {
     adminSecret,
   });
 
-  revalidatePath("/review");
-  redirect("/review");
+  revalidatePath("/admin/review");
+  redirect("/admin/review");
 }
 
 export async function rejectCandidate(formData: FormData) {
@@ -59,8 +59,8 @@ export async function rejectCandidate(formData: FormData) {
     adminSecret,
   });
 
-  revalidatePath("/review");
-  redirect("/review");
+  revalidatePath("/admin/review");
+  redirect("/admin/review");
 }
 
 export async function suppressCandidate(formData: FormData) {
@@ -73,6 +73,6 @@ export async function suppressCandidate(formData: FormData) {
     adminSecret,
   });
 
-  revalidatePath("/review");
-  redirect("/review");
+  revalidatePath("/admin/review");
+  redirect("/admin/review");
 }

@@ -8,11 +8,11 @@ export const dynamic = "force-dynamic";
 
 const confidenceClass: Record<string, string> = {
   high: "text-[var(--color-green)]",
-  medium: "text-[var(--color-signal)]",
+  medium: "text-[var(--color-high)]",
   low: "text-[var(--color-red)]",
 };
 
-export default async function ReviewQueuePage() {
+export default async function AdminReviewQueuePage() {
   const queue = await getReviewQueue();
 
   return (
@@ -22,16 +22,21 @@ export default async function ReviewQueuePage() {
       <section className="border-b border-[var(--color-line)] px-4 pb-10 pt-28 sm:px-6 md:pb-14 md:pt-32">
         <div className="vw-shell flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="vw-kicker">Admin</p>
+            <p className="vw-kicker">Admin · Review queue</p>
             <h1 className="vw-display mt-3 text-4xl md:text-5xl">Review queue</h1>
             <p className="vw-copy mt-3 max-w-[52ch] text-pretty text-base">
               {queue.length} candidates waiting for review. Low-confidence parses and docs-page revisions land
               here before they hit the public feed.
             </p>
           </div>
-          <Link href="/ops/health" className="vw-button vw-button-secondary">
-            Source health
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/admin" className="vw-button vw-button-ghost">
+              ← Dashboard
+            </Link>
+            <Link href="/admin/health" className="vw-button vw-button-secondary">
+              Source health
+            </Link>
+          </div>
         </div>
       </section>
 
@@ -68,7 +73,7 @@ export default async function ReviewQueuePage() {
                     </td>
                     <td className="px-5 py-4">
                       <Link
-                        href={`/review/${candidate.id}`}
+                        href={`/admin/review/${candidate.id}`}
                         className="text-[var(--color-ink)] transition-colors hover:text-[var(--color-signal)]"
                       >
                         {candidate.title}

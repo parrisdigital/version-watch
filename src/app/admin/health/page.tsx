@@ -11,8 +11,8 @@ const statusStyle: Record<string, { label: string; dot: string; text: string }> 
   },
   degraded: {
     label: "Degraded",
-    dot: "bg-[var(--color-signal)]",
-    text: "text-[var(--color-signal)]",
+    dot: "bg-[var(--color-high)]",
+    text: "text-[var(--color-high)]",
   },
   failing: {
     label: "Failing",
@@ -21,7 +21,7 @@ const statusStyle: Record<string, { label: string; dot: string; text: string }> 
   },
 };
 
-export default async function OpsHealthPage() {
+export default async function AdminHealthPage() {
   const health = await getSourceHealth();
   const counts = {
     healthy: health.filter((e) => e.status === "healthy").length,
@@ -35,7 +35,7 @@ export default async function OpsHealthPage() {
 
       <section className="border-b border-[var(--color-line)] px-4 pb-10 pt-28 sm:px-6 md:pb-14 md:pt-32">
         <div className="vw-shell">
-          <p className="vw-kicker">Operations</p>
+          <p className="vw-kicker">Admin · Source health</p>
           <h1 className="vw-display mt-3 text-4xl md:text-5xl">Source health</h1>
           <p className="vw-copy mt-3 max-w-[58ch] text-pretty text-base">
             Every vendor source is polled on a schedule. When a source fails or falls behind, the public feed

@@ -30,6 +30,13 @@ type SourceHealthView = SourceHealthEntry & {
   lastSuccessLabel: string;
 };
 
+type ProductionFreshnessOptions = {
+  sinceHours?: number;
+  eventLimit?: number;
+};
+
+const activeFallbackVendors = fallbackVendors.filter((vendor) => vendor.isActive !== false);
+
 async function readFromConvex<T>(read: () => Promise<T>, fallback: () => T): Promise<T> {
   if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
     if (process.env.NODE_ENV === "production") {
@@ -88,16 +95,16 @@ export async function getAllPublicEvents() {
 export async function getVendors(): Promise<VendorRecord[]> {
   return await readFromConvex<VendorRecord[]>(
     () => fetchQuery(api.vendors.list, {}) as Promise<VendorRecord[]>,
-    () => fallbackVendors,
+    () => activeFallbackVendors,
   );
 }
 
-export async function getFreshnessSummary(): Promise<FreshnessSummary> {
+export async function getProductionFreshnessReport(options: ProductionFreshnessOptions = {}): Promise<any> {
   const report = await readFromConvex<any>(
     () =>
       fetchQuery(api.ops.productionFreshness, {
-        sinceHours: 8,
-        eventLimit: 1,
+        sinceHours: options.sinceHours ?? 8,
+        eventLimit: options.eventLimit ?? 24,
       }) as Promise<any>,
     () => ({
       checkedAt: new Date().toISOString(),
@@ -105,8 +112,18 @@ export async function getFreshnessSummary(): Promise<FreshnessSummary> {
       recentRuns: [],
       recentRefreshRuns: [],
       latestFeedRefresh: null,
+      latestEvents: fallbackEvents
+        .slice()
+        .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+        .slice(0, options.eventLimit ?? 24),
     }),
   );
+
+  return report;
+}
+
+export async function getFreshnessSummary(): Promise<FreshnessSummary> {
+  const report = await getProductionFreshnessReport({ sinceHours: 8, eventLimit: 1 });
 
   const latestRun =
     report.latestFeedRefresh ??
@@ -123,7 +140,7 @@ export async function getFreshnessSummary(): Promise<FreshnessSummary> {
 export async function getVendorBySlug(slug: string) {
   return await readFromConvex<VendorRecord | null>(
     () => fetchQuery(api.vendors.bySlug, { slug }) as Promise<VendorRecord | null>,
-    () => fallbackVendors.find((vendor) => vendor.slug === slug) ?? null,
+    () => activeFallbackVendors.find((vendor) => vendor.slug === slug) ?? null,
   );
 }
 
@@ -194,4 +211,31 @@ export async function getSourceHealth(): Promise<SourceHealthView[]> {
       ? format(new Date(entry.lastSuccessAt), "MMM d, yyyy HH:mm")
       : "Never",
   }));
+}
+
+export type FeedbackSubmissionEntry = {
+  _id: string;
+  type: "suggest_vendor" | "missing_update" | "wrong_signal" | "incorrect_summary" | "general";
+  message: string;
+  pageUrl?: string;
+  userAgent?: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export async function getFeedbackSubmissions(): Promise<FeedbackSubmissionEntry[]> {
+  return await readFromConvex<FeedbackSubmissionEntry[]>(
+    () => {
+      const adminSecret = process.env.ADMIN_SECRET;
+      if (!adminSecret) {
+        throw new Error("ADMIN_SECRET is required to read feedback submissions.");
+      }
+
+      return fetchQuery(api.feedback.listRecent, {
+        adminSecret,
+        limit: 100,
+      }) as Promise<FeedbackSubmissionEntry[]>;
+    },
+    () => [],
+  );
 }
