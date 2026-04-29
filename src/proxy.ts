@@ -43,6 +43,10 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith("/admin/login")) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/review") || pathname.startsWith("/ops")) {
     const cookieValue = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
     const isValid = await isValidAdminCookieValue(cookieValue);
@@ -55,9 +59,21 @@ export async function proxy(request: NextRequest) {
     }
   }
 
+  if (pathname.startsWith("/admin")) {
+    const cookieValue = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
+    const isValid = await isValidAdminCookieValue(cookieValue);
+
+    if (!isValid) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/admin/login";
+      loginUrl.searchParams.set("from", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/", "/agent-access", "/review/:path*", "/ops/:path*"],
+  matcher: ["/", "/agent-access", "/review/:path*", "/ops/:path*", "/admin/:path*"],
 };

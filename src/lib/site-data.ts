@@ -278,3 +278,30 @@ export async function getSourceLinkQualityReport(): Promise<SourceLinkQualityRep
     freshnessReport,
   });
 }
+
+export type FeedbackSubmissionEntry = {
+  _id: string;
+  type: "suggest_vendor" | "missing_update" | "wrong_signal" | "incorrect_summary" | "general";
+  message: string;
+  pageUrl?: string;
+  userAgent?: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
+export async function getFeedbackSubmissions(): Promise<FeedbackSubmissionEntry[]> {
+  return await readFromConvex<FeedbackSubmissionEntry[]>(
+    () => {
+      const adminSecret = process.env.ADMIN_SECRET;
+      if (!adminSecret) {
+        throw new Error("ADMIN_SECRET is required to read feedback submissions.");
+      }
+
+      return fetchQuery(api.feedback.listRecent, {
+        adminSecret,
+        limit: 100,
+      }) as Promise<FeedbackSubmissionEntry[]>;
+    },
+    () => [],
+  );
+}
