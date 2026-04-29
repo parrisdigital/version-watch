@@ -1,59 +1,38 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  BadgeCheck,
-  Clock3,
-  ExternalLink,
-  Layers3,
-  Radar,
-  ScanLine,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
+import { GithubMark } from "@/components/icons/github-mark";
+import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 
-const VALUE_POINTS = [
+const REPO_URL = "https://github.com/parrisdigital/version-watch";
+
+const RECORD_FIELDS = [
   {
-    icon: Radar,
-    title: "One place to scan",
-    body: "Platform updates are scattered across vendor sites, docs, blogs, RSS feeds, and GitHub releases. Version Watch brings the important ones into one developer-focused view.",
+    label: "What changed",
+    body: "One sentence. No marketing. The actual change, written the same way whether it came from Apple's PDF or a GitHub release tag.",
   },
   {
-    icon: ScanLine,
-    title: "Built for quick decisions",
-    body: "Each update is shaped for scanning: what changed, why it matters, who should care, affected stack, signal level, and the official source.",
+    label: "Why it matters",
+    body: "The operational, migration, product, or compliance impact. The kind of sentence an engineering lead would write in a Slack post.",
   },
   {
-    icon: Layers3,
-    title: "Signal stays visible",
-    body: "Freshness drives the feed order, while critical, high, medium, and low labels help developers decide what deserves attention now.",
+    label: "Who should care",
+    body: "Mapped to the people likely to touch it: frontend, backend, mobile, infra, AI, product, security, compliance, growth.",
   },
-];
-
-const TRUST_POINTS = [
-  "Every item links back to the official source.",
-  "The feed is designed around recent developer-impacting changes.",
-  "Signal labels help separate urgent work from general awareness.",
-  "Vendor pages keep each platform's latest updates easy to review.",
-];
-
-const USE_CASES = [
-  "Morning platform scan",
-  "Release-risk review",
-  "Vendor monitoring",
-  "Engineering standup context",
-  "DevRel and support awareness",
-  "Founder and product planning",
+  {
+    label: "Affected stack",
+    body: "Context tags like payments, auth, hosting, mobile, ci-cd, agents, database, search. Filter-first scanning works.",
+  },
+  {
+    label: "Importance band",
+    body: 'Critical, high, medium, or low. Derived from the signal score. Critical means "plan this week." Low means "good to know."',
+  },
+  {
+    label: "Source trail",
+    body: "The official source URL, source type, and (if attached) the GitHub release or repo link. Always verifiable against the original.",
+  },
 ];
 
 const PRODUCT_SHAPE = [
@@ -82,222 +61,183 @@ export default function AboutPage() {
     <main className="vw-page">
       <SiteHeader />
 
-      <section className="px-4 pb-16 pt-28 sm:px-6 md:pt-32 lg:pb-20">
-        <div className="vw-shell grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center lg:gap-16">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">About Version Watch</Badge>
-              <Badge variant="secondary">Source attached</Badge>
-            </div>
-            <div className="flex flex-col gap-5">
-              <h1 className="vw-display max-w-[14ch] text-balance text-4xl sm:text-5xl md:text-6xl">
-                A faster way to keep up with platform changes.
-              </h1>
-              <p className="vw-copy max-w-[66ch] text-lg md:text-xl">
-                Version Watch helps developers stay aware of important changelogs and release notes
-                across the platforms their stack depends on. It turns scattered vendor updates into
-                one clear, recent, source-linked feed.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg">
+      <section className="px-4 pb-16 pt-28 sm:px-6 md:pb-20 md:pt-32 lg:pb-24">
+        <div className="vw-shell">
+          <div className="flex max-w-[58rem] flex-col gap-6">
+            <p className="font-mono text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
+              About Version Watch
+            </p>
+            <h1 className="vw-display text-balance text-4xl sm:text-5xl md:text-6xl lg:text-7xl">
+              A change-intelligence utility for developers.
+            </h1>
+            <p className="vw-copy max-w-[58ch] text-pretty text-lg md:text-xl">
+              OpenAI changes an API. Stripe writes a blog. Apple drops a PDF. Version Watch reads them all, normalizes the signal, and keeps the source one click away. Open source, free, run for developers.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Button asChild size="lg" className="vw-hero-primary-cta">
                 <Link href="/search">
-                  Explore the feed
-                  <ArrowRight data-icon="inline-end" />
+                  Open the feed
+                  <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <Link href="/vendors">Browse vendors</Link>
+                <a href={REPO_URL} target="_blank" rel="noreferrer">
+                  <GithubMark className="size-4" />
+                  View on GitHub
+                </a>
               </Button>
             </div>
           </div>
+        </div>
+      </section>
 
-          <Card className="overflow-hidden">
-            <CardHeader className="border-b border-border">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <Badge variant="muted">Developer scan</Badge>
-                <span className="font-mono text-xs tabular-nums text-muted-foreground">
-                  fresh first
-                </span>
+      <section className="border-t border-[var(--border)] px-4 py-16 sm:px-6 md:py-20">
+        <div className="vw-shell grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+          <div className="flex flex-col gap-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
+              Why it exists
+            </p>
+            <h2 className="vw-title text-balance text-3xl sm:text-4xl">
+              Every platform ships releases differently.
+            </h2>
+          </div>
+          <div className="flex flex-col gap-5 max-w-[64ch] text-base leading-relaxed text-[var(--muted-foreground)] md:text-lg">
+            <p>
+              Release surfaces across the developer ecosystem are inconsistent. GitHub posts to a tag. Stripe writes a blog. Apple drops a PDF. Vercel buries it in a changelog. Reading them all is a job most developers do not have time for.
+            </p>
+            <p>
+              Version Watch is that job, structured. It polls every official source on a schedule, normalizes each entry into the same six-field record, ranks by signal, and keeps the original source one click away. The same feed renders for humans on this site and for agents through a public API.
+            </p>
+            <p>
+              No newsletter. No social product. No SaaS dashboard. A change-intelligence utility for the platforms a modern developer stack actually runs on.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-[var(--border)] px-4 py-16 sm:px-6 md:py-20">
+        <div className="vw-shell">
+          <div className="flex flex-col gap-3 max-w-[58rem]">
+            <p className="font-mono text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
+              Anatomy of a record
+            </p>
+            <h2 className="vw-title text-balance text-3xl sm:text-4xl">
+              Every record, the same six fields.
+            </h2>
+            <p className="max-w-[58ch] text-pretty text-base leading-relaxed text-[var(--muted-foreground)] md:text-lg">
+              Each change is reshaped into the same record so a developer can scan twelve updates in the time it takes to read one vendor blog post.
+            </p>
+          </div>
+
+          <dl className="mt-10 grid gap-px overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--border)] md:grid-cols-2 lg:grid-cols-3">
+            {RECORD_FIELDS.map((field) => (
+              <div key={field.label} className="bg-[var(--card)] p-6">
+                <dt className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--foreground)]">
+                  {field.label}
+                </dt>
+                <dd className="mt-3 text-sm leading-relaxed text-[var(--muted-foreground)]">
+                  {field.body}
+                </dd>
               </div>
-              <CardTitle className="text-2xl">What matters changed. See it quickly.</CardTitle>
-              <CardDescription>
-                A compact view that keeps recency, signal, and source attribution in the same place.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4 pt-6">
-              <SampleRow
-                icon={Clock3}
-                label="Freshness"
-                title="Newest updates stay at the top"
-                detail="The feed is ordered by publish date so the latest news is the first thing a developer sees."
-              />
-              <Separator />
-              <SampleRow
-                icon={BadgeCheck}
-                label="Signal"
-                title="Critical, high, medium, low"
-                detail="The label stays visible so urgent changes do not blend into routine release notes."
-              />
-              <Separator />
-              <SampleRow
-                icon={ExternalLink}
-                label="Trust"
-                title="Official source one click away"
-                detail="Every record points back to the vendor page, changelog, release note, or GitHub release."
-              />
-            </CardContent>
-          </Card>
+            ))}
+          </dl>
         </div>
       </section>
 
-      <section className="border-t border-border px-4 py-16 sm:px-6 md:py-20">
-        <div className="vw-shell">
-          <div className="flex max-w-3xl flex-col gap-4">
-            <p className="vw-kicker">Why it exists</p>
-            <h2 className="vw-title text-balance text-3xl md:text-4xl">
-              Developers should not need to check dozens of vendor pages to stay current.
+      <section className="border-t border-[var(--border)] px-4 py-16 sm:px-6 md:py-20">
+        <div className="vw-shell grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+          <div className="flex flex-col gap-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
+              How updates flow
+            </p>
+            <h2 className="vw-title text-balance text-3xl sm:text-4xl">
+              Ingest, classify, review, publish.
             </h2>
-            <p className="vw-copy text-base md:text-lg">
-              The point is simple: make platform awareness easier. Version Watch is for developers,
-              founders, engineering teams, and product builders who want a quick read on what changed
-              across the tools they already use.
-            </p>
           </div>
-
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
-            {VALUE_POINTS.map((point) => (
-              <Card key={point.title}>
-                <CardHeader>
-                  <point.icon className="size-5 text-foreground" aria-hidden="true" />
-                  <CardTitle>{point.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm leading-relaxed text-muted-foreground">{point.body}</p>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="flex flex-col gap-5 max-w-[64ch] text-base leading-relaxed text-[var(--muted-foreground)] md:text-lg">
+            <p>
+              Every vendor source is polled on a schedule. GitHub releases, hosted changelog pages, RSS feeds, docs surfaces, product blogs. We fetch the full HTML because vendors edit posts after publishing, and the diff is sometimes the story.
+            </p>
+            <p>
+              Each entry is parsed and normalized into the six-field record. A rules-based classifier tags it with categories, affected stack, and audience. A signal score weighs category severity, source authority, freshness, and evidence. We chose rules over an LLM because we want every score to be reproducible and arguable.
+            </p>
+            <p>
+              Low-confidence candidates wait in a human review queue. Everything else publishes automatically with a full provenance trail. We would rather be slightly slow than confidently wrong.
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="border-t border-border px-4 py-16 sm:px-6 md:py-20">
-        <div className="vw-shell grid gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
-          <div className="flex flex-col gap-4">
-            <p className="vw-kicker">How to use it</p>
-            <h2 className="vw-title text-balance text-3xl md:text-4xl">
-              Scan first. Open the source when the update matters.
+      <section className="border-t border-[var(--border)] px-4 py-16 sm:px-6 md:py-20">
+        <div className="vw-shell">
+          <div className="flex flex-col gap-3 max-w-[58rem]">
+            <p className="font-mono text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
+              Boundaries
+            </p>
+            <h2 className="vw-title text-balance text-3xl sm:text-4xl">
+              What it is. What it is not.
             </h2>
-            <p className="vw-copy text-base">
-              Version Watch is meant to be a starting point, not the final word. It helps you find the
-              updates worth reading, then sends you straight to the original source for the full detail.
-            </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            {TRUST_POINTS.map((item) => (
-              <Card key={item}>
-                <CardContent className="flex gap-3 pt-6">
-                  <ShieldCheck className="mt-0.5 size-4 shrink-0 text-foreground" aria-hidden="true" />
-                  <p className="text-sm leading-relaxed text-muted-foreground">{item}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="border-t border-border px-4 py-16 sm:px-6 md:py-20">
-        <div className="vw-shell">
-          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-            <div className="flex max-w-2xl flex-col gap-4">
-              <p className="vw-kicker">Where it helps</p>
-              <h2 className="vw-title text-balance text-3xl md:text-4xl">
-                A practical feed for day-to-day developer awareness.
-              </h2>
-            </div>
-            <p className="vw-copy max-w-[44ch] text-sm md:text-base">
-              Use it when you want context fast, without turning changelog review into a separate job.
-            </p>
-          </div>
-
-          <div className="mt-8 flex flex-wrap gap-2">
-            {USE_CASES.map((item) => (
-              <Badge key={item} variant="outline" className="px-3 py-1 text-sm">
-                {item}
-              </Badge>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="border-t border-border px-4 py-16 sm:px-6 md:py-20">
-        <div className="vw-shell">
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
             {PRODUCT_SHAPE.map((group) => (
-              <Card key={group.label}>
-                <CardHeader>
-                  <CardTitle>{group.label}</CardTitle>
-                  <CardDescription>
-                    {group.label === "It is"
-                      ? "The product promise in plain language."
-                      : "The boundaries that keep the feed focused."}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ul className="flex flex-col gap-3">
-                    {group.items.map((item) => (
-                      <li key={item} className="flex gap-3 text-sm leading-relaxed text-muted-foreground">
-                        <span className="mt-2 size-1.5 shrink-0 rounded-full bg-foreground" aria-hidden="true" />
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+              <div key={group.label} className="vw-panel p-6">
+                <p className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--foreground)]">
+                  {group.label}
+                </p>
+                <ul role="list" className="mt-4 flex flex-col gap-3">
+                  {group.items.map((item) => (
+                    <li
+                      key={item}
+                      className="flex gap-3 text-sm leading-relaxed text-[var(--muted-foreground)]"
+                    >
+                      <span
+                        className="mt-2 size-1.5 shrink-0 rounded-full bg-[var(--foreground)]"
+                        aria-hidden="true"
+                      />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ))}
-          </div>
-
-          <div className="mt-10 flex flex-wrap gap-3">
-            <Button asChild>
-              <Link href="/">
-                See latest updates
-                <ArrowRight data-icon="inline-end" />
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/vendors">View vendor directory</Link>
-            </Button>
           </div>
         </div>
       </section>
-    </main>
-  );
-}
 
-function SampleRow({
-  icon: Icon,
-  label,
-  title,
-  detail,
-}: {
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  label: string;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <div className="grid gap-3 sm:grid-cols-[2.25rem_1fr]">
-      <span className="flex size-9 items-center justify-center rounded-md border border-border bg-muted">
-        <Icon className="size-4 text-foreground" aria-hidden="true" />
-      </span>
-      <div className="flex flex-col gap-1.5">
-        <p className="font-mono text-[0.6875rem] uppercase tracking-wider text-muted-foreground">
-          {label}
-        </p>
-        <p className="font-medium text-foreground">{title}</p>
-        <p className="text-sm leading-relaxed text-muted-foreground">{detail}</p>
-      </div>
-    </div>
+      <section className="border-t border-[var(--border)] px-4 py-16 sm:px-6 md:py-20">
+        <div className="vw-shell grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:gap-16">
+          <div className="flex flex-col gap-3">
+            <p className="font-mono text-xs uppercase tracking-wider text-[var(--muted-foreground)]">
+              Open source
+            </p>
+            <h2 className="vw-title text-balance text-3xl sm:text-4xl">
+              Public, free, built in the open.
+            </h2>
+          </div>
+          <div className="flex flex-col gap-5 max-w-[64ch] text-base leading-relaxed text-[var(--muted-foreground)] md:text-lg">
+            <p>
+              Version Watch is open. The repo is public on GitHub. Vendor suggestions, signal corrections, and pull requests are welcome through GitHub issues or the feedback form on this site.
+            </p>
+            <p>
+              Built and maintained by Parris Digital. No paywall, no team plan, no premium tier. The same feed that humans see is the same feed agents read.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Button asChild variant="outline">
+                <a href={REPO_URL} target="_blank" rel="noreferrer">
+                  <GithubMark className="size-4" />
+                  View on GitHub
+                </a>
+              </Button>
+              <Button asChild variant="ghost">
+                <Link href="/feedback">Suggest a vendor</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <SiteFooter />
+    </main>
   );
 }

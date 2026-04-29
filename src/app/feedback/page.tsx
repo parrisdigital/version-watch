@@ -25,8 +25,8 @@ export default async function FeedbackPage({
             Help tune the feed.
           </h1>
           <p className="vw-copy mt-5 max-w-[62ch] text-pretty text-lg">
-            Report a missing changelog, suggest a vendor, flag an incorrect summary, or tell me where
-            the signal ranking feels off.
+            Report a bug, flag an incorrect summary, suggest a vendor, or tell me where the signal
+            ranking feels off. Identity is optional, used only if I need to follow up.
           </p>
 
           <div className="mt-8">

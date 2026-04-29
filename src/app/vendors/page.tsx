@@ -1,19 +1,12 @@
+import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
-import { VendorGrid } from "@/components/vendor-grid";
+import { VendorDirectory } from "@/components/vendor-directory";
 import { getVendors } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
-const vendorNameCollator = new Intl.Collator("en", {
-  sensitivity: "base",
-  numeric: true,
-});
-
 export default async function VendorsPage() {
   const vendors = await getVendors();
-  const alphabeticalVendors = vendors
-    .slice()
-    .sort((a, b) => vendorNameCollator.compare(a.name, b.name) || a.slug.localeCompare(b.slug));
   const totalSources = vendors.reduce((sum, vendor) => sum + vendor.sources.length, 0);
 
   return (
@@ -27,17 +20,19 @@ export default async function VendorsPage() {
             The platforms Version Watch watches.
           </h1>
           <p className="vw-copy mt-6 max-w-[68ch] text-lg">
-            {vendors.length} vendors · {totalSources} official release surfaces. Each vendor page collects the
-            most important recent changes with the source attached.
+            {vendors.length} vendors, {totalSources} official release surfaces. Filter by name, browse by
+            category, or open any vendor for the full feed of recent changes.
           </p>
         </div>
       </section>
 
-      <section className="px-4 pb-20 pt-8 sm:px-6">
+      <section className="px-4 pb-20 pt-4 sm:px-6 md:pt-8">
         <div className="vw-shell">
-          <VendorGrid items={alphabeticalVendors} />
+          <VendorDirectory vendors={vendors} />
         </div>
       </section>
+
+      <SiteFooter />
     </main>
   );
 }
