@@ -2,12 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, formatDistanceToNowStrict } from "date-fns";
 
+import { EventActions } from "@/components/event-actions";
 import { SeverityPill } from "@/components/severity-pill";
+import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { RelevanceSignalForm } from "@/components/relevance-signal-form";
 import { VendorMark } from "@/components/vendor-mark";
 import { deriveSignalMetadata, releaseClassLabel } from "@/lib/classification/signal";
-import { getEventBySlug } from "@/lib/site-data";
+import { getEventBySlug, getEventsForVendor } from "@/lib/site-data";
 import type { MockEvent } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +64,28 @@ function buildSearchBackHref(searchParams: EventSearchParams) {
   return query ? `/search?${query}` : "/search";
 }
 
+function buildBaseUrl() {
+  const fromEnv =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.SITE_URL ||
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL;
+  if (!fromEnv) return "https://versionwatch.dev";
+  return /^https?:\/\//i.test(fromEnv) ? fromEnv.replace(/\/$/, "") : `https://${fromEnv}`;
+}
+
+function buildCitation(title: string, summary: string, sourceUrl: string, versionWatchUrl: string) {
+  const cleanTitle = title.replace(/\s+/g, " ").trim();
+  const cleanSummary = summary.replace(/\s+/g, " ").trim();
+  return [
+    `[${cleanTitle}](${sourceUrl})`,
+    "",
+    cleanSummary,
+    "",
+    `(via Version Watch: ${versionWatchUrl})`,
+  ].join("\n");
+}
+
 type EventSearchParams = {
   fromVendor?: string;
   fromSearch?: string;
@@ -112,7 +136,26 @@ export default async function EventPage({
       : fromVendor === event.vendorSlug
         ? `/vendors/${event.vendorSlug}`
         : "/";
+  const backLabel =
+    fromSearch === "true"
+      ? "Back to search"
+      : fromVendor === event.vendorSlug
+        ? `Back to ${event.vendorName}`
+        : "Back to home";
   const feedbackHref = `/feedback?type=incorrect_summary&url=${encodeURIComponent(`/events/${event.slug}`)}`;
+
+  const vendorEvents = await getEventsForVendor(event.vendorSlug);
+  const currentIndex = vendorEvents.findIndex((entry) => entry.slug === event.slug);
+  const newer = currentIndex > 0 ? vendorEvents[currentIndex - 1] : null;
+  const older =
+    currentIndex >= 0 && currentIndex < vendorEvents.length - 1
+      ? vendorEvents[currentIndex + 1]
+      : null;
+
+  const baseUrl = buildBaseUrl();
+  const versionWatchUrl = `${baseUrl}/events/${event.slug}`;
+  const jsonUrl = `/api/v1/updates/${event.slug}`;
+  const citation = buildCitation(displayTitle, event.summary, event.sourceUrl, versionWatchUrl);
 
   return (
     <main className="vw-page">
@@ -124,10 +167,10 @@ export default async function EventPage({
             href={backHref}
             className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
           >
-            ← Back to feed
+            ← {backLabel}
           </Link>
 
-          {/* Editorial vendor identity — large mark, confident type, metadata rail on the right */}
+          {/* Editorial vendor identity */}
           <div className="mt-8 grid gap-6 border-b border-[var(--color-line)] pb-8 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-8">
             <Link
               href={`/vendors/${event.vendorSlug}`}
@@ -220,6 +263,7 @@ export default async function EventPage({
               <Link href={feedbackHref} className="vw-button vw-button-ghost">
                 Report this update
               </Link>
+              <EventActions citation={citation} jsonUrl={jsonUrl} />
             </div>
           </div>
 
@@ -243,8 +287,48 @@ export default async function EventPage({
           </div>
 
           <RelevanceSignalForm eventId={event.slug} />
+
+          {newer || older ? (
+            <nav
+              aria-label={`More from ${event.vendorName}`}
+              className="mt-12 grid gap-3 border-t border-[var(--color-line)] pt-6 md:grid-cols-2 md:gap-6"
+            >
+              <div>
+                {newer ? (
+                  <Link
+                    href={`/events/${newer.slug}?fromVendor=${event.vendorSlug}`}
+                    className="group flex flex-col gap-1 rounded-md p-3 transition-colors hover:bg-[var(--color-surface-raised)]"
+                  >
+                    <span className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)]">
+                      ← Newer from {event.vendorName}
+                    </span>
+                    <span className="text-sm text-[var(--color-ink)] transition-colors group-hover:text-[var(--color-signal)]">
+                      {newer.title}
+                    </span>
+                  </Link>
+                ) : null}
+              </div>
+              <div className="md:text-right">
+                {older ? (
+                  <Link
+                    href={`/events/${older.slug}?fromVendor=${event.vendorSlug}`}
+                    className="group flex flex-col gap-1 rounded-md p-3 transition-colors hover:bg-[var(--color-surface-raised)] md:items-end"
+                  >
+                    <span className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)]">
+                      Older from {event.vendorName} →
+                    </span>
+                    <span className="text-sm text-[var(--color-ink)] transition-colors group-hover:text-[var(--color-signal)]">
+                      {older.title}
+                    </span>
+                  </Link>
+                ) : null}
+              </div>
+            </nav>
+          ) : null}
         </div>
       </section>
+
+      <SiteFooter />
     </main>
   );
 }
