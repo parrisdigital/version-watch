@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test("vendor page renders official source links", async ({ page }) => {
+test("vendor page renders the reading-from panel and source links", async ({ page }) => {
   await page.goto("/vendors/vercel");
 
   await expect(page.getByRole("heading", { level: 1, name: "Vercel" })).toBeVisible();
-  await expect(page.getByText(/Official Sources/i).first()).toBeVisible();
+  await expect(page.getByText(/Reading from/i).first()).toBeVisible();
 });
 
 test("vendor event lists are newest first across vendor profiles", async ({ page }) => {

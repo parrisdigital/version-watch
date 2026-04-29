@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { format } from "date-fns";
-import { ArrowDown, ArrowRight, Search as SearchIcon } from "lucide-react";
+import { ArrowDown, Search as SearchIcon } from "lucide-react";
 
 import { FreshnessSummaryBadge } from "@/components/freshness-summary";
 import { Button } from "@/components/ui/button";
@@ -9,23 +8,14 @@ import type { FreshnessSummary } from "@/lib/site-data";
 
 type HeroSectionProps = {
   vendorCount: number;
-  lastPublishedAt?: string;
   freshnessSummary?: FreshnessSummary;
 };
 
 /**
- * Full-viewport scrolling hero.
- *
- * Shader occupies the full hero; content is vertically centered with a scroll
- * affordance at the bottom. In dark mode a subtle blue "splash" ring sits
- * around the primary CTA — that's the only place accent chroma enters the
- * hero so it stays restrained.
+ * Cinematic hero. Single primary CTA, freshness chip promoted to live element.
+ * Subhead names three concrete vendors instead of describing the product.
  */
-export function HeroSection({ vendorCount, lastPublishedAt, freshnessSummary }: HeroSectionProps) {
-  const lastUpdatedLabel = lastPublishedAt
-    ? format(new Date(lastPublishedAt), "MMM d · HH:mm 'UTC'")
-    : "just now";
-
+export function HeroSection({ vendorCount, freshnessSummary }: HeroSectionProps) {
   return (
     <section className="relative isolate flex min-h-dvh w-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
@@ -34,51 +24,33 @@ export function HeroSection({ vendorCount, lastPublishedAt, freshnessSummary }: 
       </div>
 
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-center px-4 py-24 sm:px-6 lg:px-8">
-        <div className="flex max-w-full flex-col gap-8">
+        <div className="flex max-w-full flex-col gap-9">
           {freshnessSummary ? (
             <FreshnessSummaryBadge
               summary={freshnessSummary}
+              prominent
               className="bg-[var(--hero-chip-background)] text-[var(--hero-chip-foreground)]"
             />
-          ) : (
-            <p className="inline-flex w-fit items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--hero-chip-background)] px-3 py-1 text-xs text-[var(--hero-chip-foreground)] backdrop-blur-md">
-              <span
-                className="size-1.5 rounded-full bg-[var(--splash)] shadow-[0_0_12px_var(--splash)]"
-                aria-hidden="true"
-              />
-              <span className="tabular-nums">
-                Ingesting {vendorCount} platforms · Last update {lastUpdatedLabel}
-              </span>
-            </p>
-          )}
+          ) : null}
 
           <h1 className="max-w-[20ch] text-balance text-5xl font-semibold tracking-tight text-[var(--hero-foreground)] sm:text-6xl lg:text-7xl xl:text-8xl">
             Every platform change, ranked. Source attached.
           </h1>
 
           <p className="max-w-[58ch] text-pretty text-lg font-medium leading-relaxed text-[var(--hero-copy)] sm:text-xl">
-            Version Watch watches the official changelogs, release notes, and docs pages of the
-            developer platforms your stack actually runs on — OpenAI, Stripe, Vercel, Cloudflare,
-            GitHub, Apple, and more — then compresses each update into one decision-ready record
-            with the original source one click away.
+            OpenAI ships an API change. Stripe writes a blog post. Apple drops a PDF. Version Watch reads them all, ranks what matters, and keeps the source one click away.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button asChild size="lg" className="vw-hero-primary-cta">
               <Link href="/search">
                 <SearchIcon className="size-4" aria-hidden="true" />
-                Search the feed
+                Open the feed
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/vendors">
-                Browse {vendorCount} vendors
-                <ArrowRight className="size-4" aria-hidden="true" />
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="ghost">
-              <Link href="#how-it-works">How it works</Link>
-            </Button>
+            <p className="font-mono text-xs uppercase tracking-wider text-[var(--hero-muted)]">
+              {vendorCount} platforms tracked
+            </p>
           </div>
         </div>
       </div>

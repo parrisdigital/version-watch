@@ -3,12 +3,13 @@ import { expect, test } from "@playwright/test";
 test("event pages opened from search return to the active search feed", async ({ page }) => {
   await page.goto("/search?vendor=stripe");
 
-  const eventLink = page.getByRole("link", { name: "Open event page" }).first();
-  await expect(eventLink).toHaveAttribute("href", /fromSearch=true/);
+  // Result rows render as anchors with href starting with /events/.
+  const firstResult = page.locator('a[href^="/events/"]').first();
+  await expect(firstResult).toHaveAttribute("href", /fromSearch=true/);
 
-  await eventLink.click();
+  await firstResult.click();
 
-  await expect(page.getByRole("link", { name: /Back to feed/i })).toHaveAttribute(
+  await expect(page.getByRole("link", { name: /Back to search/i })).toHaveAttribute(
     "href",
     "/search?vendor=stripe",
   );
@@ -32,5 +33,7 @@ test("search filter controls stay compact and update the query string", async ({
 
   await expect(page).toHaveURL(/vendor=openai/);
   await expect(page).toHaveURL(/importance=critical/);
-  await expect(page.getByRole("button", { name: /Signal Critical/i })).toBeVisible();
+
+  // Active filter chips now have explicit aria-labels for accessibility.
+  await expect(page.getByRole("button", { name: /Clear Signal: Critical/i })).toBeVisible();
 });

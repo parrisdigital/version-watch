@@ -1,14 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { format, formatDistanceToNowStrict } from "date-fns";
-import { startTransition, useDeferredValue, useMemo, useState } from "react";
+import { formatDistanceToNowStrict } from "date-fns";
+import {
+  startTransition,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Check, ChevronDown, Search as SearchIcon, SlidersHorizontal, X } from "lucide-react";
+import { Check, ChevronDown, Search as SearchIcon, X } from "lucide-react";
 
-import { EventCard } from "@/components/event-card";
-import { FreshnessSummaryBadge } from "@/components/freshness-summary";
-import { SeverityPill } from "@/components/severity-pill";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,15 +26,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { VendorMark } from "@/components/vendor-mark";
-import { filterEvents, getSearchFacets, type SearchFilters } from "@/lib/search/filter-events";
-import type { ImportanceBand, VendorRecord } from "@/lib/mock-data";
-import type { FreshnessSummary, SiteEvent } from "@/lib/site-data";
+import { filterEvents, getSearchFacets, type SearchFilters, type SinceWindow } from "@/lib/search/filter-events";
+import type { ImportanceBand, SourceType, VendorRecord } from "@/lib/mock-data";
+import type { SiteEvent } from "@/lib/site-data";
 import { cn } from "@/lib/utils";
 
 type SearchExplorerProps = {
   events: SiteEvent[];
   vendors: VendorRecord[];
-  freshnessSummary?: FreshnessSummary;
   initialFilters: SearchFilters;
 };
 
@@ -51,12 +54,36 @@ const ALL_FILTER_VALUE = "__all";
 const importanceOrder: ImportanceBand[] = ["critical", "high", "medium", "low"];
 const filterLabelCollator = new Intl.Collator("en", { numeric: true, sensitivity: "base" });
 
+const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
+  github_release: "GitHub release",
+  changelog_page: "Changelog",
+  docs_page: "Docs",
+  blog: "Blog",
+  rss: "RSS",
+};
+
+const SINCE_LABEL: Record<SinceWindow, string> = {
+  "": "All time",
+  "7d": "Last 7 days",
+  "30d": "Last 30 days",
+  "90d": "Last 90 days",
+};
+const SINCE_OPTIONS: SinceWindow[] = ["", "7d", "30d", "90d"];
+
+const SEVERITY_DOT: Record<ImportanceBand, string> = {
+  critical: "bg-[var(--color-critical)]",
+  high: "bg-[var(--color-high)]",
+  medium: "bg-[var(--color-medium)]",
+  low: "bg-[var(--muted-foreground)]",
+};
+
 function toQueryString(filters: SearchFilters) {
   const params = new URLSearchParams();
   if (filters.query?.trim()) params.set("query", filters.query.trim());
   if (filters.vendor) params.set("vendor", filters.vendor);
-  if (filters.category) params.set("category", filters.category);
-  if (filters.stack) params.set("stack", filters.stack);
+  if (filters.topic) params.set("topic", filters.topic);
+  if (filters.since) params.set("since", filters.since);
+  if (filters.sourceType) params.set("sourceType", filters.sourceType);
   if (filters.importance) params.set("importance", filters.importance);
   return params.toString();
 }
@@ -74,25 +101,7 @@ function importanceRank(value: string) {
   return index === -1 ? importanceOrder.length : index;
 }
 
-function StatCard({ label, value, detail, accent }: { label: string; value: string; detail: string; accent?: boolean }) {
-  return (
-    <div className="bg-[var(--color-canvas)] p-4">
-      <p className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)]">
-        {label}
-      </p>
-      <p
-        className={`mt-2 font-[var(--font-display)] text-2xl font-semibold tracking-tight tabular-nums ${
-          accent ? "text-[var(--color-signal)]" : "text-[var(--color-ink)]"
-        }`}
-      >
-        {value}
-      </p>
-      <p className="mt-1 text-xs text-[var(--color-ink-muted)]">{detail}</p>
-    </div>
-  );
-}
-
-function FilterButtonContent({
+function FilterPillContent({
   title,
   selectedLabel,
   placeholder,
@@ -105,15 +114,13 @@ function FilterButtonContent({
 }) {
   return (
     <>
-      <span className="grid min-w-0 flex-1 gap-0.5 text-left">
-        <span className="font-[var(--font-mono)] text-[0.625rem] uppercase tracking-wider text-muted-foreground">
-          {title}
-        </span>
-        <span className={cn("truncate text-sm", active ? "text-foreground" : "text-muted-foreground")}>
-          {selectedLabel || placeholder}
-        </span>
+      <span className="font-mono text-[0.625rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+        {title}
       </span>
-      <ChevronDown aria-hidden="true" className="opacity-60" />
+      <span className={cn("text-sm", active ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]")}>
+        {selectedLabel || placeholder}
+      </span>
+      <ChevronDown aria-hidden="true" className="size-3 opacity-60" />
     </>
   );
 }
@@ -124,35 +131,39 @@ function DropdownFilter({
   options,
   placeholder,
   onSelect,
+  formatLabel,
 }: {
   title: string;
   value: string;
   options: FilterOption[];
   placeholder: string;
   onSelect: (nextValue: string) => void;
+  formatLabel?: (value: string) => string;
 }) {
-  const selectedLabel = getOptionLabel(options, value);
+  const selectedLabel = formatLabel
+    ? value
+      ? formatLabel(value)
+      : ""
+    : getOptionLabel(options, value);
   const active = Boolean(value);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
+        <button
           type="button"
-          variant="outline"
           aria-label={`${title}: ${selectedLabel || placeholder}`}
           className={cn(
-            "h-auto min-h-11 w-full justify-between px-3 py-2",
-            active && "border-[var(--border-strong)] bg-muted text-foreground",
+            "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 transition-colors",
+            active
+              ? "border-[var(--border-strong)] bg-[var(--muted)]"
+              : "border-[var(--border)] bg-[var(--background)] hover:border-[var(--border-strong)]",
           )}
         >
-          <FilterButtonContent title={title} selectedLabel={selectedLabel} placeholder={placeholder} active={active} />
-        </Button>
+          <FilterPillContent title={title} selectedLabel={selectedLabel} placeholder={placeholder} active={active} />
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        className="max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto"
-      >
+      <DropdownMenuContent align="start" className="max-h-[24rem] min-w-[14rem] overflow-y-auto">
         <DropdownMenuLabel>{title}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuRadioGroup
@@ -161,24 +172,61 @@ function DropdownFilter({
         >
           <DropdownMenuGroup>
             <DropdownMenuRadioItem value={ALL_FILTER_VALUE}>
-              <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                <span className="truncate">All {title.toLowerCase()}</span>
-                <span className="font-[var(--font-mono)] text-[0.6875rem] tabular-nums text-muted-foreground">
+              <span className="flex flex-1 items-center justify-between gap-3">
+                <span>All {title.toLowerCase()}</span>
+                <span className="font-mono text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]">
                   {totalOptionCount(options)}
                 </span>
               </span>
             </DropdownMenuRadioItem>
             {options.map((option) => (
               <DropdownMenuRadioItem key={option.value} value={option.value}>
-                <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                  <span className="truncate">{option.label}</span>
-                  <span className="font-[var(--font-mono)] text-[0.6875rem] tabular-nums text-muted-foreground">
+                <span className="flex flex-1 items-center justify-between gap-3">
+                  <span className="truncate">{formatLabel ? formatLabel(option.value) : option.label}</span>
+                  <span className="font-mono text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]">
                     {option.count}
                   </span>
                 </span>
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuGroup>
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function SinceFilter({ value, onSelect }: { value: SinceWindow; onSelect: (next: SinceWindow) => void }) {
+  const active = Boolean(value);
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Since: ${SINCE_LABEL[value]}`}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 transition-colors",
+            active
+              ? "border-[var(--border-strong)] bg-[var(--muted)]"
+              : "border-[var(--border)] bg-[var(--background)] hover:border-[var(--border-strong)]",
+          )}
+        >
+          <FilterPillContent title="Since" selectedLabel={SINCE_LABEL[value]} placeholder="All time" active={active} />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-[12rem]">
+        <DropdownMenuLabel>Since</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuRadioGroup
+          value={value || ALL_FILTER_VALUE}
+          onValueChange={(next) => onSelect(next === ALL_FILTER_VALUE ? "" : (next as SinceWindow))}
+        >
+          {SINCE_OPTIONS.map((option) => (
+            <DropdownMenuRadioItem key={option || ALL_FILTER_VALUE} value={option || ALL_FILTER_VALUE}>
+              {SINCE_LABEL[option]}
+            </DropdownMenuRadioItem>
+          ))}
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -196,12 +244,16 @@ function VendorFilter({
 }) {
   const [open, setOpen] = useState(false);
   const [vendorQuery, setVendorQuery] = useState("");
+  const listboxId = "vendor-filter-listbox";
   const selectedLabel = getOptionLabel(options, value);
   const active = Boolean(value);
   const normalizedVendorQuery = vendorQuery.trim().toLowerCase();
   const filteredOptions = options.filter((option) => {
     if (!normalizedVendorQuery) return true;
-    return option.label.toLowerCase().includes(normalizedVendorQuery) || option.value.includes(normalizedVendorQuery);
+    return (
+      option.label.toLowerCase().includes(normalizedVendorQuery) ||
+      option.value.includes(normalizedVendorQuery)
+    );
   });
 
   function chooseVendor(nextValue: string) {
@@ -219,49 +271,56 @@ function VendorFilter({
       }}
     >
       <PopoverTrigger asChild>
-        <Button
+        <button
           type="button"
-          variant="outline"
           role="combobox"
           aria-expanded={open}
+          aria-controls={listboxId}
           aria-label={`Vendor: ${selectedLabel || "All vendors"}`}
           className={cn(
-            "h-auto min-h-11 w-full justify-between px-3 py-2",
-            active && "border-[var(--border-strong)] bg-muted text-foreground",
+            "inline-flex items-center gap-2 rounded-md border px-3 py-1.5 transition-colors",
+            active
+              ? "border-[var(--border-strong)] bg-[var(--muted)]"
+              : "border-[var(--border)] bg-[var(--background)] hover:border-[var(--border-strong)]",
           )}
         >
-          <FilterButtonContent title="Vendor" selectedLabel={selectedLabel} placeholder="All vendors" active={active} />
-        </Button>
+          <FilterPillContent title="Vendor" selectedLabel={selectedLabel} placeholder="All vendors" active={active} />
+        </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] overflow-hidden p-0">
-        <div className="border-b border-border p-2">
+      <PopoverContent align="start" className="w-72 overflow-hidden p-0">
+        <div className="border-b border-[var(--border)] p-2">
           <label className="relative block">
             <span className="sr-only">Search vendors</span>
             <SearchIcon
               aria-hidden="true"
-              className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+              className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[var(--muted-foreground)]"
             />
             <input
               value={vendorQuery}
               onChange={(event) => setVendorQuery(event.target.value)}
-              placeholder="Search vendors"
+              placeholder="Filter vendors"
               className="vw-input h-9 py-2 pl-8 text-sm"
             />
           </label>
         </div>
-        <div className="max-h-[20rem] overflow-y-auto p-1" role="listbox" aria-label="Vendor filter">
+        <div
+          id={listboxId}
+          className="max-h-[20rem] overflow-y-auto p-1"
+          role="listbox"
+          aria-label="Vendor filter"
+        >
           <button
             type="button"
             role="option"
             aria-selected={!value}
             onClick={() => chooseVendor("")}
             className={cn(
-              "flex w-full items-center justify-between gap-3 rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-              !value && "bg-accent text-accent-foreground",
+              "flex w-full items-center justify-between gap-3 rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-[var(--accent)]",
+              !value && "bg-[var(--accent)]",
             )}
           >
             <span className="min-w-0 truncate">All vendors</span>
-            <span className="font-[var(--font-mono)] text-[0.6875rem] tabular-nums text-muted-foreground">
+            <span className="font-mono text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]">
               {totalOptionCount(options)}
             </span>
           </button>
@@ -276,21 +335,21 @@ function VendorFilter({
                   aria-selected={isSelected}
                   onClick={() => chooseVendor(option.value)}
                   className={cn(
-                    "flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-accent hover:text-accent-foreground",
-                    isSelected && "bg-accent text-accent-foreground",
+                    "flex w-full items-center gap-2 rounded-sm px-2 py-2 text-left text-sm transition-colors hover:bg-[var(--accent)]",
+                    isSelected && "bg-[var(--accent)]",
                   )}
                 >
                   <VendorMark vendorSlug={option.value} vendorName={option.label} size="sm" />
                   <span className="min-w-0 flex-1 truncate">{option.label}</span>
-                  <span className="font-[var(--font-mono)] text-[0.6875rem] tabular-nums text-muted-foreground">
+                  <span className="font-mono text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]">
                     {option.count}
                   </span>
-                  {isSelected ? <Check aria-hidden="true" className="text-foreground" /> : null}
+                  {isSelected ? <Check aria-hidden="true" className="size-3.5" /> : null}
                 </button>
               );
             })
           ) : (
-            <p className="px-2 py-6 text-center text-sm text-muted-foreground">No vendors found.</p>
+            <p className="px-2 py-6 text-center text-sm text-[var(--muted-foreground)]">No vendors.</p>
           )}
         </div>
       </PopoverContent>
@@ -308,23 +367,24 @@ function ActiveFilterChips({
   if (!filters.length) return null;
 
   return (
-    <div className="mt-4 flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {filters.map((filter) => (
         <button
           key={filter.key}
           type="button"
           onClick={filter.onClear}
-          className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:border-[var(--border-strong)] hover:text-foreground"
+          aria-label={`Clear ${filter.label}: ${filter.value}`}
+          className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--background)] px-2.5 py-1 text-xs text-[var(--muted-foreground)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
         >
-          <span className="font-[var(--font-mono)] uppercase tracking-wider">{filter.label}</span>
-          <span className="max-w-48 truncate text-foreground">{filter.value}</span>
+          <span className="font-mono uppercase tracking-wider">{filter.label}</span>
+          <span className="max-w-48 truncate text-[var(--foreground)]">{filter.value}</span>
           <X aria-hidden="true" className="size-3" />
         </button>
       ))}
       <button
         type="button"
         onClick={onClearAll}
-        className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
+        className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
       >
         Clear all
       </button>
@@ -332,17 +392,58 @@ function ActiveFilterChips({
   );
 }
 
-export function SearchExplorer({ events, vendors, freshnessSummary, initialFilters }: SearchExplorerProps) {
+function ResultRow({ event, href }: { event: SiteEvent; href: string }) {
+  const relative = formatDistanceToNowStrict(new Date(event.publishedAt), { addSuffix: true });
+  return (
+    <li>
+      <Link
+        href={href}
+        className="group flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-md border border-[var(--color-line-quiet)] bg-[var(--card)] px-4 py-3 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--color-surface-raised)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]"
+      >
+        <VendorMark vendorSlug={event.vendorSlug} vendorName={event.vendorName} size="sm" />
+        <span className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+          {event.vendorName}
+        </span>
+        <span
+          className={cn("size-1.5 rounded-full", SEVERITY_DOT[event.importanceBand])}
+          aria-label={`${event.importanceBand} importance`}
+        />
+        <span className="min-w-0 flex-1 truncate text-sm text-[var(--foreground)] transition-colors group-hover:text-[var(--color-signal)]">
+          {event.title}
+        </span>
+        <span className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+          {SOURCE_TYPE_LABEL[event.sourceType]}
+        </span>
+        <span
+          className="font-mono text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]"
+          title={new Date(event.publishedAt).toLocaleString()}
+        >
+          {relative}
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+export function SearchExplorer({ events, vendors, initialFilters }: SearchExplorerProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState(initialFilters.query ?? "");
   const [vendor, setVendor] = useState(initialFilters.vendor ?? "");
-  const [category, setCategory] = useState(initialFilters.category ?? "");
-  const [stack, setStack] = useState(initialFilters.stack ?? "");
+  const [topic, setTopic] = useState(initialFilters.topic ?? initialFilters.category ?? initialFilters.stack ?? "");
+  const [since, setSince] = useState<SinceWindow>(initialFilters.since ?? "");
+  const [sourceType, setSourceType] = useState<SourceType | "">(initialFilters.sourceType ?? "");
   const [importance, setImportance] = useState<ImportanceBand | "">(initialFilters.importance ?? "");
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+
   const deferredQuery = useDeferredValue(query);
   const facets = useMemo(() => getSearchFacets(events), [events]);
-  const vendorNameBySlug = useMemo(() => new Map(vendors.map((item) => [item.slug, item.name])), [vendors]);
+  const vendorNameBySlug = useMemo(
+    () => new Map(vendors.map((item) => [item.slug, item.name])),
+    [vendors],
+  );
   const vendorOptions = useMemo(
     () =>
       facets.vendors
@@ -350,7 +451,9 @@ export function SearchExplorer({ events, vendors, freshnessSummary, initialFilte
           ...facet,
           label: vendorNameBySlug.get(facet.value) ?? facet.label,
         }))
-        .sort((a, b) => filterLabelCollator.compare(a.label, b.label) || a.value.localeCompare(b.value)),
+        .sort(
+          (a, b) => filterLabelCollator.compare(a.label, b.label) || a.value.localeCompare(b.value),
+        ),
     [facets.vendors, vendorNameBySlug],
   );
   const importanceOptions = useMemo(
@@ -358,26 +461,48 @@ export function SearchExplorer({ events, vendors, freshnessSummary, initialFilte
       facets.importanceBands
         .slice()
         .sort(
-          (a, b) =>
-            importanceRank(a.value) - importanceRank(b.value) || a.label.localeCompare(b.label),
+          (a, b) => importanceRank(a.value) - importanceRank(b.value) || a.label.localeCompare(b.label),
         ),
     [facets.importanceBands],
   );
-  const filteredEvents = filterEvents(events, {
-    query: deferredQuery,
-    vendor,
-    category,
-    stack,
-    importance,
-  });
-  const featuredEvent = filteredEvents[0] ?? null;
-  const remainingEvents = featuredEvent ? filteredEvents.slice(1) : [];
+  const filteredEvents = useMemo(
+    () =>
+      filterEvents(events, {
+        query: deferredQuery,
+        vendor,
+        topic,
+        since,
+        sourceType,
+        importance,
+      }),
+    [events, deferredQuery, vendor, topic, since, sourceType, importance],
+  );
+
   const queryValue = query.trim();
-  const highSignalCount = filteredEvents.filter((event) => {
-    return event.importanceBand === "critical" || event.importanceBand === "high";
-  }).length;
-  const vendorCount = new Set(filteredEvents.map((event) => event.vendorSlug)).size;
-  const activeFilterCount = [queryValue, vendor, category, stack, importance].filter(Boolean).length;
+  const activeFilterCount = [queryValue, vendor, topic, since, sourceType, importance].filter(Boolean).length;
+  const hasResults = filteredEvents.length > 0;
+
+  // Autofocus the search input on mount.
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  // Global "/" keyboard shortcut focuses the search input.
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      const isTyping =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable;
+      if (isTyping) return;
+      event.preventDefault();
+      inputRef.current?.focus();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   function replaceUrl(nextFilters: SearchFilters) {
     const queryString = toQueryString(nextFilters);
@@ -387,34 +512,68 @@ export function SearchExplorer({ events, vendors, freshnessSummary, initialFilte
     });
   }
 
-  function updateFilters(nextFilters: SearchFilters) {
-    setQuery(nextFilters.query ?? "");
-    setVendor(nextFilters.vendor ?? "");
-    setCategory(nextFilters.category ?? "");
-    setStack(nextFilters.stack ?? "");
-    setImportance(nextFilters.importance ?? "");
-    replaceUrl(nextFilters);
-  }
-
   function patchFilters(patch: Partial<SearchFilters>) {
-    updateFilters({ query, vendor, category, stack, importance, ...patch });
+    const next: SearchFilters = {
+      query,
+      vendor,
+      topic,
+      since,
+      sourceType,
+      importance,
+      ...patch,
+    };
+    setQuery(next.query ?? "");
+    setVendor(next.vendor ?? "");
+    setTopic(next.topic ?? "");
+    setSince((next.since ?? "") as SinceWindow);
+    setSourceType((next.sourceType ?? "") as SourceType | "");
+    setImportance((next.importance ?? "") as ImportanceBand | "");
+    replaceUrl(next);
   }
 
   function clearAll() {
-    updateFilters({ query: "", vendor: "", category: "", stack: "", importance: "" });
+    patchFilters({ query: "", vendor: "", topic: "", since: "", sourceType: "", importance: "" });
   }
 
   function getEventHref(slug: string) {
-    const params = new URLSearchParams(toQueryString({ query, vendor, category, stack, importance }));
+    const params = new URLSearchParams(toQueryString({ query, vendor, topic, since, sourceType, importance }));
     params.set("fromSearch", "true");
     return `/events/${slug}?${params.toString()}`;
   }
 
-  const featuredRelative = featuredEvent
-    ? formatDistanceToNowStrict(new Date(featuredEvent.publishedAt), { addSuffix: true })
-    : null;
+  function focusFirstResult() {
+    const first = listRef.current?.querySelector<HTMLAnchorElement>('a[href]');
+    first?.focus();
+  }
+
+  function onListKeyDown(event: React.KeyboardEvent<HTMLUListElement>) {
+    const links = listRef.current?.querySelectorAll<HTMLAnchorElement>('a[href]');
+    if (!links || links.length === 0) return;
+    const current = document.activeElement as HTMLAnchorElement | null;
+    const currentIndex = current ? Array.from(links).indexOf(current) : -1;
+
+    if (event.key === "j" || event.key === "ArrowDown") {
+      event.preventDefault();
+      const next = currentIndex === -1 ? 0 : Math.min(currentIndex + 1, links.length - 1);
+      links[next]?.focus();
+    } else if (event.key === "k" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const next = currentIndex === -1 ? 0 : Math.max(currentIndex - 1, 0);
+      links[next]?.focus();
+    }
+  }
+
+  function onInputKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusFirstResult();
+    }
+  }
+
   const activeFilters: ActiveFilterChip[] = [
-    queryValue ? { key: "query", label: "Query", value: queryValue, onClear: () => patchFilters({ query: "" }) } : null,
+    queryValue
+      ? { key: "query", label: "Query", value: queryValue, onClear: () => patchFilters({ query: "" }) }
+      : null,
     vendor
       ? {
           key: "vendor",
@@ -423,20 +582,28 @@ export function SearchExplorer({ events, vendors, freshnessSummary, initialFilte
           onClear: () => patchFilters({ vendor: "" }),
         }
       : null,
-    category
+    topic
       ? {
-          key: "category",
-          label: "Category",
-          value: getOptionLabel(facets.categories, category, category),
-          onClear: () => patchFilters({ category: "" }),
+          key: "topic",
+          label: "Topic",
+          value: getOptionLabel(facets.topics, topic, topic),
+          onClear: () => patchFilters({ topic: "" }),
         }
       : null,
-    stack
+    since
       ? {
-          key: "stack",
-          label: "Stack",
-          value: getOptionLabel(facets.stacks, stack, stack),
-          onClear: () => patchFilters({ stack: "" }),
+          key: "since",
+          label: "Since",
+          value: SINCE_LABEL[since],
+          onClear: () => patchFilters({ since: "" }),
+        }
+      : null,
+    sourceType
+      ? {
+          key: "sourceType",
+          label: "Source",
+          value: SOURCE_TYPE_LABEL[sourceType],
+          onClear: () => patchFilters({ sourceType: "" }),
         }
       : null,
     importance
@@ -450,220 +617,153 @@ export function SearchExplorer({ events, vendors, freshnessSummary, initialFilte
   ].filter((filter): filter is ActiveFilterChip => Boolean(filter));
 
   return (
-    <section className="px-4 py-10 sm:px-6 md:py-14">
+    <section className="px-4 pb-20 pt-6 sm:px-6">
       <div className="vw-shell">
-        <div className="border-b border-[var(--color-line)] pb-10">
-          <p className="vw-kicker">Search intelligence</p>
-          <h1 className="vw-display mt-4 max-w-[22ch] text-balance text-4xl sm:text-5xl md:text-6xl">
-            Cut through release surfaces to the changes that actually move a stack.
-          </h1>
-          {freshnessSummary ? (
-            <div className="mt-5">
-              <FreshnessSummaryBadge summary={freshnessSummary} />
-            </div>
-          ) : null}
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <p className="vw-kicker">Search</p>
+          <p className="hidden font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)] md:block">
+            Press <kbd className="rounded border border-[var(--border)] bg-[var(--card)] px-1 py-0.5 font-mono text-[0.625rem] text-[var(--foreground)]">/</kbd> to focus, <kbd className="rounded border border-[var(--border)] bg-[var(--card)] px-1 py-0.5 font-mono text-[0.625rem] text-[var(--foreground)]">↓</kbd> or <kbd className="rounded border border-[var(--border)] bg-[var(--card)] px-1 py-0.5 font-mono text-[0.625rem] text-[var(--foreground)]">j</kbd>/<kbd className="rounded border border-[var(--border)] bg-[var(--card)] px-1 py-0.5 font-mono text-[0.625rem] text-[var(--foreground)]">k</kbd> to navigate
+          </p>
+        </div>
 
-          <div className="mt-8 grid gap-4 lg:grid-cols-[1.3fr_0.7fr] lg:items-end">
-            <div className="vw-panel p-4">
-              <label htmlFor="search-query" className="vw-kicker vw-kicker-muted">
-                Query
-              </label>
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                <input
-                  id="search-query"
-                  name="query"
-                  value={query}
-                  onChange={(event) => patchFilters({ query: event.target.value })}
-                  placeholder="Search vendors, models, payments, CI, auth, mobile…"
-                  className="vw-input vw-input-lg"
-                />
-                <button type="button" onClick={clearAll} className="vw-button vw-button-secondary vw-button-lg">
-                  Reset
-                </button>
-              </div>
-              <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-                {filteredEvents.length} results · {vendorCount || vendors.length} vendors in scope ·{" "}
-                {activeFilterCount} active filter{activeFilterCount === 1 ? "" : "s"}
-              </p>
-              <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
-            </div>
+        <div className="mt-4 grid gap-3">
+          <label className="relative block">
+            <span className="sr-only">Search the feed</span>
+            <SearchIcon
+              aria-hidden="true"
+              className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[var(--muted-foreground)]"
+            />
+            <input
+              ref={inputRef}
+              id="search-query"
+              name="query"
+              type="search"
+              value={query}
+              onChange={(event) => patchFilters({ query: event.target.value })}
+              onKeyDown={onInputKeyDown}
+              placeholder="Search vendors, models, payments, auth, mobile, ci-cd…"
+              autoComplete="off"
+              spellCheck={false}
+              className="vw-input vw-input-lg pl-10 pr-10"
+            />
+            {queryValue ? (
+              <button
+                type="button"
+                onClick={() => patchFilters({ query: "" })}
+                aria-label="Clear query"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+              >
+                <X aria-hidden="true" className="size-4" />
+              </button>
+            ) : null}
+          </label>
 
-            <dl className="grid grid-cols-2 gap-px rounded-md border border-[var(--color-line)] bg-[var(--color-line)]">
-              <StatCard
-                label="In view"
-                value={String(filteredEvents.length)}
-                detail={activeFilterCount ? "Filtered" : "Full feed"}
-              />
-              <StatCard
-                label="High signal"
-                value={String(highSignalCount)}
-                detail="Critical + high"
-                accent
-              />
-              <StatCard label="Vendors" value={String(vendors.length)} detail="Tracked total" />
-              <StatCard
-                label="Latest"
-                value={featuredEvent ? format(new Date(featuredEvent.publishedAt), "MMM d") : "None"}
-                detail={featuredEvent ? featuredEvent.vendorName : "No matches"}
-              />
-            </dl>
+          <div className="flex flex-wrap items-center gap-2">
+            <VendorFilter
+              value={vendor}
+              options={vendorOptions}
+              onSelect={(next) => patchFilters({ vendor: next })}
+            />
+            <DropdownFilter
+              title="Importance"
+              value={importance}
+              options={importanceOptions}
+              placeholder="Any signal"
+              onSelect={(next) => patchFilters({ importance: next as ImportanceBand | "" })}
+            />
+            <DropdownFilter
+              title="Topic"
+              value={topic}
+              options={facets.topics}
+              placeholder="Any topic"
+              onSelect={(next) => patchFilters({ topic: next })}
+            />
+            <SinceFilter value={since} onSelect={(next) => patchFilters({ since: next })} />
+            <DropdownFilter
+              title="Source"
+              value={sourceType}
+              options={facets.sourceTypes}
+              placeholder="Any source"
+              onSelect={(next) => patchFilters({ sourceType: next as SourceType | "" })}
+              formatLabel={(value) => SOURCE_TYPE_LABEL[value as SourceType] ?? value}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--color-line-quiet)] pt-3">
+            <p className="font-mono text-[0.6875rem] uppercase tracking-wider tabular-nums text-[var(--muted-foreground)]">
+              {filteredEvents.length} {filteredEvents.length === 1 ? "result" : "results"}
+              {activeFilterCount > 0 ? ` · ${activeFilterCount} active filter${activeFilterCount === 1 ? "" : "s"}` : ""}
+            </p>
+            <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
           </div>
         </div>
 
-        <div className="mt-8 grid gap-6 xl:grid-cols-[280px_1fr]">
-          <aside className="xl:sticky xl:top-20 xl:self-start">
-            <section className="vw-panel p-4">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="flex items-center gap-2 font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-signal)]">
-                  <SlidersHorizontal aria-hidden="true" className="size-3.5" />
-                  Filters
-                </h2>
-                {activeFilterCount ? (
-                  <button
-                    type="button"
-                    onClick={clearAll}
-                    className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    Reset
-                  </button>
-                ) : null}
-              </div>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <DropdownFilter
-                  title="Importance"
-                  value={importance}
-                  options={importanceOptions}
-                  placeholder="Any signal"
-                  onSelect={(nextValue) => patchFilters({ importance: nextValue as ImportanceBand | "" })}
-                />
-                <VendorFilter
-                  value={vendor}
-                  options={vendorOptions}
-                  onSelect={(nextValue) => patchFilters({ vendor: nextValue })}
-                />
-                <DropdownFilter
-                  title="Category"
-                  value={category}
-                  options={facets.categories}
-                  placeholder="All categories"
-                  onSelect={(nextValue) => patchFilters({ category: nextValue })}
-                />
-                <DropdownFilter
-                  title="Affected stack"
-                  value={stack}
-                  options={facets.stacks}
-                  placeholder="All stacks"
-                  onSelect={(nextValue) => patchFilters({ stack: nextValue })}
-                />
-              </div>
-            </section>
-          </aside>
-
-          <div className="grid gap-4">
-            {featuredEvent ? (
-              <article className="vw-panel-raised p-6 md:p-7">
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="flex items-center gap-2.5">
-                    <VendorMark
-                      vendorSlug={featuredEvent.vendorSlug}
-                      vendorName={featuredEvent.vendorName}
-                      size="sm"
-                    />
-                    <span className="flex flex-col leading-tight">
-                      <span className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-signal)]">
-                        Top match
-                      </span>
-                      <span className="text-sm font-semibold text-[var(--color-ink)]">
-                        {featuredEvent.vendorName}
-                      </span>
-                    </span>
-                  </span>
-                  <span className="ml-auto flex flex-wrap items-center gap-2">
-                    <SeverityPill band={featuredEvent.importanceBand} />
-                    <span className="font-[var(--font-mono)] text-[0.6875rem] tabular-nums uppercase tracking-wider text-[var(--color-ink-muted)]">
-                      {featuredRelative}
-                    </span>
-                    <span className="font-[var(--font-mono)] text-[0.6875rem] tabular-nums text-[var(--color-ink-muted)]">
-                      signal · {featuredEvent.computedScore ?? 0}
-                    </span>
-                  </span>
-                </div>
-                <h2 className="vw-title mt-5 max-w-[28ch] text-balance text-3xl">
-                  {featuredEvent.title}
-                </h2>
-                <p className="vw-copy mt-4 max-w-[66ch] text-pretty text-base md:text-lg">
-                  {featuredEvent.summary}
-                </p>
-                <div className="mt-6 grid gap-3 md:grid-cols-2">
-                  <div className="vw-well p-4">
-                    <p className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)]">
-                      Why it matters
-                    </p>
-                    <p className="mt-2 text-sm leading-relaxed text-[var(--color-ink-soft)]">
-                      {featuredEvent.whyItMatters}
-                    </p>
-                  </div>
-                  <div className="vw-well p-4">
-                    <p className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)]">
-                      Who should care
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {featuredEvent.whoShouldCare.map((role) => (
-                        <span key={role} className="vw-tag vw-tag-mono">
-                          {role}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-6 flex flex-wrap gap-2">
-                  <Link href={getEventHref(featuredEvent.slug)} className="vw-button vw-button-primary">
-                    Open event page
-                  </Link>
-                  <a
-                    href={featuredEvent.sourceUrl}
-                    className="vw-button vw-button-secondary"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Official source
-                  </a>
-                  {featuredEvent.githubUrl ? (
-                    <a
-                      href={featuredEvent.githubUrl}
-                      className="vw-button vw-button-ghost"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      GitHub
-                    </a>
-                  ) : null}
-                </div>
-              </article>
-            ) : (
-              <article className="vw-panel p-8 text-center">
-                <p className="vw-kicker vw-kicker-muted">No matches</p>
-                <h2 className="vw-title mt-3 text-balance text-2xl">
-                  Nothing matches the current filter set.
-                </h2>
-                <p className="vw-copy mx-auto mt-4 max-w-[52ch] text-pretty text-base">
-                  Try removing a facet, broadening the search query, or switching from a specific vendor to an
-                  affected stack like payments, auth, or mobile.
-                </p>
-                <button type="button" onClick={clearAll} className="vw-button vw-button-signal mt-6">
-                  Clear filters
-                </button>
-              </article>
-            )}
-
-            <div className="grid gap-3">
-              {remainingEvents.map((event) => (
-                <EventCard key={event.id} event={event} compact eventHref={getEventHref(event.slug)} />
-              ))}
-            </div>
-          </div>
-        </div>
+        {hasResults ? (
+          <ul
+            ref={listRef}
+            role="list"
+            onKeyDown={onListKeyDown}
+            className="mt-6 grid gap-2"
+          >
+            {filteredEvents.map((event) => (
+              <ResultRow key={event.id} event={event} href={getEventHref(event.slug)} />
+            ))}
+          </ul>
+        ) : (
+          <EmptyState filters={activeFilters} onClearAll={clearAll} />
+        )}
       </div>
     </section>
+  );
+}
+
+function EmptyState({
+  filters,
+  onClearAll,
+}: {
+  filters: ActiveFilterChip[];
+  onClearAll: () => void;
+}) {
+  return (
+    <div className="mt-10 vw-panel p-8 md:p-10">
+      <p className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+        No results
+      </p>
+      <h2 className="vw-title mt-3 text-balance text-2xl">
+        Nothing matches the current filter set.
+      </h2>
+      {filters.length > 0 ? (
+        <>
+          <p className="mt-3 max-w-[58ch] text-base text-[var(--muted-foreground)]">
+            Try removing one filter at a time. The most-restrictive filter is usually the cause.
+          </p>
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {filters.map((filter) => (
+              <button
+                key={filter.key}
+                type="button"
+                onClick={filter.onClear}
+                className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--background)] px-2.5 py-1 text-xs text-[var(--muted-foreground)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+              >
+                <X aria-hidden="true" className="size-3" />
+                <span className="font-mono uppercase tracking-wider">{filter.label}</span>
+                <span className="text-[var(--foreground)]">{filter.value}</span>
+              </button>
+            ))}
+            <Button variant="ghost" size="sm" onClick={onClearAll}>
+              Clear all
+            </Button>
+          </div>
+        </>
+      ) : (
+        <p className="mt-3 max-w-[58ch] text-base text-[var(--muted-foreground)]">
+          The feed is currently empty. Check back soon, or read the latest from the{" "}
+          <Link href="/" className="underline-offset-4 hover:underline">
+            homepage
+          </Link>
+          .
+        </p>
+      )}
+    </div>
   );
 }
