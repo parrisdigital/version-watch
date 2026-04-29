@@ -6,9 +6,12 @@ import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { Menu, Search as SearchIcon, X } from "lucide-react";
 
+import { GithubMark } from "@/components/icons/github-mark";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
+
+const REPO_URL = "https://github.com/parrisdigital/version-watch";
 
 const NAV_LINKS = [
   { href: "/", label: "Latest" },
@@ -122,6 +125,15 @@ export function SiteHeader() {
                 Search feed
               </Link>
             </Button>
+            <a
+              href={REPO_URL}
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Version Watch on GitHub"
+              className="hidden size-9 items-center justify-center rounded-full text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)] lg:inline-flex"
+            >
+              <GithubMark className="size-4" />
+            </a>
             <ThemeToggle className="size-9 rounded-full" />
             <Button
               variant="ghost"

@@ -1,6 +1,9 @@
 import Link from "next/link";
 
+import { GithubMark } from "@/components/icons/github-mark";
 import { Separator } from "@/components/ui/separator";
+
+const REPO_URL = "https://github.com/parrisdigital/version-watch";
 
 const FOOTER_LINKS = [
   { href: "/about", label: "About" },
@@ -34,6 +37,15 @@ export function SiteFooter() {
               ) : null}
             </span>
           ))}
+          <a
+            href={REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Version Watch on GitHub"
+            className="inline-flex items-center justify-center rounded-md p-1.5 text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
+          >
+            <GithubMark className="size-4" />
+          </a>
         </nav>
       </div>
     </footer>
