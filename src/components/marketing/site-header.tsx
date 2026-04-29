@@ -19,7 +19,6 @@ const NAV_LINKS = [
   { href: "/agent-access", label: "API" },
   { href: "/search", label: "Search" },
   { href: "/about", label: "About" },
-  { href: "/feedback", label: "Feedback" },
 ] as const;
 
 function subscribeScroll(callback: () => void) {

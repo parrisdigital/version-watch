@@ -1,6 +1,5 @@
 import { AgentSurfaceSection } from "@/components/marketing/agent-surface-section";
 import { HeroSection } from "@/components/marketing/hero-section";
-import { HowItWorksSection } from "@/components/marketing/how-it-works-section";
 import { LatestUpdatesSection } from "@/components/marketing/latest-updates-section";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -22,18 +21,12 @@ export default async function HomePage() {
     (event) => event.importanceBand === "critical" || event.importanceBand === "high",
   ).length;
 
-  const latest = events[0];
-
   return (
     <div className="isolate flex min-h-dvh flex-col">
       <SiteHeader />
 
       <main className="flex-1">
-        <HeroSection
-          vendorCount={vendors.length}
-          lastPublishedAt={latest?.publishedAt}
-          freshnessSummary={freshnessSummary}
-        />
+        <HeroSection vendorCount={vendors.length} freshnessSummary={freshnessSummary} />
 
         <StatsStrip
           eventCount={allEvents.length}
@@ -44,8 +37,6 @@ export default async function HomePage() {
         <LatestUpdatesSection events={events} />
 
         <AgentSurfaceSection />
-
-        <HowItWorksSection />
 
         <VendorCoverageSection vendors={vendors} />
       </main>
