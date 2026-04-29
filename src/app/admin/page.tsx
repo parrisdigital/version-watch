@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { SiteHeader } from "@/components/marketing/site-header";
 import { VendorMark } from "@/components/vendor-mark";
+import { requireAdminSession } from "@/lib/admin/require-session";
 import {
   getFeedbackSubmissions,
   getReviewQueue,
@@ -25,6 +26,8 @@ const STATUS_TEXT: Record<string, string> = {
 };
 
 export default async function AdminDashboardPage() {
+  await requireAdminSession("/admin");
+
   const [health, queue, feedback] = await Promise.all([
     getSourceHealth(),
     getReviewQueue(),

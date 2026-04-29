@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { SiteHeader } from "@/components/marketing/site-header";
 import { VendorMark } from "@/components/vendor-mark";
+import { requireAdminSession } from "@/lib/admin/require-session";
 import { getReviewQueue } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,8 @@ const confidenceClass: Record<string, string> = {
 };
 
 export default async function AdminReviewQueuePage() {
+  await requireAdminSession("/admin/review");
+
   const queue = await getReviewQueue();
 
   return (

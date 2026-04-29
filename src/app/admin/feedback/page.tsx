@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/marketing/site-header";
+import { requireAdminSession } from "@/lib/admin/require-session";
 import { getFeedbackSubmissions } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
@@ -91,6 +92,8 @@ function HeaderRow({ label, children }: { label: string; children: React.ReactNo
 }
 
 export default async function AdminFeedbackPage() {
+  await requireAdminSession("/admin/feedback");
+
   const feedback = await getFeedbackSubmissions();
 
   return (

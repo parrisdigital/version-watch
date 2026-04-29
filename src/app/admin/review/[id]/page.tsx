@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { SiteHeader } from "@/components/marketing/site-header";
 import { VendorMark } from "@/components/vendor-mark";
+import { requireAdminSession } from "@/lib/admin/require-session";
 import { getReviewCandidateById } from "@/lib/site-data";
 import { approveCandidate, rejectCandidate, suppressCandidate } from "./actions";
 
@@ -14,6 +15,8 @@ export default async function AdminReviewCandidatePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  await requireAdminSession(`/admin/review/${id}`);
+
   const candidate = await getReviewCandidateById(id);
 
   if (!candidate) {
