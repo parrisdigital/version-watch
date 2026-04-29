@@ -1,3 +1,4 @@
+import { AgentSurfaceSection } from "@/components/marketing/agent-surface-section";
 import { HeroSection } from "@/components/marketing/hero-section";
 import { HowItWorksSection } from "@/components/marketing/how-it-works-section";
 import { LatestUpdatesSection } from "@/components/marketing/latest-updates-section";
@@ -41,6 +42,8 @@ export default async function HomePage() {
         />
 
         <LatestUpdatesSection events={events} />
+
+        <AgentSurfaceSection />
 
         <HowItWorksSection />
 
