@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 type FreshnessSummaryBadgeProps = {
   summary: FreshnessSummary;
   className?: string;
+  /** When true, render at slightly larger type and padding for hero placement. */
+  prominent?: boolean;
 };
 
 function relativeTime(value: string | null) {
@@ -17,13 +19,18 @@ function relativeTime(value: string | null) {
   return formatDistanceToNowStrict(date, { addSuffix: true });
 }
 
-export function FreshnessSummaryBadge({ summary, className }: FreshnessSummaryBadgeProps) {
+export function FreshnessSummaryBadge({
+  summary,
+  className,
+  prominent = false,
+}: FreshnessSummaryBadgeProps) {
   const latestRunLabel = relativeTime(summary.latestRunAt);
 
   return (
     <div
       className={cn(
-        "inline-flex w-fit max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--card)_82%,transparent)] px-3 py-1.5 text-xs text-[var(--muted-foreground)] backdrop-blur-md",
+        "inline-flex w-fit max-w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-full border border-[var(--border)] bg-[color-mix(in_oklch,var(--card)_82%,transparent)] backdrop-blur-md text-[var(--muted-foreground)]",
+        prominent ? "px-4 py-2 text-[0.8125rem] gap-x-2.5" : "px-3 py-1.5 text-xs",
         className,
       )}
     >

@@ -38,6 +38,7 @@ export function HeroSection({ vendorCount, lastPublishedAt, freshnessSummary }: 
           {freshnessSummary ? (
             <FreshnessSummaryBadge
               summary={freshnessSummary}
+              prominent
               className="bg-[var(--hero-chip-background)] text-[var(--hero-chip-foreground)]"
             />
           ) : (
