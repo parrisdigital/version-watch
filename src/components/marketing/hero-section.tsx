@@ -57,10 +57,7 @@ export function HeroSection({ vendorCount, lastPublishedAt, freshnessSummary }: 
           </h1>
 
           <p className="max-w-[58ch] text-pretty text-lg font-medium leading-relaxed text-[var(--hero-copy)] sm:text-xl">
-            Version Watch watches the official changelogs, release notes, and docs pages of the
-            developer platforms your stack actually runs on — OpenAI, Stripe, Vercel, Cloudflare,
-            GitHub, Apple, and more — then compresses each update into one decision-ready record
-            with the original source one click away.
+            OpenAI ships an API change. Stripe writes a blog post. Apple drops a PDF. Version Watch reads them all, ranks what matters, and keeps the source one click away.
           </p>
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
