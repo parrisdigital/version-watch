@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 
 import {
   getPublicBaseUrl,
-  paginateEventsForPublicUpdates,
   parseUpdateFilters,
   PUBLIC_API_SCHEMA_VERSION,
   PUBLIC_AGENT_HEADERS,
   serializePublicUpdates,
 } from "@/lib/agent-feed";
-import { getAllPublicEvents, requestVendorRefreshIfStale } from "@/lib/site-data";
+import { getPublicUpdatesPage } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
@@ -25,12 +24,7 @@ export async function GET(request: Request) {
   }
 
   const baseUrl = getPublicBaseUrl(request.url);
-  if (parsed.filters.vendor) {
-    await requestVendorRefreshIfStale(parsed.filters.vendor);
-  }
-
-  const events = await getAllPublicEvents();
-  const page = paginateEventsForPublicUpdates(events, parsed.filters);
+  const page = await getPublicUpdatesPage(parsed.filters);
   const updates = serializePublicUpdates(page.events, baseUrl);
 
   return NextResponse.json(

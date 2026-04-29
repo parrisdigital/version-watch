@@ -1,7 +1,12 @@
 import { format } from "date-fns";
-import { fetchAction, fetchQuery } from "convex/nextjs";
+import { fetchQuery } from "convex/nextjs";
 
 import { api } from "../../convex/_generated/api";
+import {
+  nextCursorForPublicUpdate,
+  paginateEventsForPublicUpdates,
+  type UpdateFilters,
+} from "@/lib/agent-feed";
 import { scoreEvent } from "@/lib/classification/score";
 import { buildSourceLinkQualityReport, type SourceLinkQualityReport } from "@/lib/source-link-quality";
 import {
@@ -91,6 +96,55 @@ export async function getAllPublicEvents() {
   return withComputedScores(items);
 }
 
+export type PublicUpdatesPage = {
+  events: SiteEvent[];
+  total_count: number;
+  next_cursor: string | null;
+};
+
+export async function getPublicUpdatesPage(filters: UpdateFilters): Promise<PublicUpdatesPage> {
+  return await readFromConvex<PublicUpdatesPage>(
+    async () => {
+      const queryArgs: {
+        vendor?: string;
+        sinceTimestamp?: number;
+        severity?: UpdateFilters["severity"];
+        releaseClass?: UpdateFilters["releaseClass"];
+        audience?: string;
+        tag?: string;
+        cursorPublishedAt?: number;
+        cursorId?: string;
+        limit: number;
+      } = { limit: filters.limit };
+
+      if (filters.vendor) queryArgs.vendor = filters.vendor;
+      if (filters.sinceTimestamp !== undefined) queryArgs.sinceTimestamp = filters.sinceTimestamp;
+      if (filters.severity) queryArgs.severity = filters.severity;
+      if (filters.releaseClass) queryArgs.releaseClass = filters.releaseClass;
+      if (filters.audience) queryArgs.audience = filters.audience;
+      if (filters.tag) queryArgs.tag = filters.tag;
+      if (filters.cursorPosition) {
+        queryArgs.cursorPublishedAt = Date.parse(filters.cursorPosition.publishedAt);
+        queryArgs.cursorId = filters.cursorPosition.id;
+      }
+
+      const page = await fetchQuery(api.events.listPublicUpdatesPage, queryArgs) as {
+        events: SiteEvent[];
+        totalCount: number;
+        hasMore: boolean;
+      };
+      const lastEvent = page.events[page.events.length - 1];
+
+      return {
+        events: page.events,
+        total_count: page.totalCount,
+        next_cursor: page.hasMore && lastEvent ? nextCursorForPublicUpdate(lastEvent) : null,
+      };
+    },
+    () => paginateEventsForPublicUpdates(fallbackEvents, filters),
+  );
+}
+
 export async function getVendors(): Promise<VendorRecord[]> {
   return await readFromConvex<VendorRecord[]>(
     () => fetchQuery(api.vendors.list, {}) as Promise<VendorRecord[]>,
@@ -159,19 +213,6 @@ export async function getVendorFreshnessReport(slug?: string): Promise<any> {
     () => fetchQuery(api.ops.vendorFreshness, { slug }) as Promise<any>,
     () => fallbackVendorFreshnessRecords(slug),
   );
-}
-
-export async function requestVendorRefreshIfStale(vendorSlug: string) {
-  if (!process.env.NEXT_PUBLIC_CONVEX_URL) {
-    return null;
-  }
-
-  try {
-    return await fetchAction(api.ingest.requestVendorRefresh, { vendorSlug });
-  } catch (error) {
-    console.warn(`Could not enqueue refresh for ${vendorSlug}.`, error);
-    return null;
-  }
 }
 
 export async function getFreshnessSummary(): Promise<FreshnessSummary> {

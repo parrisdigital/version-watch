@@ -15,7 +15,7 @@ import {
   nextCursorForPublicCluster,
   serializePublicCluster,
 } from "@/lib/public-clusters";
-import { getAllPublicEvents, requestVendorRefreshIfStale } from "@/lib/site-data";
+import { getAllPublicEvents } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
@@ -42,10 +42,6 @@ export async function GET(request: Request) {
 
   if (!parsed.ok) {
     return NextResponse.json(parsed.error, { status: 400, headers: PUBLIC_AGENT_HEADERS });
-  }
-
-  if (parsed.filters.vendor) {
-    await requestVendorRefreshIfStale(parsed.filters.vendor);
   }
 
   const baseUrl = getPublicBaseUrl(request.url);

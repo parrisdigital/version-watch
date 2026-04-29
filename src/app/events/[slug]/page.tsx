@@ -36,8 +36,10 @@ function getDisplaySourceType(event: MockEvent): MockEvent["sourceType"] {
   return event.sourceSurfaceType ?? event.sourceType;
 }
 
-const searchBackKeys = ["query", "vendor", "category", "stack", "importance"] as const;
+const searchBackKeys = ["query", "vendor", "topic", "category", "stack", "since", "sourceType", "importance"] as const;
 const importanceBands = new Set(["critical", "high", "medium", "low"]);
+const sinceWindows = new Set(["7d", "30d", "90d"]);
+const sourceTypes = new Set(["github_release", "changelog_page", "docs_page", "blog", "rss"]);
 
 function normalize(value: string | undefined | null): string {
   return (value ?? "").trim().toLowerCase();
@@ -54,6 +56,14 @@ function buildSearchBackHref(searchParams: EventSearchParams) {
     }
 
     if (key === "importance" && !importanceBands.has(value)) {
+      continue;
+    }
+
+    if (key === "since" && !sinceWindows.has(value)) {
+      continue;
+    }
+
+    if (key === "sourceType" && !sourceTypes.has(value)) {
       continue;
     }
 
@@ -91,8 +101,11 @@ type EventSearchParams = {
   fromSearch?: string;
   query?: string;
   vendor?: string;
+  topic?: string;
   category?: string;
   stack?: string;
+  since?: string;
+  sourceType?: string;
   importance?: string;
 };
 

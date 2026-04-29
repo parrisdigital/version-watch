@@ -812,6 +812,10 @@ function isMeaningfulCursorTitle(title: string) {
   return value.length >= 4 && !NOISE_TITLES.has(value.toLowerCase()) && !isDateLike(value);
 }
 
+function isWarpParserKey(parserKey: string) {
+  return parserKey === "warp:docs_page" || parserKey === "warp:changelog_page";
+}
+
 function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: string) {
   const lines = markdown.split(/\r?\n/);
 
@@ -846,7 +850,7 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
     );
   }
 
-  if (parserKey === "warp:docs_page") {
+  if (isWarpParserKey(parserKey)) {
     return parseWarpMarkdownEntries(sourceUrl, lines);
   }
 
@@ -2142,7 +2146,7 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
     }
   }
 
-  if (parserKey === "warp:docs_page") {
+  if (isWarpParserKey(parserKey)) {
     const entries = parseWarpEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);

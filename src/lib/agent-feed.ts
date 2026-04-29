@@ -410,6 +410,10 @@ function cursorForEvent(event: MockEvent): UpdateCursor {
   };
 }
 
+export function nextCursorForPublicUpdate(event: MockEvent) {
+  return encodeUpdateCursor(cursorForEvent(event));
+}
+
 export function paginateEventsForPublicUpdates<T extends MockEvent>(
   events: T[],
   filters: UpdateFilters,
@@ -427,7 +431,7 @@ export function paginateEventsForPublicUpdates<T extends MockEvent>(
   return {
     events: page,
     total_count: matches.length,
-    next_cursor: lastEvent && eligible.length > page.length ? encodeUpdateCursor(cursorForEvent(lastEvent)) : null,
+    next_cursor: lastEvent && eligible.length > page.length ? nextCursorForPublicUpdate(lastEvent) : null,
   };
 }
 

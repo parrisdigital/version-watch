@@ -269,6 +269,27 @@ describe("parseHtmlEntries", () => {
     expect(entries).toHaveLength(2);
   });
 
+  it("parses Warp changelog entries from GitBook markdown exports", () => {
+    const markdown = `
+      # Changelog
+
+      ### 2026.04.22 (v0.2026.04.22.08.46)
+      Warp added new agent mode controls for terminal workflows.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "warp:changelog_page",
+      sourceUrl: "https://docs.warp.dev/changelog/readme.md",
+      html: markdown,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Warp 2026.04.22 (v0.2026.04.22.08.46)",
+      url: "https://docs.warp.dev/changelog#id-2026.04.22-v0.2026.04.22.08.46",
+      parseConfidence: "high",
+    });
+  });
+
   it("parses Zed stable release text blocks", () => {
     const html = `
       <main>
