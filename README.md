@@ -1,8 +1,8 @@
-# Version Watch
-
 <p align="center">
-  <img src="./public/brand/readme-banner.svg" alt="Version Watch - change intelligence for developer platform updates" width="100%">
+  <img src="public/brand/readme-banner.png" alt="Version Watch - source-linked change intelligence for developer platforms" width="100%">
 </p>
+
+# Version Watch
 
 Change intelligence for developer platform updates.
 
