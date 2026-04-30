@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/marketing/site-header";
+import { requireAdminSession } from "@/lib/admin/require-session";
 import { getSourceHealth } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,8 @@ const statusStyle: Record<string, { label: string; dot: string; text: string }> 
 };
 
 export default async function OpsHealthPage() {
+  await requireAdminSession("/ops/health", { loginPath: "/review/login" });
+
   const health = await getSourceHealth();
   const counts = {
     healthy: health.filter((e) => e.status === "healthy").length,

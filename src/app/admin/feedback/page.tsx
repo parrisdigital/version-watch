@@ -2,7 +2,12 @@ import Link from "next/link";
 
 import { SiteHeader } from "@/components/marketing/site-header";
 import { requireAdminSession } from "@/lib/admin/require-session";
-import { getFeedbackSubmissions } from "@/lib/site-data";
+import {
+  getFeedbackSubmissions,
+  getRelevanceSignals,
+  type FeedbackSubmissionEntry,
+  type RelevanceSignalEntry,
+} from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +25,12 @@ const TYPE_COLOR: Record<string, string> = {
   wrong_signal: "text-[var(--color-critical)]",
   incorrect_summary: "text-[var(--color-critical)]",
   general: "text-[var(--muted-foreground)]",
+};
+
+const SIGNAL_COLOR: Record<string, string> = {
+  impacted: "text-[var(--color-critical)]",
+  needs_review: "text-[var(--color-high)]",
+  no_impact: "text-[var(--color-green)]",
 };
 
 const HEADER_KEYS = ["bug", "reporter", "vendor", "vendor-url", "event", "where"] as const;
@@ -94,7 +105,10 @@ function HeaderRow({ label, children }: { label: string; children: React.ReactNo
 export default async function AdminFeedbackPage() {
   await requireAdminSession("/admin/feedback");
 
-  const feedback = await getFeedbackSubmissions();
+  const [feedback, relevance] = await Promise.all([
+    getFeedbackSubmissions(),
+    getRelevanceSignals(),
+  ]);
 
   return (
     <main className="vw-page">
@@ -103,10 +117,11 @@ export default async function AdminFeedbackPage() {
       <section className="border-b border-[var(--color-line)] px-4 pb-10 pt-28 sm:px-6 md:pb-14 md:pt-32">
         <div className="vw-shell flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="vw-kicker">Admin · Feedback inbox</p>
-            <h1 className="vw-display mt-3 text-4xl md:text-5xl">Feedback inbox</h1>
+            <p className="vw-kicker">Admin · Feedback & relevance</p>
+            <h1 className="vw-display mt-3 text-4xl md:text-5xl">Feedback & relevance</h1>
             <p className="vw-copy mt-3 max-w-[58ch] text-pretty text-base">
-              {feedback.length} {feedback.length === 1 ? "submission" : "submissions"}, newest first.
+              {feedback.length} feedback {feedback.length === 1 ? "submission" : "submissions"} ·{" "}
+              {relevance.length} relevance {relevance.length === 1 ? "signal" : "signals"}, newest first.
             </p>
           </div>
           <Link href="/admin" className="vw-button vw-button-ghost">
@@ -116,97 +131,185 @@ export default async function AdminFeedbackPage() {
       </section>
 
       <section className="px-4 py-10 sm:px-6 md:py-12">
-        <div className="vw-shell">
-          {feedback.length === 0 ? (
-            <p className="vw-panel p-10 text-center font-mono text-[0.75rem] uppercase tracking-wider text-[var(--muted-foreground)]">
-              Inbox is empty.
-            </p>
-          ) : (
-            <ul role="list" className="grid gap-2">
-              {feedback.map((entry) => {
-                const path = safePathname(entry.pageUrl);
-                const parsed = parseMessage(entry.message ?? "");
-                const typeLabel = parsed.isBug ? "Bug" : TYPE_LABEL[entry.type] ?? entry.type;
-                const typeColor = parsed.isBug
-                  ? "text-[var(--color-critical)]"
-                  : TYPE_COLOR[entry.type] ?? "text-[var(--muted-foreground)]";
+        <div className="vw-shell grid gap-8">
+          <section id="relevance" className="scroll-mt-28">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="vw-title text-2xl">Relevance signals</h2>
+                <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+                  Structured event feedback for admin review and future ranking tuning.
+                </p>
+              </div>
+              <span className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+                {relevance.length} {relevance.length === 1 ? "signal" : "signals"}
+              </span>
+            </div>
+            <RelevanceSignalsList relevance={relevance} />
+          </section>
 
-                return (
-                  <li key={entry._id} className="vw-panel-flat p-5">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span
-                        className={`font-mono text-[0.6875rem] uppercase tracking-wider ${typeColor}`}
-                      >
-                        {typeLabel}
-                      </span>
-                      <span className="font-mono text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]">
-                        {formatTimestamp(entry.createdAt)}
-                      </span>
-                      {path ? (
-                        entry.pageUrl ? (
-                          <a
-                            href={entry.pageUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="ml-auto font-mono text-[0.6875rem] tabular-nums text-[var(--color-ink-muted)] hover:text-[var(--foreground)]"
-                          >
-                            {path}
-                          </a>
-                        ) : null
-                      ) : null}
-                    </div>
-
-                    {Object.keys(parsed.headers).length > 0 ? (
-                      <div className="mt-4 grid gap-1.5 rounded-md border border-[var(--color-line-quiet)] bg-[var(--color-surface-raised)] p-3">
-                        {parsed.headers.reporter ? (
-                          <HeaderRow label="Reporter">
-                            {parsed.headers.reporter.startsWith("@") ||
-                            !parsed.headers.reporter.includes("@")
-                              ? parsed.headers.reporter
-                              : (
-                                <a
-                                  href={`mailto:${parsed.headers.reporter}`}
-                                  className="underline-offset-4 hover:underline"
-                                >
-                                  {parsed.headers.reporter}
-                                </a>
-                              )}
-                          </HeaderRow>
-                        ) : null}
-                        {parsed.headers.vendor ? (
-                          <HeaderRow label="Vendor">{parsed.headers.vendor}</HeaderRow>
-                        ) : null}
-                        {parsed.headers["vendor-url"] ? (
-                          <HeaderRow label="Source URL">
-                            <a
-                              href={parsed.headers["vendor-url"]}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="break-all underline-offset-4 hover:underline"
-                            >
-                              {parsed.headers["vendor-url"]}
-                            </a>
-                          </HeaderRow>
-                        ) : null}
-                        {parsed.headers.event ? (
-                          <HeaderRow label="Event">{parsed.headers.event}</HeaderRow>
-                        ) : null}
-                        {parsed.headers.where ? (
-                          <HeaderRow label="Where">{parsed.headers.where}</HeaderRow>
-                        ) : null}
-                      </div>
-                    ) : null}
-
-                    <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-ink-soft)]">
-                      {parsed.body}
-                    </p>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          <section id="feedback" className="scroll-mt-28">
+            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="vw-title text-2xl">Feedback submissions</h2>
+                <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+                  Open-ended reports, vendor suggestions, and correction requests.
+                </p>
+              </div>
+              <span className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+                {feedback.length} {feedback.length === 1 ? "submission" : "submissions"}
+              </span>
+            </div>
+            <FeedbackSubmissionsList feedback={feedback} />
+          </section>
         </div>
       </section>
     </main>
+  );
+}
+
+function RelevanceSignalsList({ relevance }: { relevance: RelevanceSignalEntry[] }) {
+  if (relevance.length === 0) {
+    return (
+      <p className="vw-panel p-10 text-center font-mono text-[0.75rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+        No relevance signals yet.
+      </p>
+    );
+  }
+
+  return (
+    <ul role="list" className="grid gap-2">
+      {relevance.map((entry) => (
+        <li key={entry._id} className="vw-panel-flat p-5">
+          <div className="flex flex-wrap items-center gap-3">
+            <span
+              className={`font-mono text-[0.6875rem] uppercase tracking-wider ${
+                SIGNAL_COLOR[entry.signal] ?? "text-[var(--muted-foreground)]"
+              }`}
+            >
+              {entry.signalLabel}
+            </span>
+            <span className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)]">
+              {entry.areaLabel}
+            </span>
+            <span className="font-mono text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]">
+              {formatTimestamp(entry.createdAt)}
+            </span>
+            {entry.eventVisibility === "hidden" ? (
+              <span className="font-mono text-[0.6875rem] uppercase tracking-wider text-[var(--color-high)]">
+                Hidden event
+              </span>
+            ) : null}
+          </div>
+
+          <div className="mt-4 grid gap-1.5 rounded-md border border-[var(--color-line-quiet)] bg-[var(--color-surface-raised)] p-3">
+            <HeaderRow label="Vendor">
+              {entry.vendorSlug ? (
+                <Link href={`/vendors/${entry.vendorSlug}`} className="underline-offset-4 hover:underline">
+                  {entry.vendorName}
+                </Link>
+              ) : (
+                entry.vendorName
+              )}
+            </HeaderRow>
+            <HeaderRow label="Event">
+              <Link href={entry.eventUrl} className="underline-offset-4 hover:underline">
+                {entry.eventTitle}
+              </Link>
+            </HeaderRow>
+            {entry.userAgent ? <HeaderRow label="User agent">{entry.userAgent}</HeaderRow> : null}
+          </div>
+
+          {entry.note ? (
+            <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-ink-soft)]">
+              {entry.note}
+            </p>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function FeedbackSubmissionsList({ feedback }: { feedback: FeedbackSubmissionEntry[] }) {
+  if (feedback.length === 0) {
+    return (
+      <p className="vw-panel p-10 text-center font-mono text-[0.75rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+        Inbox is empty.
+      </p>
+    );
+  }
+
+  return (
+    <ul role="list" className="grid gap-2">
+      {feedback.map((entry) => {
+        const path = safePathname(entry.pageUrl);
+        const parsed = parseMessage(entry.message ?? "");
+        const typeLabel = parsed.isBug ? "Bug" : TYPE_LABEL[entry.type] ?? entry.type;
+        const typeColor = parsed.isBug
+          ? "text-[var(--color-critical)]"
+          : TYPE_COLOR[entry.type] ?? "text-[var(--muted-foreground)]";
+
+        return (
+          <li key={entry._id} className="vw-panel-flat p-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className={`font-mono text-[0.6875rem] uppercase tracking-wider ${typeColor}`}>
+                {typeLabel}
+              </span>
+              <span className="font-mono text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]">
+                {formatTimestamp(entry.createdAt)}
+              </span>
+              {path && entry.pageUrl ? (
+                <a
+                  href={entry.pageUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="ml-auto font-mono text-[0.6875rem] tabular-nums text-[var(--color-ink-muted)] hover:text-[var(--foreground)]"
+                >
+                  {path}
+                </a>
+              ) : null}
+            </div>
+
+            {Object.keys(parsed.headers).length > 0 ? (
+              <div className="mt-4 grid gap-1.5 rounded-md border border-[var(--color-line-quiet)] bg-[var(--color-surface-raised)] p-3">
+                {parsed.headers.reporter ? (
+                  <HeaderRow label="Reporter">
+                    {parsed.headers.reporter.startsWith("@") || !parsed.headers.reporter.includes("@") ? (
+                      parsed.headers.reporter
+                    ) : (
+                      <a
+                        href={`mailto:${parsed.headers.reporter}`}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {parsed.headers.reporter}
+                      </a>
+                    )}
+                  </HeaderRow>
+                ) : null}
+                {parsed.headers.vendor ? <HeaderRow label="Vendor">{parsed.headers.vendor}</HeaderRow> : null}
+                {parsed.headers["vendor-url"] ? (
+                  <HeaderRow label="Source URL">
+                    <a
+                      href={parsed.headers["vendor-url"]}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="break-all underline-offset-4 hover:underline"
+                    >
+                      {parsed.headers["vendor-url"]}
+                    </a>
+                  </HeaderRow>
+                ) : null}
+                {parsed.headers.event ? <HeaderRow label="Event">{parsed.headers.event}</HeaderRow> : null}
+                {parsed.headers.where ? <HeaderRow label="Where">{parsed.headers.where}</HeaderRow> : null}
+              </div>
+            ) : null}
+
+            <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-[var(--color-ink-soft)]">
+              {parsed.body}
+            </p>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

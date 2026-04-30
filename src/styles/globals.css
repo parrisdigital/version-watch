@@ -665,6 +665,18 @@ button {
     background: var(--muted);
   }
 
+  .vw-button-utility {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted-foreground);
+  }
+
+  .vw-button-utility:hover {
+    color: var(--foreground);
+    background: var(--muted);
+    border-color: var(--border-strong);
+  }
+
   .vw-tag {
     display: inline-flex;
     align-items: center;
