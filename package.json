@@ -16,7 +16,7 @@
     "vendors:production": "node scripts/check-vendor-coverage.mjs"
   },
   "dependencies": {
-    "@convex-dev/eslint-plugin": "^1.0.0",
+    "@convex-dev/eslint-plugin": "^2.0.0",
     "@gsap/react": "^2.1.2",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-popover": "^1.1.15",
