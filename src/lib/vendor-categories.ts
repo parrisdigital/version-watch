@@ -1,33 +1,45 @@
 export const VENDOR_CATEGORIES = [
-  "AI Models",
+  "AI Models & APIs",
   "AI Coding Agents",
+  "Editors & IDEs",
   "Hosting & Edge",
   "Frameworks & Tooling",
   "Auth",
   "Databases",
   "Mobile",
   "Dev Workflow",
+  "Browsers",
   "Observability",
   "Payments & Email",
-  "Search",
+  "Search & Web Data",
 ] as const;
 
 export type VendorCategory = (typeof VENDOR_CATEGORIES)[number] | "Other";
 
 const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
-  // AI Models
-  anthropic: "AI Models",
-  gemini: "AI Models",
-  openai: "AI Models",
+  // AI Models & APIs
+  anthropic: "AI Models & APIs",
+  gemini: "AI Models & APIs",
+  groq: "AI Models & APIs",
+  "meta-ai": "AI Models & APIs",
+  openai: "AI Models & APIs",
+  xai: "AI Models & APIs",
 
   // AI Coding Agents
-  cursor: "AI Coding Agents",
-  "dp-code": "AI Coding Agents",
+  cline: "AI Coding Agents",
   "hermes-agent": "AI Coding Agents",
   openclaw: "AI Coding Agents",
   opencode: "AI Coding Agents",
-  openusage: "AI Coding Agents",
   "t3-code": "AI Coding Agents",
+
+  // Editors & IDEs
+  "augment-code": "Editors & IDEs",
+  cursor: "Editors & IDEs",
+  "dp-code": "Editors & IDEs",
+  "google-antigravity": "Editors & IDEs",
+  vscode: "Editors & IDEs",
+  windsurf: "Editors & IDEs",
+  zed: "Editors & IDEs",
 
   // Hosting & Edge
   cloudflare: "Hosting & Edge",
@@ -69,8 +81,14 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   docker: "Dev Workflow",
   github: "Dev Workflow",
   linear: "Dev Workflow",
+  warp: "Dev Workflow",
+
+  // Browsers
+  brave: "Browsers",
+  dia: "Browsers",
 
   // Observability
+  openusage: "Observability",
   posthog: "Observability",
   sentry: "Observability",
 
@@ -78,9 +96,9 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   resend: "Payments & Email",
   stripe: "Payments & Email",
 
-  // Search
-  exa: "Search",
-  firecrawl: "Search",
+  // Search & Web Data
+  exa: "Search & Web Data",
+  firecrawl: "Search & Web Data",
 };
 
 export function getCategoryForSlug(slug: string): VendorCategory {

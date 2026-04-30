@@ -843,6 +843,10 @@ button {
     height: 80%;
   }
 
+  .dark .vw-mark-image-invert-dark {
+    filter: invert(1) brightness(1.12);
+  }
+
   .vw-mark-sm { width: 1.75rem; }
   .vw-mark-md { width: 2.5rem; }
   .vw-mark-lg { width: 3.5rem; }
