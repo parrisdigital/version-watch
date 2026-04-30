@@ -1,0 +1,19 @@
+<svg width="1280" height="420" viewBox="0 0 1280 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Version Watch terminal banner</title>
+  <desc id="desc">A terminal-inspired banner option for Version Watch</desc>
+  <rect width="1280" height="420" rx="28" fill="#020617"/>
+  <rect x="72" y="56" width="1136" height="308" rx="18" fill="#07111f" stroke="#1e293b"/>
+  <circle cx="106" cy="86" r="7" fill="#ef4444"/>
+  <circle cx="130" cy="86" r="7" fill="#eab308"/>
+  <circle cx="154" cy="86" r="7" fill="#22c55e"/>
+  <text x="104" y="151" fill="#a78bfa" font-family="SFMono-Regular, ui-monospace, Menlo, Consolas, monospace" font-size="21">$ curl /api/v1/updates?severity=high</text>
+  <text x="104" y="198" fill="#e2e8f0" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="58" font-weight="760">Version Watch</text>
+  <text x="106" y="244" fill="#94a3b8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="24">Change intelligence for developer platform updates.</text>
+  <rect x="104" y="284" width="142" height="34" rx="17" fill="#172554" stroke="#2563eb"/>
+  <text x="126" y="307" fill="#bfdbfe" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="700">ranked feed</text>
+  <rect x="260" y="284" width="138" height="34" rx="17" fill="#2e1065" stroke="#7c3aed"/>
+  <text x="282" y="307" fill="#ddd6fe" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="700">open api</text>
+  <rect x="412" y="284" width="150" height="34" rx="17" fill="#052e2b" stroke="#0d9488"/>
+  <text x="434" y="307" fill="#ccfbf1" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="700">source links</text>
+  <image href="version-watch-icon.png" x="904" y="128" width="160" height="160" preserveAspectRatio="xMidYMid meet"/>
+</svg>
