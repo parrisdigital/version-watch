@@ -34,7 +34,9 @@ const DEFAULT_INGESTION_USER_AGENT =
   process.env.INGESTION_USER_AGENT ?? "VersionWatchBot/1.0 (+https://versionwatch.dev)";
 const BROWSER_FALLBACK_USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
-const BROWSER_RETRY_STATUSES = new Set([403, 406, 429]);
+// Some vendor sites disguise bot blocking as a 404 while serving the same URL
+// normally to browser user-agents.
+const BROWSER_RETRY_STATUSES = new Set([403, 404, 406, 429]);
 const FETCH_TIMEOUT_MS = 30 * 1000;
 const WATCHDOG_STALE_AFTER_MS = 270 * 60 * 1000;
 const WATCHDOG_RUNNING_GRACE_MS = 30 * 60 * 1000;
