@@ -223,7 +223,7 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-23T00:00:00.000Z"));
   });
 
-  it("parses shadcnspace timeline entries", () => {
+  it("parses shadcnspace timeline entries with concatenated version and day text", () => {
     const html = `
       <main>
         <div class="relative flex flex-col gap-4 md:flex-row md:items-start">
@@ -243,12 +243,40 @@ describe("parseHtmlEntries", () => {
     });
 
     expect(entries[0]).toMatchObject({
-      title: "shadcnspace 2.1.528: UI Blocks & Components Expansion",
-      url: "https://shadcnspace.com/changelog#version-2-1-528",
+      title: "shadcnspace 2.1.5: UI Blocks & Components Expansion",
+      url: "https://shadcnspace.com/changelog#version-2-1-5",
       excerpt: "Added 30+ new blocks and 30+ new components across the collection.",
       parseConfidence: "high",
     });
-    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-01T00:00:00.000Z"));
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-28T00:00:00.000Z"));
+  });
+
+  it("parses shadcnspace timeline entries with spaced version and day text", () => {
+    const html = `
+      <main>
+        <div class="relative flex flex-col gap-4 md:flex-row md:items-start">
+          <div>Version 2.1.4 14 April 2026</div>
+          <div>
+            <h2>UI Blocks, UI Components & Added Template</h2>
+            <div>Added 1 new template and more blocks across the collection.</div>
+          </div>
+        </div>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "shadcnspace:changelog_page",
+      sourceUrl: "https://shadcnspace.com/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "shadcnspace 2.1.4: UI Blocks, UI Components & Added Template",
+      url: "https://shadcnspace.com/changelog#version-2-1-4",
+      excerpt: "Added 1 new template and more blocks across the collection.",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-14T00:00:00.000Z"));
   });
 
   it("parses Warp version headings", () => {

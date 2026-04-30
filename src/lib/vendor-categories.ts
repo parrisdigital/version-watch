@@ -3,6 +3,7 @@ export const VENDOR_CATEGORIES = [
   "AI Coding Agents",
   "Editors & IDEs",
   "Hosting & Edge",
+  "Design Systems & UI",
   "Frameworks & Tooling",
   "Auth",
   "Databases",
@@ -48,6 +49,10 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   render: "Hosting & Edge",
   vercel: "Hosting & Edge",
 
+  // Design Systems & UI
+  shadcn: "Design Systems & UI",
+  shadcnspace: "Design Systems & UI",
+
   // Frameworks & Tooling
   biome: "Frameworks & Tooling",
   bun: "Frameworks & Tooling",
@@ -55,8 +60,6 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   hono: "Frameworks & Tooling",
   langchain: "Frameworks & Tooling",
   pnpm: "Frameworks & Tooling",
-  shadcn: "Frameworks & Tooling",
-  shadcnspace: "Frameworks & Tooling",
   uv: "Frameworks & Tooling",
   vite: "Frameworks & Tooling",
 
