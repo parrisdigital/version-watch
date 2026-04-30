@@ -24,4 +24,9 @@ describe("vendor categories", () => {
     expect(getCategoryForSlug("firecrawl")).toBe("Search & Web Data");
     expect(getCategoryForSlug("exa")).toBe("Search & Web Data");
   });
+
+  it("keeps shadcn ecosystem vendors in framework and tooling", () => {
+    expect(getCategoryForSlug("shadcn")).toBe("Frameworks & Tooling");
+    expect(getCategoryForSlug("shadcnspace")).toBe("Frameworks & Tooling");
+  });
 });

@@ -302,6 +302,12 @@ export const vendors: VendorRecord[] = [
     sources: [{ name: "GitHub Releases", url: "https://github.com/shadcn-ui/ui/releases", type: "changelog_page" }],
   },
   {
+    slug: "shadcnspace",
+    name: "shadcnspace",
+    description: "Open-source shadcn/ui blocks, components, templates, and layout releases.",
+    sources: [{ name: "shadcnspace Changelog", url: "https://shadcnspace.com/changelog", type: "changelog_page" }],
+  },
+  {
     slug: "hono",
     name: "Hono",
     description: "Web standards-first framework releases for edge and server runtimes.",

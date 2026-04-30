@@ -141,6 +141,7 @@ const VENDOR_STACKS: Record<string, string[]> = {
   openusage: ["developer-workflow", "observability", "tooling"],
   "dp-code": ["developer-workflow", "llms", "desktop-app"],
   shadcn: ["frontend-ui", "design-system", "developer-workflow"],
+  shadcnspace: ["frontend-ui", "design-system", "developer-workflow"],
   hono: ["framework", "backend", "edge-compute"],
   bun: ["runtime", "tooling", "backend"],
   vite: ["frontend-infra", "developer-workflow", "tooling"],
@@ -579,6 +580,51 @@ function parseDateLedHeadingEntries(sourceUrl: string, html: string) {
       url: getEntryElementUrl($, element, sourceUrl),
       excerpt,
       publishedAt: activeDate,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseShadcnspaceEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const heading of root.find("h2").toArray()) {
+    const title = cleanText($(heading).text());
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const contentContainer = $(heading).closest("div").first();
+    const timelineItem = contentContainer.parent();
+    const metaText = cleanText(timelineItem.children().first().text());
+    const metaMatch = metaText.match(
+      /\bVersion\s+([0-9.]+)\s+(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+(20\d{2})\b/i,
+    );
+
+    if (!metaMatch) {
+      continue;
+    }
+
+    const version = metaMatch[1]!;
+    const monthIndex = MONTH_INDEX[metaMatch[2]!.toLowerCase()];
+    const year = Number(metaMatch[3]);
+    if (monthIndex === undefined || Number.isNaN(year)) {
+      continue;
+    }
+
+    const versionSlug = version.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
+    const summary = cleanText($(heading).nextAll("p, div").first().text());
+    const excerpt = truncateSentence(summary || collectContainerExcerpt($, heading, title) || title);
+
+    entries.push({
+      title: `shadcnspace ${version}: ${title}`,
+      url: `${sourceUrl.split("#")[0]}#version-${encodeURIComponent(versionSlug)}`,
+      excerpt,
+      publishedAt: Date.UTC(year, monthIndex, 1),
       parseConfidence: "high",
     });
   }
@@ -2101,6 +2147,13 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "better-auth:changelog_page") {
     const entries = parseBetterAuthEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "shadcnspace:changelog_page") {
+    const entries = parseShadcnspaceEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }
