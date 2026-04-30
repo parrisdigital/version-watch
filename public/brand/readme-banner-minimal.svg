@@ -1,0 +1,16 @@
+<svg width="1280" height="420" viewBox="0 0 1280 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Version Watch minimal banner</title>
+  <desc id="desc">A clean banner option for Version Watch</desc>
+  <rect width="1280" height="420" rx="28" fill="#f8fafc"/>
+  <rect x="54" y="54" width="1172" height="312" rx="28" fill="#0f172a"/>
+  <circle cx="216" cy="210" r="92" fill="#172554"/>
+  <path d="M153 172H184L216 225L249 172H280L216 282L153 172Z" fill="white"/>
+  <path d="M153 242C191 266 264 260 296 218" stroke="#8b5cf6" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="216" cy="153" r="15" fill="#8b5cf6"/>
+  <circle cx="282" cy="232" r="15" fill="#8b5cf6"/>
+  <text x="354" y="196" fill="#f8fafc" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="64" font-weight="760">Version Watch</text>
+  <text x="358" y="244" fill="#cbd5e1" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="25" font-weight="500">Source-linked platform updates for developers, tools, and agents.</text>
+  <path d="M942 154H1094" stroke="#38bdf8" stroke-width="8" stroke-linecap="round"/>
+  <path d="M942 204H1140" stroke="#8b5cf6" stroke-width="8" stroke-linecap="round"/>
+  <path d="M942 254H1062" stroke="#22c55e" stroke-width="8" stroke-linecap="round"/>
+</svg>

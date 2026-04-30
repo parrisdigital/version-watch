@@ -1,0 +1,118 @@
+<svg width="1280" height="420" viewBox="0 0 1280 420" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Version Watch</title>
+  <desc id="desc">A full-width README banner for Version Watch, a change intelligence tool for developer platform updates.</desc>
+  <defs>
+    <linearGradient id="page" x1="0" y1="0" x2="1280" y2="420" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#030712"/>
+      <stop offset="0.48" stop-color="#0b1324"/>
+      <stop offset="1" stop-color="#111c3a"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1040 118) rotate(144) scale(366 214)">
+      <stop stop-color="#8b5cf6" stop-opacity="0.55"/>
+      <stop offset="0.55" stop-color="#1d4ed8" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(204 338) rotate(-16) scale(360 180)">
+      <stop stop-color="#22d3ee" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#020617" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="line" x1="0" y1="0" x2="1" y2="0">
+      <stop stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#1e1b4b"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <filter id="blur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="420" rx="30" fill="url(#page)"/>
+  <rect width="1280" height="420" rx="30" fill="url(#glowA)"/>
+  <rect width="1280" height="420" rx="30" fill="url(#glowB)"/>
+
+  <g opacity="0.18">
+    <path d="M64 72H1216" stroke="#94a3b8"/>
+    <path d="M64 128H1216" stroke="#94a3b8"/>
+    <path d="M64 184H1216" stroke="#94a3b8"/>
+    <path d="M64 240H1216" stroke="#94a3b8"/>
+    <path d="M64 296H1216" stroke="#94a3b8"/>
+    <path d="M64 352H1216" stroke="#94a3b8"/>
+    <path d="M128 36V384" stroke="#94a3b8"/>
+    <path d="M256 36V384" stroke="#94a3b8"/>
+    <path d="M384 36V384" stroke="#94a3b8"/>
+    <path d="M512 36V384" stroke="#94a3b8"/>
+    <path d="M640 36V384" stroke="#94a3b8"/>
+    <path d="M768 36V384" stroke="#94a3b8"/>
+    <path d="M896 36V384" stroke="#94a3b8"/>
+    <path d="M1024 36V384" stroke="#94a3b8"/>
+    <path d="M1152 36V384" stroke="#94a3b8"/>
+  </g>
+
+  <g transform="translate(76 62)">
+    <rect x="0" y="0" width="96" height="96" rx="28" fill="#172554" stroke="#334155"/>
+    <path d="M25 31H42L48 44L55 31H72L48 74L25 31Z" fill="#ffffff"/>
+    <path d="M23 58C42 70 76 66 88 47" stroke="#8b5cf6" stroke-width="6" stroke-linecap="round"/>
+    <circle cx="48" cy="22" r="7" fill="#8b5cf6"/>
+    <circle cx="80" cy="56" r="7" fill="#8b5cf6"/>
+  </g>
+
+  <g transform="translate(76 185)">
+    <text x="0" y="0" fill="#f8fafc" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="64" font-weight="780">Version Watch</text>
+    <text x="2" y="46" fill="#cbd5e1" font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="25" font-weight="520">Source-linked change intelligence for developer platforms.</text>
+    <g transform="translate(2 82)">
+      <rect x="0" y="0" width="142" height="36" rx="18" fill="url(#chip)" stroke="#334155"/>
+      <circle cx="22" cy="18" r="5" fill="#22c55e"/>
+      <text x="38" y="24" fill="#dbeafe" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="700">source-first</text>
+      <rect x="156" y="0" width="122" height="36" rx="18" fill="url(#chip)" stroke="#334155"/>
+      <circle cx="178" cy="18" r="5" fill="#38bdf8"/>
+      <text x="194" y="24" fill="#dbeafe" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="700">public API</text>
+      <rect x="292" y="0" width="132" height="36" rx="18" fill="url(#chip)" stroke="#334155"/>
+      <circle cx="314" cy="18" r="5" fill="#a78bfa"/>
+      <text x="330" y="24" fill="#dbeafe" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="14" font-weight="700">agent-ready</text>
+    </g>
+  </g>
+
+  <g opacity="0.46" filter="url(#blur)">
+    <path d="M410 330C530 240 659 284 790 214C895 157 966 104 1125 120" stroke="url(#line)" stroke-width="18" stroke-linecap="round"/>
+  </g>
+  <path d="M410 330C530 240 659 284 790 214C895 157 966 104 1125 120" stroke="url(#line)" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+
+  <g transform="translate(604 68)">
+    <rect x="0" y="0" width="268" height="126" rx="18" fill="#020617" fill-opacity="0.82" stroke="#334155"/>
+    <text x="20" y="34" fill="#94a3b8" font-family="SFMono-Regular, ui-monospace, Menlo, Consolas, monospace" font-size="13">official source</text>
+    <rect x="20" y="54" width="170" height="12" rx="6" fill="#e2e8f0"/>
+    <rect x="20" y="78" width="220" height="9" rx="4.5" fill="#64748b"/>
+    <rect x="20" y="96" width="136" height="9" rx="4.5" fill="#64748b"/>
+    <rect x="198" y="24" width="44" height="22" rx="11" fill="#172554"/>
+    <text x="210" y="40" fill="#bfdbfe" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="10" font-weight="800">RSS</text>
+  </g>
+
+  <g transform="translate(742 214)">
+    <rect x="0" y="0" width="292" height="144" rx="18" fill="#020617" fill-opacity="0.84" stroke="#334155"/>
+    <text x="20" y="35" fill="#94a3b8" font-family="SFMono-Regular, ui-monospace, Menlo, Consolas, monospace" font-size="13">normalized update</text>
+    <rect x="20" y="56" width="220" height="14" rx="7" fill="#f8fafc"/>
+    <rect x="20" y="84" width="250" height="9" rx="4.5" fill="#64748b"/>
+    <rect x="20" y="104" width="160" height="9" rx="4.5" fill="#64748b"/>
+    <rect x="20" y="124" width="56" height="18" rx="9" fill="#7c3aed"/>
+    <rect x="84" y="124" width="68" height="18" rx="9" fill="#2563eb"/>
+    <rect x="160" y="124" width="82" height="18" rx="9" fill="#0f766e"/>
+  </g>
+
+  <g transform="translate(902 72)">
+    <rect x="0" y="0" width="300" height="118" rx="18" fill="#020617" fill-opacity="0.76" stroke="#334155"/>
+    <text x="18" y="31" fill="#a78bfa" font-family="SFMono-Regular, ui-monospace, Menlo, Consolas, monospace" font-size="13">$ curl /api/v1/updates</text>
+    <rect x="18" y="52" width="114" height="10" rx="5" fill="#38bdf8"/>
+    <rect x="18" y="75" width="214" height="8" rx="4" fill="#475569"/>
+    <rect x="18" y="94" width="164" height="8" rx="4" fill="#475569"/>
+  </g>
+
+  <g transform="translate(1062 238)">
+    <rect x="0" y="0" width="120" height="38" rx="19" fill="#450a0a" stroke="#ef4444"/>
+    <text x="31" y="25" fill="#fecaca" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="800">critical</text>
+    <rect x="-46" y="52" width="166" height="38" rx="19" fill="#172554" stroke="#2563eb"/>
+    <text x="-16" y="77" fill="#bfdbfe" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="13" font-weight="800">api_change</text>
+  </g>
+</svg>
