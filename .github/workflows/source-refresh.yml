@@ -20,6 +20,9 @@ on:
           - "true"
           - "false"
 
+permissions:
+  contents: read
+
 jobs:
   refresh:
     name: Refresh source coverage

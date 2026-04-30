@@ -1,0 +1,28 @@
+name: Source coverage
+description: Suggest a vendor, changelog, release feed, or source coverage improvement.
+title: "[Source]: "
+labels: ["source-coverage"]
+body:
+  - type: input
+    id: vendor
+    attributes:
+      label: Vendor or project
+      placeholder: OpenAI, Vercel, Convex, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Official source URLs
+      description: List official changelogs, release notes, docs pages, RSS feeds, blogs, or GitHub releases.
+      placeholder: "https://..."
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Why this matters
+      description: Who would use this coverage and what kind of changes should be tracked?
+    validations:
+      required: true
+

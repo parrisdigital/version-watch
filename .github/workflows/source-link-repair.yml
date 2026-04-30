@@ -25,6 +25,9 @@ on:
         default: "500"
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   repair:
     name: Repair source links

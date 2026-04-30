@@ -115,7 +115,9 @@ This repository is being prepared for public release. Before changing GitHub vis
 
 ## Documentation
 
+- [Changelog](./CHANGELOG.md)
 - [Open source checklist](./docs/open-source-checklist.md)
+- [Release process](./docs/release-process.md)
 - [Product brief](./docs/product-brief.md)
 - [Architecture](./docs/architecture.md)
 - [Data model](./docs/data-model.md)

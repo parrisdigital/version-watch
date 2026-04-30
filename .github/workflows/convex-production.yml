@@ -27,6 +27,9 @@ concurrency:
   group: convex-deploy-${{ github.ref }}-${{ github.event.inputs.environment || 'production' }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   deploy-development:
     if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'development' }}

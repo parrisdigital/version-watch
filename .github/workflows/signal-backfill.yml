@@ -17,6 +17,9 @@ on:
         default: "1000"
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   rescore:
     name: Rescore signal v2 rows

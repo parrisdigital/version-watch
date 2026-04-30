@@ -41,6 +41,7 @@ Every substantive change should go through a PR, even for a solo project, becaus
 - GitHub PR opens Vercel preview deployment
 - merged `main` branch deploys production web app
 - Convex deployment changes should be kept aligned with the merged code
+- deployment records are operational; public release history should use GitHub Releases and semantic version tags
 
 ## Platform Expectations
 

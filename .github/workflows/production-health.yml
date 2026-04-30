@@ -19,6 +19,9 @@ concurrency:
   group: production-health-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   production-health:
     name: Production freshness check
