@@ -156,7 +156,7 @@ export const vendors: VendorRecord[] = [
   {
     slug: "augment-code",
     name: "Augment Code",
-    description: "AI coding agent, editor extension, CLI, and IDE release updates from Augment.",
+    description: "AI coding assistant, editor extension, CLI, and IDE workflow updates from Augment.",
     sources: [{ name: "Augment Changelog", url: "https://www.augmentcode.com/changelog", type: "changelog_page" }],
   },
   {
@@ -192,13 +192,13 @@ export const vendors: VendorRecord[] = [
   {
     slug: "windsurf",
     name: "Windsurf",
-    description: "AI coding editor release coverage placeholder until a reliable machine-readable source is available.",
+    description: "AI coding editor, agent workflow, and IDE release updates.",
     sources: [{ name: "Windsurf Changelog", url: "https://windsurf.com/changelog", type: "changelog_page" }],
   },
   {
     slug: "google-antigravity",
     name: "Google Antigravity",
-    description: "Agentic development environment releases, changelog updates, and AI coding workflow changes.",
+    description: "Agentic IDE releases, changelog updates, and AI coding workflow changes.",
     sources: [{ name: "Antigravity Changelog", url: "https://antigravity.google/changelog", type: "changelog_page" }],
   },
   {
@@ -292,7 +292,7 @@ export const vendors: VendorRecord[] = [
   {
     slug: "dp-code",
     name: "DP Code",
-    description: "AI coding environment releases and workflow updates.",
+    description: "AI coding IDE releases and workflow updates.",
     sources: [{ name: "GitHub Releases", url: "https://github.com/Emanuele-web04/dpcode/releases", type: "changelog_page" }],
   },
   {

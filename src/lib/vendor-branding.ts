@@ -11,6 +11,8 @@ type VendorBrandConfig = {
   renderMode?: "mask" | "image";
   /** Expand the glyph inside the mark (for logos whose own padding makes them read small). */
   fill?: boolean;
+  /** Invert dark-on-transparent raster marks when the site is in dark mode. */
+  invertOnDark?: boolean;
 };
 
 const vendorBranding: Record<string, VendorBrandConfig> = {
@@ -36,7 +38,12 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   // Exa's mark is a blue app-style tile, so preserve the color instead of masking it.
   exa: { logoUrl: "/logos/exa.svg", renderMode: "image", fill: true },
   cline: { logoUrl: "https://cdn.simpleicons.org/cline" },
-  "augment-code": { logoUrl: "https://www.augmentcode.com/favicon.ico", renderMode: "image", fill: true },
+  "augment-code": {
+    logoUrl: "https://www.augmentcode.com/favicon.ico",
+    renderMode: "image",
+    fill: true,
+    invertOnDark: true,
+  },
   clerk: { logoUrl: "https://cdn.simpleicons.org/clerk" },
   resend: { logoUrl: "https://cdn.simpleicons.org/resend" },
   linear: { logoUrl: "https://cdn.simpleicons.org/linear" },
@@ -103,5 +110,6 @@ export function getVendorBranding(vendorSlug: string, vendorName: string) {
     logoUrl: brand?.logoUrl ?? null,
     renderMode: brand?.renderMode ?? "mask",
     fill: brand?.fill ?? false,
+    invertOnDark: brand?.invertOnDark ?? false,
   };
 }
