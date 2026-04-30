@@ -56,6 +56,7 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   langchain: "Frameworks & Tooling",
   pnpm: "Frameworks & Tooling",
   shadcn: "Frameworks & Tooling",
+  shadcnspace: "Frameworks & Tooling",
   uv: "Frameworks & Tooling",
   vite: "Frameworks & Tooling",
 

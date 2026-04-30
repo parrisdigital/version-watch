@@ -65,6 +65,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   openusage: { logoUrl: "https://www.openusage.ai/icon.svg", renderMode: "image", fill: true },
   "dp-code": { logoUrl: "https://www.dpcode.cc/favicon.ico", renderMode: "image", fill: true },
   shadcn: { logoUrl: "https://cdn.simpleicons.org/shadcnui" },
+  shadcnspace: { logoUrl: "/logos/shadcnspace.png", renderMode: "image", fill: true },
   hono: { logoUrl: "https://cdn.simpleicons.org/hono" },
   bun: { logoUrl: "https://cdn.simpleicons.org/bun" },
   vite: { logoUrl: "https://cdn.simpleicons.org/vite" },
