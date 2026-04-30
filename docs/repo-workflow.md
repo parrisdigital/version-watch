@@ -42,23 +42,11 @@ Every substantive change should go through a PR, even for a solo project, becaus
 - merged `main` branch deploys production web app
 - Convex deployment changes should be kept aligned with the merged code
 
-## Plugin Expectations
+## Platform Expectations
 
-### GitHub plugin
+Use GitHub for PR creation, review, repo metadata, and deployment-adjacent repository operations.
 
-Use `[@github](plugin://github@openai-curated)` for:
-
-- PR creation and summary workflows
-- repo and PR metadata
-- deployment-adjacent repo operations
-
-### Vercel plugin
-
-Use `[@vercel](plugin://vercel@openai-curated)` for:
-
-- deployment context
-- preview deployment inspection
-- production deployment follow-up
+Use Vercel for preview deployment inspection and production deployment follow-up.
 
 ## Commit Conventions
 

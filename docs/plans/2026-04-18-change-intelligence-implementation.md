@@ -1,6 +1,6 @@
 # Version Watch Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILLS: Use `[$convex](/Users/matthewparris/.codex/skills/convex/SKILL.md)`, `[@vercel](plugin://vercel@openai-curated)`, `[@github](plugin://github@openai-curated)`, `[@build-web-apps](plugin://build-web-apps@openai-curated)`, and `[$gpt-taste](/Users/matthewparris/.agents/skills/gpt-taste/SKILL.md)` during implementation.
+This historical plan is kept for project context. The current implementation is described in the README and supporting docs.
 
 **Goal:** Build Version Watch, a public non-monetized developer utility that turns official platform updates into reviewed, source-linked change events.
 
@@ -57,9 +57,7 @@ Add:
 - `NEXT_PUBLIC_CONVEX_URL`
 - `CONVEX_DEPLOYMENT`
 - `ADMIN_SECRET`
-- `GITHUB_TOKEN`
 - `INGESTION_USER_AGENT`
-- `INGESTION_ENABLED`
 
 **Step 4: Verify the app boots**
 

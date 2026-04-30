@@ -1,38 +1,122 @@
 # Version Watch
 
-Version Watch is a public, non-monetized developer utility for tracking meaningful changes across major developer platforms.
+Version Watch is a public developer utility for tracking meaningful changes across major developer platforms. It collects official release notes, changelogs, docs updates, RSS feeds, blogs, and GitHub release signals, then normalizes them into searchable update records.
 
-**Subtitle:** Change intelligence for developers
+The current app is live product code, not a pre-build docs package.
 
-The product collects official release notes, changelogs, docs updates, and GitHub-linked release signals from major vendors, then normalizes them into a consistent public record:
+## What It Shows
+
+Public update records answer:
 
 - what changed
 - why it matters
 - who should care
-- what part of the stack is affected
+- which platform or stack area is affected
 - where the official source lives
+- how confident and urgent the signal is
 
-## Product Shape
+Updates are displayed as event cards and canonical event pages. Each card shows the vendor, source type, release class, severity, publish time, summary, tags, signal score, and links back to the official detail. Event pages add deeper context, citation helpers, source provenance, neighboring vendor updates, and structured feedback.
 
-Version Watch is intentionally not a newsletter business, social product, or generic RSS reader. It is a source-first utility with three primary public surfaces:
+## Public Surfaces
 
-- importance-ranked homepage
-- chronological vendor pages
-- canonical event pages
+- `/` - importance-ranked recent updates
+- `/search` - searchable and filterable update explorer
+- `/vendors` and `/vendors/[slug]` - vendor directory and vendor-specific feeds
+- `/events/[slug]` - canonical update pages
+- `/feedback` - public correction and feedback form
+- `/agent-access` - human-readable API and agent integration guide
+- `/api/v1/updates` - paginated JSON updates
+- `/api/v1/clusters` - grouped update bursts for alerting and digests
+- `/api/v1/feed.json` and `/api/v1/feed.md` - feed formats
+- `/api/v1/status` and `/api/v1/status/vendors` - freshness and source health
+- `/api/v1/taxonomy` - valid vendors, severities, tags, audiences, and release classes
+- `/api/v1/openapi.json` - OpenAPI contract
+- `/agents.md`, `/llms.txt`, `/llms-full.txt`, and `/skills/version-watch/SKILL.md` - agent-facing context
 
-Version Watch also includes a protected solo review queue used to approve, edit, reject, or suppress newly ingested events before they are published.
+## Release Classes
 
-## Locked Stack
+Version Watch classifies updates into:
+
+- `breaking`
+- `security`
+- `model_launch`
+- `pricing`
+- `policy`
+- `api_change`
+- `sdk_release`
+- `cli_patch`
+- `beta_release`
+- `docs_update`
+- `routine_release`
+
+Severity is represented as `critical`, `high`, `medium`, or `low`. Public feeds can be filtered by `vendor`, `severity`, `release_class`, `audience`, `tag`, `since`, `cursor`, and `limit`.
+
+## Stack
 
 - Next.js App Router
-- Convex for backend data, queries, mutations, actions, and cron jobs
-- Vercel for web hosting and preview deployments
-- GitHub-first repo and PR workflow
+- React
+- TypeScript
+- Convex for data, ingestion, review workflows, cron jobs, and health state
+- Vercel for web hosting and previews
+- GitHub Actions for Convex deployment and production freshness checks
+- Vitest and Playwright for automated checks
 
-## Documentation Map
+This repository keeps `"private": true` in `package.json` because it is an application, not an npm package. That flag does not control GitHub repository visibility.
 
+## Local Setup
+
+```bash
+npm ci
+cp .env.example .env.local
+npm run dev
+```
+
+Local public pages can run without `NEXT_PUBLIC_CONVEX_URL`; the app falls back to bundled sample data outside production. Production requires a Convex deployment URL.
+
+Useful commands:
+
+```bash
+npm run lint
+npm test
+npm run test:e2e
+npm run health:production
+npm run signal:production
+npm run sources:production
+npm run vendors:production
+```
+
+## Environment
+
+Application variables:
+
+- `NEXT_PUBLIC_SITE_URL` - canonical public site URL, for example `https://versionwatch.dev`
+- `NEXT_PUBLIC_CONVEX_URL` - public Convex deployment URL; required in production
+- `CONVEX_DEPLOYMENT` - Convex CLI deployment name for local development
+- `ADMIN_SECRET` - server-side secret for admin pages, review actions, and protected admin APIs
+- `INGESTION_USER_AGENT` - optional user agent used by Convex ingestion fetches
+
+GitHub Actions environment secrets:
+
+- `CONVEX_DEPLOY_KEY` - Convex deploy key for the `development` and `production` GitHub Environments
+- `ADMIN_SECRET` - same production admin secret used by protected operational workflows
+
+Do not commit real `.env` files, deploy keys, API tokens, webhook URLs, or production admin secrets. Use `.env.local`, Vercel environment variables, Convex environment variables, and GitHub Environment secrets.
+
+## Open Source Status
+
+This repository is being prepared for public release. Before changing GitHub visibility from private to public:
+
+- run a full secret scan across the current tree and git history
+- rotate any key that was ever committed, even if it has since been deleted
+- add a real open source license
+- confirm GitHub secret scanning and push protection are enabled
+- confirm Vercel, Convex, and GitHub Actions secrets are environment-scoped
+- review `docs/open-source-checklist.md`
+
+## Documentation
+
+- [Open source checklist](./docs/open-source-checklist.md)
 - [Product brief](./docs/product-brief.md)
-- [Information architecture](./docs/information-architecture.md)
 - [Architecture](./docs/architecture.md)
 - [Data model](./docs/data-model.md)
 - [Vendor registry](./docs/vendor-registry.md)
@@ -40,59 +124,18 @@ Version Watch also includes a protected solo review queue used to approve, edit,
 - [Content guidelines](./docs/content-guidelines.md)
 - [Review operations](./docs/review-operations.md)
 - [Ingestion strategy](./docs/ingestion-strategy.md)
-- [Design direction](./docs/design-direction.md)
-- [Motion and interaction](./docs/motion-and-interaction.md)
 - [Deployment and ops](./docs/deployment-and-ops.md)
 - [Repo workflow](./docs/repo-workflow.md)
 - [Roadmap](./docs/roadmap.md)
-- [Launch checklist](./docs/launch-checklist.md)
-- [Stack decision](./docs/decisions/001-stack.md)
-- [Design decision](./docs/decisions/002-design-direction.md)
-- [Implementation plan](./docs/plans/2026-04-18-change-intelligence-implementation.md)
 
-## Current Phase
+## Contributing
 
-This folder currently holds the pre-build documentation package. The next phase is app scaffolding and implementation against the locked decisions in the docs.
+See [CONTRIBUTING.md](./CONTRIBUTING.md). Public contributions should focus on source coverage, parser quality, docs, tests, and public API reliability. Admin workflows and production secrets stay private.
 
-## Environment Plan
+## Security
 
-The implementation phase should assume these environment variables:
+See [SECURITY.md](./SECURITY.md). Please report vulnerabilities privately instead of opening public issues.
 
-- `NEXT_PUBLIC_CONVEX_URL`
-- `NEXT_PUBLIC_SITE_URL`
-- `CONVEX_DEPLOYMENT`
-- `ADMIN_SECRET`
-- `GITHUB_TOKEN`
-- `INGESTION_USER_AGENT`
-- `INGESTION_ENABLED`
+## License
 
-Optional later:
-
-- `SENTRY_DSN`
-- `VERCEL_ENV`
-
-## Local Setup Plan
-
-When implementation begins:
-
-1. Initialize the Next.js app in this project root.
-2. Initialize Convex in the same repo.
-3. Add the public pages and admin review surfaces.
-4. Add the vendor registry and ingestion logic.
-5. Wire Convex cron jobs for polling.
-6. Deploy previews through Vercel and connect the production deployment after the review queue is stable.
-
-## Design Guardrails
-
-The public design must follow the direction in:
-
-- [Design direction](./docs/design-direction.md)
-- [Motion and interaction](./docs/motion-and-interaction.md)
-
-Implementation is expected to use:
-
-- `[$gpt-taste](/Users/matthewparris/.agents/skills/gpt-taste/SKILL.md)`
-- `[@build-web-apps](plugin://build-web-apps@openai-curated)`
-- `[@vercel](plugin://vercel@openai-curated)`
-- `[@github](plugin://github@openai-curated)`
-- `[$convex](/Users/matthewparris/.codex/skills/convex/SKILL.md)` and relevant Convex sub-skills
+Version Watch is released under the [MIT License](./LICENSE).

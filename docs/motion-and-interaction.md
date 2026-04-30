@@ -4,12 +4,9 @@
 
 Motion in Version Watch should create hierarchy and clarity. It should not make the utility surfaces feel theatrical or slow.
 
-## Mandatory Inputs
+## Implementation Inputs
 
-Implementation must use the motion principles from:
-
-- `[$gpt-taste](/Users/matthewparris/.agents/skills/gpt-taste/SKILL.md)`
-- Build Web Apps frontend guidance
+Motion work should start from the design principles in this document and include a clear verification step for desktop and mobile behavior.
 
 GSAP is allowed where it materially improves the homepage experience. It is not the default for dense utility pages.
 

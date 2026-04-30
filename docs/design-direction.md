@@ -11,14 +11,9 @@ Version Watch should look like a premium intelligence terminal for developers, n
 - slightly cinematic at the homepage level
 - restrained and practical on dense utility surfaces
 
-## Mandatory Inputs
+## Implementation Inputs
 
-Implementation must use:
-
-- `[$gpt-taste](/Users/matthewparris/.agents/skills/gpt-taste/SKILL.md)`
-- `[@build-web-apps](plugin://build-web-apps@openai-curated)` frontend guidance
-
-The public design phase must begin with the `gpt-taste` required `<design_plan>` block before writing UI code.
+Public design work should begin with a short written design plan before UI code changes. The plan should name the user workflow, visual hierarchy, responsive layout risks, and verification steps.
 
 ## Product-Level Art Direction
 

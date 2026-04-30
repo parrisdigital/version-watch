@@ -10,12 +10,9 @@ It is not:
 - a newsroom or magazine site
 - a feature-marketing homepage with generic stats and badges
 
-## Mandatory Inputs
+## Implementation Inputs
 
-Implementation must use:
-
-- `[$gpt-taste](/Users/matthewparris/.agents/skills/gpt-taste/SKILL.md)`
-- `[@build-web-apps](plugin://build-web-apps@openai-curated)`
+Public design work should begin with a short design plan before UI code changes. The plan should cover hierarchy, responsive behavior, interaction model, and verification steps.
 
 ## Why
 

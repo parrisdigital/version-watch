@@ -1,9 +1,15 @@
 node_modules
 .next
+.vercel
 playwright-report
 test-results
-.env
-.env.local
 coverage
 dist
 tsconfig.tsbuildinfo
+
+# Local secrets and deployment credentials.
+.env*
+!.env.example
+!.env*.example
+*.pem
+*.key

@@ -47,15 +47,19 @@ Owns:
 
 ## Environment Variables
 
-Required:
+Application variables:
 
 - `NEXT_PUBLIC_CONVEX_URL`
 - `NEXT_PUBLIC_SITE_URL`
 - `CONVEX_DEPLOYMENT`
 - `ADMIN_SECRET`
-- `GITHUB_TOKEN`
 - `INGESTION_USER_AGENT`
-- `INGESTION_ENABLED`
+
+Workflow and script variables:
+
+- `CONVEX_DEPLOY_KEY`
+- `VERSION_WATCH_URL`
+- `CONVEX_URL`
 
 Optional later:
 
