@@ -14,11 +14,16 @@ import type * as feedback from "../feedback.js";
 import type * as http from "../http.js";
 import type * as ingest from "../ingest.js";
 import type * as ingestState from "../ingestState.js";
+import type * as ingestionErrors from "../ingestionErrors.js";
 import type * as lib_publish from "../lib/publish.js";
 import type * as ops from "../ops.js";
+import type * as relevance from "../relevance.js";
 import type * as review from "../review.js";
 import type * as seed from "../seed.js";
+import type * as sourceFreshness from "../sourceFreshness.js";
+import type * as sourceLifecycle from "../sourceLifecycle.js";
 import type * as vendors from "../vendors.js";
+import type * as watchlists from "../watchlists.js";
 
 import type {
   ApiFromModules,
@@ -33,11 +38,16 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   ingest: typeof ingest;
   ingestState: typeof ingestState;
+  ingestionErrors: typeof ingestionErrors;
   "lib/publish": typeof lib_publish;
   ops: typeof ops;
+  relevance: typeof relevance;
   review: typeof review;
   seed: typeof seed;
+  sourceFreshness: typeof sourceFreshness;
+  sourceLifecycle: typeof sourceLifecycle;
   vendors: typeof vendors;
+  watchlists: typeof watchlists;
 }>;
 
 /**

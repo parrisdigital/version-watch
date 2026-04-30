@@ -330,6 +330,71 @@ export type FeedbackSubmissionEntry = {
   updatedAt: number;
 };
 
+export type RelevanceSignalValue = "impacted" | "needs_review" | "no_impact";
+export type RelevanceArea =
+  | "api"
+  | "auth"
+  | "billing"
+  | "deployments"
+  | "sdk"
+  | "security"
+  | "mobile"
+  | "ai_agents"
+  | "docs"
+  | "other";
+
+export type RawRelevanceSignalEntry = {
+  _id: string;
+  eventSlug: string;
+  signal: RelevanceSignalValue;
+  area: RelevanceArea;
+  note?: string;
+  userAgent?: string;
+  createdAt: number;
+  eventTitle?: string | null;
+  eventVisibility?: "public" | "hidden" | null;
+  vendorName?: string | null;
+  vendorSlug?: string | null;
+};
+
+export type RelevanceSignalEntry = RawRelevanceSignalEntry & {
+  signalLabel: string;
+  areaLabel: string;
+  eventTitle: string;
+  vendorName: string;
+  eventUrl: string;
+};
+
+export const RELEVANCE_SIGNAL_LABEL: Record<RelevanceSignalValue, string> = {
+  impacted: "Impacted us",
+  needs_review: "Needs review",
+  no_impact: "No impact",
+};
+
+export const RELEVANCE_AREA_LABEL: Record<RelevanceArea, string> = {
+  api: "API",
+  auth: "Auth",
+  billing: "Billing",
+  deployments: "Deployments",
+  sdk: "SDK",
+  security: "Security",
+  mobile: "Mobile",
+  ai_agents: "AI agents",
+  docs: "Docs",
+  other: "Other",
+};
+
+export function formatRelevanceSignals(items: RawRelevanceSignalEntry[]): RelevanceSignalEntry[] {
+  return items.map((entry) => ({
+    ...entry,
+    signalLabel: RELEVANCE_SIGNAL_LABEL[entry.signal] ?? entry.signal,
+    areaLabel: RELEVANCE_AREA_LABEL[entry.area] ?? entry.area,
+    eventTitle: entry.eventTitle ?? entry.eventSlug,
+    vendorName: entry.vendorName ?? "Unknown vendor",
+    eventUrl: `/events/${entry.eventSlug}`,
+  }));
+}
+
 export async function getFeedbackSubmissions(): Promise<FeedbackSubmissionEntry[]> {
   return await readFromConvex<FeedbackSubmissionEntry[]>(
     () => {
@@ -345,4 +410,23 @@ export async function getFeedbackSubmissions(): Promise<FeedbackSubmissionEntry[
     },
     () => [],
   );
+}
+
+export async function getRelevanceSignals(): Promise<RelevanceSignalEntry[]> {
+  const items = await readFromConvex<RawRelevanceSignalEntry[]>(
+    () => {
+      const adminSecret = process.env.ADMIN_SECRET;
+      if (!adminSecret) {
+        throw new Error("ADMIN_SECRET is required to read relevance signals.");
+      }
+
+      return fetchQuery(api.relevance.listRecent, {
+        adminSecret,
+        limit: 100,
+      }) as Promise<RawRelevanceSignalEntry[]>;
+    },
+    () => [],
+  );
+
+  return formatRelevanceSignals(items);
 }

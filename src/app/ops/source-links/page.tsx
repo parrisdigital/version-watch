@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { SiteHeader } from "@/components/marketing/site-header";
+import { requireAdminSession } from "@/lib/admin/require-session";
 import { getSourceLinkQualityReport } from "@/lib/site-data";
 import type { SourceLinkQualityRow } from "@/lib/source-link-quality";
 
@@ -37,6 +38,8 @@ const confidenceStyle: Record<SourceLinkQualityRow["parser_confidence"], string>
 };
 
 export default async function OpsSourceLinksPage() {
+  await requireAdminSession("/ops/source-links", { loginPath: "/review/login" });
+
   const report = await getSourceLinkQualityReport();
 
   return (

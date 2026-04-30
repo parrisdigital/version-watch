@@ -1,10 +1,12 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 import { SiteHeader } from "@/components/marketing/site-header";
 import { VendorMark } from "@/components/vendor-mark";
 import { requireAdminSession } from "@/lib/admin/require-session";
 import {
   getFeedbackSubmissions,
+  getRelevanceSignals,
   getReviewQueue,
   getSourceHealth,
 } from "@/lib/site-data";
@@ -28,10 +30,11 @@ const STATUS_TEXT: Record<string, string> = {
 export default async function AdminDashboardPage() {
   await requireAdminSession("/admin");
 
-  const [health, queue, feedback] = await Promise.all([
+  const [health, queue, feedback, relevance] = await Promise.all([
     getSourceHealth(),
     getReviewQueue(),
     getFeedbackSubmissions(),
+    getRelevanceSignals(),
   ]);
 
   const counts = {
@@ -42,6 +45,7 @@ export default async function AdminDashboardPage() {
   };
   const queuePreview = queue.slice(0, 5);
   const feedbackPreview = feedback.slice(0, 5);
+  const relevancePreview = relevance.slice(0, 5);
 
   return (
     <main className="vw-page">
@@ -52,13 +56,29 @@ export default async function AdminDashboardPage() {
           <p className="vw-kicker">Admin · Operator console</p>
           <h1 className="vw-display mt-3 text-4xl md:text-5xl">Dashboard</h1>
           <p className="vw-copy mt-3 max-w-[58ch] text-pretty text-base">
-            Source health, review queue, and feedback inbox in one place. Open any tile for the full view.
+            Source health, source link quality, signal quality, feedback, and relevance review in one place.
           </p>
         </div>
       </section>
 
       <section className="px-4 py-10 sm:px-6 md:py-12">
         <div className="vw-shell grid gap-6 lg:gap-8">
+          <nav className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5" aria-label="Admin operations">
+            <AdminTile href="/admin/health" label="Source health" value={`${counts.total} sources`} />
+            <AdminTile href="/ops/source-links" label="Source link quality" value="Audit" />
+            <AdminTile href="/ops/signal" label="Signal quality" value="Report" />
+            <AdminTile
+              href="/admin/feedback#feedback"
+              label="Feedback"
+              value={`${feedback.length} ${feedback.length === 1 ? "item" : "items"}`}
+            />
+            <AdminTile
+              href="/admin/feedback#relevance"
+              label="Relevance"
+              value={`${relevance.length} ${relevance.length === 1 ? "signal" : "signals"}`}
+            />
+          </nav>
+
           <article className="vw-panel p-6 md:p-7">
             <header className="flex flex-wrap items-end justify-between gap-3">
               <div>
@@ -128,34 +148,67 @@ export default async function AdminDashboardPage() {
           <article className="vw-panel p-6 md:p-7">
             <header className="flex flex-wrap items-end justify-between gap-3">
               <div>
-                <p className="vw-kicker">Feedback inbox</p>
+                <p className="vw-kicker">Feedback & relevance</p>
                 <p className="mt-3 font-[var(--font-display)] text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-                  {feedback.length} {feedback.length === 1 ? "submission" : "submissions"}
+                  {feedback.length} feedback · {relevance.length} relevance
                 </p>
               </div>
               <Link href="/admin/feedback" className="vw-button vw-button-secondary">
                 Open inbox
               </Link>
             </header>
-            {feedbackPreview.length > 0 ? (
-              <ul role="list" className="mt-5 grid gap-2">
-                {feedbackPreview.map((entry) => (
-                  <li
-                    key={entry._id}
-                    className="vw-panel-flat flex flex-wrap items-center gap-3 p-3"
-                  >
-                    <span className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-signal)]">
-                      {TYPE_LABEL[entry.type] ?? entry.type}
-                    </span>
-                    <span className="hidden truncate text-sm text-[var(--foreground)] sm:inline">
-                      {entry.message}
-                    </span>
-                    <span className="ml-auto font-[var(--font-mono)] text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]">
-                      {new Date(entry.createdAt).toISOString().slice(0, 10)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+            {feedbackPreview.length > 0 || relevancePreview.length > 0 ? (
+              <div className="mt-5 grid gap-4 lg:grid-cols-2">
+                <PreviewColumn title="Feedback">
+                  {feedbackPreview.length > 0 ? (
+                    <ul role="list" className="grid gap-2">
+                      {feedbackPreview.map((entry) => (
+                        <li
+                          key={entry._id}
+                          className="vw-panel-flat flex flex-wrap items-center gap-3 p-3"
+                        >
+                          <span className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-signal)]">
+                            {TYPE_LABEL[entry.type] ?? entry.type}
+                          </span>
+                          <span className="hidden truncate text-sm text-[var(--foreground)] sm:inline">
+                            {entry.message}
+                          </span>
+                          <span className="ml-auto font-[var(--font-mono)] text-[0.6875rem] tabular-nums text-[var(--muted-foreground)]">
+                            {new Date(entry.createdAt).toISOString().slice(0, 10)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <EmptyPreview text="No feedback submissions." />
+                  )}
+                </PreviewColumn>
+
+                <PreviewColumn title="Relevance">
+                  {relevancePreview.length > 0 ? (
+                    <ul role="list" className="grid gap-2">
+                      {relevancePreview.map((entry) => (
+                        <li
+                          key={entry._id}
+                          className="vw-panel-flat flex flex-wrap items-center gap-3 p-3"
+                        >
+                          <span className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-high)]">
+                            {entry.signalLabel}
+                          </span>
+                          <span className="hidden truncate text-sm text-[var(--foreground)] sm:inline">
+                            {entry.vendorName} · {entry.eventTitle}
+                          </span>
+                          <span className="ml-auto font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+                            {entry.areaLabel}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <EmptyPreview text="No relevance signals." />
+                  )}
+                </PreviewColumn>
+              </div>
             ) : (
               <p className="mt-5 font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
                 Inbox is empty.
@@ -165,5 +218,40 @@ export default async function AdminDashboardPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+function AdminTile({ href, label, value }: { href: string; label: string; value: string }) {
+  return (
+    <Link
+      href={href}
+      className="vw-panel-flat p-4 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--color-surface-raised)]"
+    >
+      <span className="block font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+        {label}
+      </span>
+      <span className="mt-2 block font-[var(--font-display)] text-lg font-semibold tracking-tight text-[var(--foreground)]">
+        {value}
+      </span>
+    </Link>
+  );
+}
+
+function PreviewColumn({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section>
+      <h2 className="mb-2 font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function EmptyPreview({ text }: { text: string }) {
+  return (
+    <p className="vw-panel-flat p-3 font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--muted-foreground)]">
+      {text}
+    </p>
   );
 }

@@ -11,13 +11,16 @@ import { ADMIN_COOKIE_NAME, isValidAdminCookieValue } from "@/lib/admin/session"
  * Pass the current path as `fromPath` so login can bounce the user back
  * after sign-in.
  */
-export async function requireAdminSession(fromPath: string): Promise<void> {
+export async function requireAdminSession(
+  fromPath: string,
+  options: { loginPath?: "/admin/login" | "/review/login" } = {},
+): Promise<void> {
   const cookieStore = await cookies();
   const cookieValue = cookieStore.get(ADMIN_COOKIE_NAME)?.value;
   const isValid = await isValidAdminCookieValue(cookieValue);
 
   if (!isValid) {
     const params = new URLSearchParams({ from: fromPath });
-    redirect(`/admin/login?${params.toString()}`);
+    redirect(`${options.loginPath ?? "/admin/login"}?${params.toString()}`);
   }
 }

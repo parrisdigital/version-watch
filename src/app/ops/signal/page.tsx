@@ -1,12 +1,15 @@
 import Link from "next/link";
 
 import { SiteHeader } from "@/components/marketing/site-header";
+import { requireAdminSession } from "@/lib/admin/require-session";
 import { buildSignalQualityReport } from "@/lib/signal-observability";
 import { getAllPublicEvents } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function OpsSignalPage() {
+  await requireAdminSession("/ops/signal", { loginPath: "/review/login" });
+
   const events = await getAllPublicEvents();
   const report = buildSignalQualityReport(events);
 

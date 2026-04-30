@@ -1,5 +1,13 @@
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+
+function requireAdminSecret(suppliedSecret: string | undefined) {
+  const expectedSecret = process.env.ADMIN_SECRET;
+
+  if (!expectedSecret || suppliedSecret !== expectedSecret) {
+    throw new Error("Unauthorized");
+  }
+}
 
 function clampText(value: string | undefined, maxLength: number) {
   return (value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
@@ -50,5 +58,40 @@ export const submit = mutation({
     });
 
     return { ok: true };
+  },
+});
+
+export const listRecent = query({
+  args: {
+    adminSecret: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(v.any()),
+  handler: async (ctx, args) => {
+    requireAdminSecret(args.adminSecret);
+
+    const rows = await ctx.db
+      .query("eventRelevanceSignals")
+      .withIndex("by_created_at")
+      .order("desc")
+      .take(Math.max(1, Math.min(args.limit ?? 50, 100)));
+
+    return await Promise.all(
+      rows.map(async (row) => {
+        const event = await ctx.db
+          .query("changeEvents")
+          .withIndex("by_slug", (q) => q.eq("slug", row.eventSlug))
+          .unique();
+        const vendor = event ? await ctx.db.get(event.vendorId) : null;
+
+        return {
+          ...row,
+          eventTitle: event?.title ?? null,
+          eventVisibility: event?.visibility ?? null,
+          vendorName: vendor?.name ?? null,
+          vendorSlug: vendor?.slug ?? null,
+        };
+      }),
+    );
   },
 });

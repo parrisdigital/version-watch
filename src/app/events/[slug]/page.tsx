@@ -169,6 +169,8 @@ export default async function EventPage({
   const versionWatchUrl = `${baseUrl}/events/${event.slug}`;
   const jsonUrl = `/api/v1/updates/${event.slug}`;
   const citation = buildCitation(displayTitle, event.summary, event.sourceUrl, versionWatchUrl);
+  const trackedSourceUrl = event.sourceSurfaceUrl;
+  const hasTrackedSource = Boolean(trackedSourceUrl);
 
   return (
     <main className="vw-page">
@@ -245,22 +247,33 @@ export default async function EventPage({
               . The simplified record can be checked against the original wording.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
-              <a
-                href={event.sourceUrl}
-                className="vw-button vw-button-primary"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open official detail
-              </a>
-              {event.sourceSurfaceUrl && event.sourceSurfaceUrl !== event.sourceUrl ? (
+              {hasTrackedSource && trackedSourceUrl ? (
                 <a
-                  href={event.sourceSurfaceUrl}
-                  className="vw-button vw-button-secondary"
+                  href={trackedSourceUrl}
+                  className="vw-button vw-button-primary"
                   target="_blank"
                   rel="noreferrer"
                 >
                   Open tracked source
+                </a>
+              ) : (
+                <a
+                  href={event.sourceUrl}
+                  className="vw-button vw-button-primary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open official detail
+                </a>
+              )}
+              {hasTrackedSource ? (
+                <a
+                  href={event.sourceUrl}
+                  className="vw-button vw-button-secondary"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open official detail
                 </a>
               ) : null}
               {event.githubUrl ? (
@@ -273,7 +286,7 @@ export default async function EventPage({
                   View on GitHub
                 </a>
               ) : null}
-              <Link href={feedbackHref} className="vw-button vw-button-ghost">
+              <Link href={feedbackHref} className="vw-button vw-button-utility">
                 Report this update
               </Link>
               <EventActions citation={citation} jsonUrl={jsonUrl} />

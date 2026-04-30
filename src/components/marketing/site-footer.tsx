@@ -10,10 +10,10 @@ const PROJECT_LINKS = [
   { href: REPO_URL, label: "GitHub", external: true },
 ] as const;
 
-const OPS_LINKS = [
-  { href: "/ops/health", label: "Source health" },
-  { href: "/ops/source-links", label: "Source links" },
-  { href: "/ops/signal", label: "Signal quality" },
+const STATUS_LINKS = [
+  { href: "/api/v1/status", label: "API status" },
+  { href: "/api/v1/status/vendors", label: "Vendor status" },
+  { href: "/llms-status", label: "Agent resource status" },
 ] as const;
 
 const AGENT_LINKS = [
@@ -48,7 +48,7 @@ export function SiteFooter() {
           </div>
 
           <FooterColumn label="Project" links={PROJECT_LINKS} />
-          <FooterColumn label="Operations" links={OPS_LINKS} />
+          <FooterColumn label="Status" links={STATUS_LINKS} />
           <FooterColumn label="For agents" links={AGENT_LINKS} />
         </div>
 

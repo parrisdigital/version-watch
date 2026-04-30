@@ -30,7 +30,7 @@ export function CopyCitation({ citation }: { citation: string }) {
     <button
       type="button"
       onClick={onCopy}
-      className="vw-button vw-button-ghost"
+      className="vw-button vw-button-utility"
       aria-live="polite"
     >
       {state === "copied"
@@ -44,11 +44,11 @@ export function CopyCitation({ citation }: { citation: string }) {
 
 export function EventActions({ citation, jsonUrl }: EventActionsProps) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <>
       <CopyCitation citation={citation} />
-      <a href={jsonUrl} className="vw-button vw-button-ghost" target="_blank" rel="noreferrer">
+      <a href={jsonUrl} className="vw-button vw-button-utility" target="_blank" rel="noreferrer">
         View JSON
       </a>
-    </div>
+    </>
   );
 }
