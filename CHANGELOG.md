@@ -12,6 +12,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Move shadcn ecosystem vendors into a clearer Design Systems & UI directory category.
 - Make forced admin refreshes reparse unchanged source content, and allow source-link repair rules to target exact URL fragments.
 - Update the Warp changelog source URL after the previous markdown endpoint began returning 404s.
+- Reactivate paused sources when they remain present in the active registry after a source repair.
 
 ## [0.1.1] - 2026-04-30
 

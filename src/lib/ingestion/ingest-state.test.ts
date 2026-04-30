@@ -241,6 +241,27 @@ describe("source lifecycle state", () => {
     expect(payload).not.toHaveProperty("consecutiveFailures");
   });
 
+  it("reactivates paused sources that remain active in the registry", () => {
+    const payload = buildSourceRegistryPayload({
+      existingSource: {
+        lifecycleState: "paused",
+        consecutiveFailures: 1,
+      },
+      vendorId: "vendor_warp",
+      vendorSlug: "warp",
+      source: {
+        name: "Warp Changelog",
+        type: "changelog_page",
+        url: "https://docs.warp.dev/changelog",
+      },
+      isPrimary: true,
+      now: Date.UTC(2026, 3, 25, 16),
+    });
+
+    expect(payload.lifecycleState).toBe("active");
+    expect(payload).not.toHaveProperty("consecutiveFailures");
+  });
+
   it("marks Railway as unsupported during registry sync", () => {
     const payload = buildSourceRegistryPayload({
       existingSource: {

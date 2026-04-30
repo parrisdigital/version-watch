@@ -47,6 +47,10 @@ function resolveSyncedLifecycleState(existingSource: any, registryState: SourceL
   }
 
   const currentState = getEffectiveLifecycleState(existingSource);
+  if (currentState === "paused" && registryState === "active") {
+    return registryState;
+  }
+
   return currentState === "unsupported" ? registryState : currentState;
 }
 
