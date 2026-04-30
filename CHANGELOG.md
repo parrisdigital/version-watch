@@ -11,6 +11,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Correct shadcnspace changelog parsing so versions and exact release dates match the upstream timeline.
 - Move shadcn ecosystem vendors into a clearer Design Systems & UI directory category.
 - Make forced admin refreshes reparse unchanged source content, and allow source-link repair rules to target exact URL fragments.
+- Update the Warp changelog source URL after the previous markdown endpoint began returning 404s.
 
 ## [0.1.1] - 2026-04-30
 

@@ -335,7 +335,7 @@ describe("parseHtmlEntries", () => {
 
     const entries = parseHtmlEntries({
       parserKey: "warp:changelog_page",
-      sourceUrl: "https://docs.warp.dev/changelog/readme.md",
+      sourceUrl: "https://docs.warp.dev/changelog",
       html: markdown,
     });
 
