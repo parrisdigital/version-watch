@@ -25,8 +25,8 @@ describe("vendor categories", () => {
     expect(getCategoryForSlug("exa")).toBe("Search & Web Data");
   });
 
-  it("keeps shadcn ecosystem vendors in framework and tooling", () => {
-    expect(getCategoryForSlug("shadcn")).toBe("Frameworks & Tooling");
-    expect(getCategoryForSlug("shadcnspace")).toBe("Frameworks & Tooling");
+  it("keeps shadcn ecosystem vendors in design systems and UI", () => {
+    expect(getCategoryForSlug("shadcn")).toBe("Design Systems & UI");
+    expect(getCategoryForSlug("shadcnspace")).toBe("Design Systems & UI");
   });
 });

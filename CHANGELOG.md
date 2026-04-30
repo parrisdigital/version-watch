@@ -4,6 +4,13 @@ All notable public releases of Version Watch are documented here.
 
 Version Watch uses GitHub Releases and semantic version tags for human-readable project milestones. Routine production deployments may happen more often than releases.
 
+## Unreleased
+
+### Fixed
+
+- Correct shadcnspace changelog parsing so versions and exact release dates match the upstream timeline.
+- Move shadcn ecosystem vendors into a clearer Design Systems & UI directory category.
+
 ## [0.1.1] - 2026-04-30
 
 ### Added

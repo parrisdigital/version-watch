@@ -587,6 +587,34 @@ function parseDateLedHeadingEntries(sourceUrl: string, html: string) {
   return dedupeEntries(entries);
 }
 
+const SHADCNSPACE_META_PATTERN =
+  /\bVersion\s+([0-9]+(?:\.[0-9]+)+)\s*(?:(\d{1,2})\s+)?(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+(20\d{2})\b/i;
+
+function normalizeShadcnspaceVersionDate(versionValue: string, dayValue: string | undefined, monthIndex: number, year: number) {
+  let version = versionValue;
+  let day = dayValue ? Number(dayValue) : undefined;
+  const maxDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
+
+  if (day === undefined) {
+    const parts = version.split(".");
+    const lastPart = parts.at(-1) ?? "";
+    const possibleDay = Number(lastPart.slice(-2));
+    const correctedLastPart = lastPart.slice(0, -2);
+
+    if (lastPart.length >= 3 && correctedLastPart && possibleDay >= 1 && possibleDay <= maxDay) {
+      version = [...parts.slice(0, -1), correctedLastPart].join(".");
+      day = possibleDay;
+    }
+  }
+
+  day ??= 1;
+  if (day < 1 || day > maxDay) {
+    return null;
+  }
+
+  return { version, publishedAt: Date.UTC(year, monthIndex, day) };
+}
+
 function parseShadcnspaceEntries(sourceUrl: string, html: string) {
   const $ = load(html);
   const root = $("main").length > 0 ? $("main").first() : $("body");
@@ -601,21 +629,24 @@ function parseShadcnspaceEntries(sourceUrl: string, html: string) {
     const contentContainer = $(heading).closest("div").first();
     const timelineItem = contentContainer.parent();
     const metaText = cleanText(timelineItem.children().first().text());
-    const metaMatch = metaText.match(
-      /\bVersion\s+([0-9.]+)\s+(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+(20\d{2})\b/i,
-    );
+    const metaMatch = metaText.match(SHADCNSPACE_META_PATTERN);
 
     if (!metaMatch) {
       continue;
     }
 
-    const version = metaMatch[1]!;
-    const monthIndex = MONTH_INDEX[metaMatch[2]!.toLowerCase()];
-    const year = Number(metaMatch[3]);
+    const monthIndex = MONTH_INDEX[metaMatch[3]!.toLowerCase()];
+    const year = Number(metaMatch[4]);
     if (monthIndex === undefined || Number.isNaN(year)) {
       continue;
     }
 
+    const normalizedMeta = normalizeShadcnspaceVersionDate(metaMatch[1]!, metaMatch[2], monthIndex, year);
+    if (!normalizedMeta) {
+      continue;
+    }
+
+    const { version, publishedAt } = normalizedMeta;
     const versionSlug = version.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "").toLowerCase();
     const summary = cleanText($(heading).nextAll("p, div").first().text());
     const excerpt = truncateSentence(summary || collectContainerExcerpt($, heading, title) || title);
@@ -624,7 +655,7 @@ function parseShadcnspaceEntries(sourceUrl: string, html: string) {
       title: `shadcnspace ${version}: ${title}`,
       url: `${sourceUrl.split("#")[0]}#version-${encodeURIComponent(versionSlug)}`,
       excerpt,
-      publishedAt: Date.UTC(year, monthIndex, 1),
+      publishedAt,
       parseConfidence: "high",
     });
   }

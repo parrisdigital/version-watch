@@ -12,6 +12,10 @@ type ViewMode = "grouped" | "alphabetical";
 
 const CATEGORY_ORDER: VendorCategory[] = [...VENDOR_CATEGORIES, "Other"];
 
+function normalizeSearchText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
 function ArrowIcon() {
   return (
     <svg
@@ -90,11 +94,13 @@ export function VendorDirectory({ vendors }: { vendors: VendorRecord[] }) {
 
   const filtered = useMemo(() => {
     if (!trimmed) return vendors;
+    const compactQuery = normalizeSearchText(trimmed);
     return vendors.filter(
-      (vendor) =>
-        vendor.name.toLowerCase().includes(trimmed) ||
-        vendor.slug.toLowerCase().includes(trimmed) ||
-        vendor.description.toLowerCase().includes(trimmed),
+      (vendor) => {
+        const searchable = [vendor.name, vendor.slug, vendor.description].join(" ").toLowerCase();
+        const compactSearchable = normalizeSearchText(searchable);
+        return searchable.includes(trimmed) || compactSearchable.includes(compactQuery);
+      },
     );
   }, [vendors, trimmed]);
 
