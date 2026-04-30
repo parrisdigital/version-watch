@@ -163,7 +163,7 @@ export const vendors: VendorRecord[] = [
     slug: "warp",
     name: "Warp",
     description: "Agentic terminal, developer workflow, and desktop release notes.",
-    sources: [{ name: "Warp Changelog", url: "https://docs.warp.dev/changelog/readme.md", type: "changelog_page" }],
+    sources: [{ name: "Warp Changelog", url: "https://docs.warp.dev/changelog", type: "changelog_page" }],
   },
   {
     slug: "vscode",
