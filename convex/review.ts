@@ -281,7 +281,10 @@ export const rescoreSignalV2 = mutation({
 function matchesSourceUrlPrefix(sourceUrl: string, prefixes: string[]) {
   try {
     const url = new URL(sourceUrl);
-    const normalizedUrl = `${url.origin}${url.pathname}`.replace(/\/$/, "");
+    const normalizedBaseUrl = `${url.origin}${url.pathname}`.replace(/\/$/, "");
+    const normalizedFullUrl = `${url.origin}${url.pathname}${url.search}${url.hash}`;
+    const normalizedPath = url.pathname.replace(/\/$/, "");
+    const normalizedFullPath = `${url.pathname}${url.search}${url.hash}`;
 
     return prefixes.some((prefix) => {
       const trimmed = prefix.trim();
@@ -289,12 +292,16 @@ function matchesSourceUrlPrefix(sourceUrl: string, prefixes: string[]) {
         return false;
       }
 
+      const includesDetail = /[?#]/.test(trimmed);
       if (trimmed.startsWith("/")) {
-        return url.pathname === trimmed || url.pathname.startsWith(`${trimmed.replace(/\/$/, "")}/`);
+        const normalizedPrefix = includesDetail ? trimmed : trimmed.replace(/\/$/, "");
+        const target = includesDetail ? normalizedFullPath : normalizedPath;
+        return target === normalizedPrefix || (!includesDetail && target.startsWith(`${normalizedPrefix}/`));
       }
 
-      const normalizedPrefix = trimmed.replace(/\/$/, "");
-      return normalizedUrl === normalizedPrefix || normalizedUrl.startsWith(`${normalizedPrefix}/`);
+      const normalizedPrefix = includesDetail ? trimmed : trimmed.replace(/\/$/, "");
+      const target = includesDetail ? normalizedFullUrl : normalizedBaseUrl;
+      return target === normalizedPrefix || (!includesDetail && target.startsWith(`${normalizedPrefix}/`));
     });
   } catch {
     return prefixes.some((prefix) => sourceUrl.startsWith(prefix));

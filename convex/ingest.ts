@@ -255,7 +255,7 @@ function parseSourceEntries(args: { parserKey: string; sourceUrl: string; body: 
   }
 }
 
-async function ingestSource(ctx: any, source: any, runType: RunType) {
+async function ingestSource(ctx: any, source: any, runType: RunType, force: boolean) {
   const startedAt = Date.now();
 
   try {
@@ -268,11 +268,12 @@ async function ingestSource(ctx: any, source: any, runType: RunType) {
     }
 
     if (
-      sourceResponse.notModified ||
-      (canUseConditionalCache(source) &&
-        source.contentHash &&
-        sourceResponse.contentHash &&
-        source.contentHash === sourceResponse.contentHash)
+      !force &&
+      (sourceResponse.notModified ||
+        (canUseConditionalCache(source) &&
+          source.contentHash &&
+          sourceResponse.contentHash &&
+          source.contentHash === sourceResponse.contentHash))
     ) {
       return await ctx.runMutation(internal.ingestState.persistSourceUnchanged, {
         sourceId: source.sourceId,
@@ -493,7 +494,7 @@ async function runIngestion(
     let failures = 0;
 
     for (const source of sources) {
-      const result = await ingestSource(ctx, source, options.runType);
+      const result = await ingestSource(ctx, source, options.runType, options.force);
       itemsFetched += result.itemsFetched;
       itemsCreated += result.itemsCreated;
       itemsDeduped += result.itemsDeduped;
