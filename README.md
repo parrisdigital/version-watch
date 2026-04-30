@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/brand/readme-banner.png" alt="Version Watch - source-linked change intelligence for developer platforms" width="100%">
+  <img src="public/brand/readme-banner-refined.png" alt="Version Watch - source-linked change intelligence for developer platforms" width="100%">
 </p>
 
 # Version Watch
@@ -19,7 +19,7 @@ Use it to see what changed, why it matters, who should care, which stack area is
 - Website: [versionwatch.dev](https://versionwatch.dev)
 - API docs: [versionwatch.dev/agent-access](https://versionwatch.dev/agent-access)
 - OpenAPI: [versionwatch.dev/api/v1/openapi.json](https://versionwatch.dev/api/v1/openapi.json)
-- Latest release: [v0.1.0](https://github.com/parrisdigital/version-watch/releases/tag/v0.1.0)
+- Latest release: [v0.1.1](https://github.com/parrisdigital/version-watch/releases/tag/v0.1.1)
 
 ## Features
 
