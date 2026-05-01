@@ -10,6 +10,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 - Consolidate dependency maintenance by grouping future Dependabot npm and GitHub Actions updates.
 - Update maintenance dependencies and GitHub Actions versions used by project workflows.
+- Keep automated Dependabot version PRs scoped to minor and patch updates; major upgrades remain manual maintenance.
 
 ### Fixed
 
