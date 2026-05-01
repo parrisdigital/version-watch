@@ -143,7 +143,9 @@ export default defineSchema({
     .index("by_slug", ["slug"])
     .index("by_raw_candidate", ["rawCandidateId"])
     .index("by_vendor_and_published", ["vendorId", "publishedAt"])
+    .index("by_vendor_visibility_and_published", ["vendorId", "visibility", "publishedAt"])
     .index("by_importance_and_published", ["importanceBand", "publishedAt"])
+    .index("by_importance_visibility_and_published", ["importanceBand", "visibility", "publishedAt"])
     .index("by_visibility_and_published", ["visibility", "publishedAt"]),
 
   eventLinks: defineTable({

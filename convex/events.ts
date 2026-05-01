@@ -185,15 +185,17 @@ export const listPublicUpdatesPage = query({
 
       rows = await ctx.db
         .query("changeEvents")
-        .withIndex("by_vendor_and_published", (q) => q.eq("vendorId", vendor._id))
-        .filter((q) => q.eq(q.field("visibility"), "public"))
+        .withIndex("by_vendor_visibility_and_published", (q) =>
+          q.eq("vendorId", vendor._id).eq("visibility", "public"),
+        )
         .order("desc")
         .take(scanLimit);
     } else if (args.severity) {
       rows = await ctx.db
         .query("changeEvents")
-        .withIndex("by_importance_and_published", (q) => q.eq("importanceBand", args.severity!))
-        .filter((q) => q.eq(q.field("visibility"), "public"))
+        .withIndex("by_importance_visibility_and_published", (q) =>
+          q.eq("importanceBand", args.severity!).eq("visibility", "public"),
+        )
         .order("desc")
         .take(scanLimit);
     } else {
@@ -250,8 +252,9 @@ export const byVendorSlug = query({
 
     const rows = await ctx.db
       .query("changeEvents")
-      .withIndex("by_vendor_and_published", (q) => q.eq("vendorId", vendor._id))
-      .filter((q) => q.eq(q.field("visibility"), "public"))
+      .withIndex("by_vendor_visibility_and_published", (q) =>
+        q.eq("vendorId", vendor._id).eq("visibility", "public"),
+      )
       .collect();
 
     const formatted = await Promise.all(rows.map((row) => formatEvent(ctx, row)));
