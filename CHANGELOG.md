@@ -6,6 +6,11 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+### Changed
+
+- Consolidate dependency maintenance by grouping future Dependabot npm and GitHub Actions updates.
+- Update maintenance dependencies and GitHub Actions versions used by project workflows.
+
 ### Fixed
 
 - Correct shadcnspace changelog parsing so versions and exact release dates match the upstream timeline.
