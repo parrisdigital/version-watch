@@ -14,6 +14,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ### Fixed
 
+- Hold future-dated upstream changelog entries out of the public feed until they are within the public freshness skew window.
 - Correct shadcnspace changelog parsing so versions and exact release dates match the upstream timeline.
 - Move shadcn ecosystem vendors into a clearer Design Systems & UI directory category.
 - Make forced admin refreshes reparse unchanged source content, and allow source-link repair rules to target exact URL fragments.

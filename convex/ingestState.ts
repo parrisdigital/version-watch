@@ -2,7 +2,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 import { sourceErrorCodeValidator } from "./ingestionErrors";
-import { publishRawCandidate } from "./lib/publish";
+import { hidePublishedRawCandidate, publishRawCandidate } from "./lib/publish";
 import {
   getLifecycleStateAfterFailure,
   getLifecycleStateAfterSuccess,
@@ -97,6 +97,7 @@ function canonicalSourceUrl(value: string) {
 }
 
 const POLL_DUE_GRACE_MS = 60 * 1000;
+const PUBLIC_FUTURE_SKEW_MS = 60 * 60 * 1000;
 const BASE_BACKOFF_MS = 15 * 60 * 1000;
 const MAX_BACKOFF_MS = 6 * 60 * 60 * 1000;
 const CIRCUIT_BREAKER_BACKOFF_MS = 24 * 60 * 60 * 1000;
@@ -351,11 +352,15 @@ function findSameCanonicalSourceCandidate<T extends { rawTitle: string; sourceUr
   );
 }
 
-function isReasonablePublishDate(publishedAt: number, now: number) {
+export function isReasonablePublishDate(publishedAt: number, now: number) {
   const earliestAllowed = Date.UTC(2025, 0, 1);
-  const latestAllowed = now + 36 * 60 * 60 * 1000;
+  const latestAllowed = now + PUBLIC_FUTURE_SKEW_MS;
 
   return publishedAt >= earliestAllowed && publishedAt <= latestAllowed;
+}
+
+function isHeldForFuturePublicDate(publishedAt: number, now: number) {
+  return publishedAt > now + PUBLIC_FUTURE_SKEW_MS;
 }
 
 function shouldAutoPublishCandidate(item: any, vendor: any, source: any, now: number) {
@@ -686,9 +691,12 @@ export const persistSourceEntries = internalMutation({
         sameNormalizedTitleCandidate ?? findSameCanonicalSourceCandidate(sourceCandidates, item);
       const existingCandidate = sameCanonicalSourceCandidate;
 
+      const heldForFutureDate = isHeldForFuturePublicDate(item.publishedAt, now);
       const shouldPublish = shouldAutoPublishCandidate(item, vendor, source, now);
       const status =
-        existingCandidate?.status === "pending_review" && shouldPublish
+        heldForFutureDate && (!existingCandidate || existingCandidate.status === "published")
+          ? ("pending_review" as const)
+          : existingCandidate?.status === "pending_review" && shouldPublish
           ? ("published" as const)
           : (existingCandidate?.status ?? (shouldPublish ? ("published" as const) : ("pending_review" as const)));
       const rawPayload = {
@@ -744,6 +752,8 @@ export const persistSourceEntries = internalMutation({
         if (publishedId) {
           published += 1;
         }
+      } else if (heldForFutureDate) {
+        await hidePublishedRawCandidate(ctx, rawCandidate._id);
       }
     }
 
