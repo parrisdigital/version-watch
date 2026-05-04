@@ -75,3 +75,21 @@ export async function publishRawCandidate(ctx: any, rawCandidate: any) {
     createdAt: Date.now(),
   });
 }
+
+export async function hidePublishedRawCandidate(ctx: any, rawCandidateId: any) {
+  const existingEvent = await ctx.db
+    .query("changeEvents")
+    .withIndex("by_raw_candidate", (q: any) => q.eq("rawCandidateId", rawCandidateId))
+    .unique();
+
+  if (!existingEvent || existingEvent.visibility !== "public") {
+    return null;
+  }
+
+  await ctx.db.patch(existingEvent._id, {
+    visibility: "hidden" as const,
+    updatedAt: Date.now(),
+  });
+
+  return existingEvent._id;
+}

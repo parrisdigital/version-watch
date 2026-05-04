@@ -9,6 +9,7 @@ import {
   findSameSourceCandidateByTitle,
   getFailureBackoffUntil,
   hasMeaningfulTitle,
+  isReasonablePublishDate,
   isOfficialSourceUrl,
   shouldPollSource,
 } from "../../../convex/ingestState";
@@ -71,6 +72,20 @@ describe("findSameSourceCandidateByTitle", () => {
     expect(findSameSourceCandidateByTitle(candidates, "Updates the elements.update() method to return a Promise")).toBe(
       candidates[1],
     );
+  });
+});
+
+describe("isReasonablePublishDate", () => {
+  const now = Date.UTC(2026, 4, 4, 12, 0, 0);
+
+  it("allows only the public future-skew window", () => {
+    expect(isReasonablePublishDate(now + 59 * 60 * 1000, now)).toBe(true);
+    expect(isReasonablePublishDate(now + 2 * 60 * 60 * 1000, now)).toBe(false);
+    expect(isReasonablePublishDate(Date.UTC(2026, 4, 5), now)).toBe(false);
+  });
+
+  it("rejects dates before the supported ingestion window", () => {
+    expect(isReasonablePublishDate(Date.UTC(2024, 11, 31), now)).toBe(false);
   });
 });
 
