@@ -15,6 +15,7 @@ import {
 import {
   discoverAntigravityBundleUrl,
   discoverFeedUrl,
+  discoverWarpChangelogYearUrl,
   normalizeParsedEntry,
   parseHtmlEntries,
   parsePostHogPageData,
@@ -330,6 +331,27 @@ async function ingestSource(ctx: any, source: any, runType: RunType, force: bool
               parserKey: source.parserKey,
               sourceUrl: sourceResponse.url,
               body: bundleResponse.body,
+            });
+          }
+        } catch {
+          parsedEntries = [];
+        }
+      }
+    }
+
+    if (
+      parsedEntries.length === 0 &&
+      (source.parserKey === "warp:docs_page" || source.parserKey === "warp:changelog_page")
+    ) {
+      const yearUrl = discoverWarpChangelogYearUrl(sourceResponse.body, sourceResponse.url);
+      if (yearUrl) {
+        try {
+          const yearResponse = await fetchText(yearUrl);
+          if (yearResponse.ok) {
+            parsedEntries = parseSourceEntries({
+              parserKey: source.parserKey,
+              sourceUrl: yearResponse.url,
+              body: yearResponse.body,
             });
           }
         } catch {

@@ -2091,6 +2091,43 @@ export function discoverAntigravityBundleUrl(html: string, sourceUrl: string) {
   return script ? toAbsoluteUrl(script, sourceUrl) : null;
 }
 
+export function discoverWarpChangelogYearUrl(html: string, sourceUrl: string, now = new Date()) {
+  const $ = load(html);
+  const currentYear = now.getUTCFullYear();
+  const candidates = new Map<number, string>();
+
+  for (const anchor of $('a[href*="/changelog/"]').toArray()) {
+    const href = $(anchor).attr("href");
+    if (!href) {
+      continue;
+    }
+
+    const url = toAbsoluteUrl(href, sourceUrl);
+    let parsed: URL;
+
+    try {
+      parsed = new URL(url);
+    } catch {
+      continue;
+    }
+
+    const match = parsed.pathname.match(/\/changelog\/(20\d{2})(?:\/|\.md)?$/i);
+    if (!match) {
+      continue;
+    }
+
+    const year = Number(match[1]);
+    if (Number.isFinite(year)) {
+      candidates.set(year, url);
+    }
+  }
+
+  const candidateYears = Array.from(candidates.keys()).filter((year) => year <= currentYear);
+  const preferredYear = candidates.has(currentYear) ? currentYear : Math.max(...candidateYears);
+
+  return Number.isFinite(preferredYear) ? (candidates.get(preferredYear) ?? null) : null;
+}
+
 export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput) {
   if (isLikelyMarkdownDocument(html) || /\.(?:md|txt)$/i.test(new URL(sourceUrl).pathname)) {
     const markdownEntries = parseMarkdownEntries(sourceUrl, html, parserKey);

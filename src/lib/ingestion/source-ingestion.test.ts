@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   discoverAntigravityBundleUrl,
   discoverFeedUrl,
+  discoverWarpChangelogYearUrl,
   normalizeParsedEntry,
   parseHtmlEntries,
   parsePostHogPageData,
@@ -48,6 +49,40 @@ describe("discoverFeedUrl", () => {
     expect(discoverAntigravityBundleUrl(html, "https://antigravity.google/changelog")).toBe(
       "https://antigravity.google/main-5LR4F4TY.js",
     );
+  });
+
+  it("discovers Warp's active yearly changelog from the index", () => {
+    const html = `
+      <main>
+        <a href="/changelog/2026/">2026</a>
+        <a href="/changelog/2025/">2025</a>
+      </main>
+    `;
+
+    expect(
+      discoverWarpChangelogYearUrl(
+        html,
+        "https://docs.warp.dev/changelog",
+        new Date("2026-05-07T00:00:00Z"),
+      ),
+    ).toBe("https://docs.warp.dev/changelog/2026/");
+  });
+
+  it("falls back to Warp's newest non-future yearly changelog", () => {
+    const html = `
+      <main>
+        <a href="/changelog/2025/">2025</a>
+        <a href="/changelog/2024/">2024</a>
+      </main>
+    `;
+
+    expect(
+      discoverWarpChangelogYearUrl(
+        html,
+        "https://docs.warp.dev/changelog",
+        new Date("2026-01-01T00:00:00Z"),
+      ),
+    ).toBe("https://docs.warp.dev/changelog/2025/");
   });
 });
 
