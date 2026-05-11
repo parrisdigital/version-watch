@@ -1,0 +1,19 @@
+scripts/check-production-freshness.mjs
+  s_856cb04848cf51::t_1ea22e6d7458db 113-161,178-179,182-192
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "3b214b47bd723633d52ed361cadabf777ffaedaa",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
