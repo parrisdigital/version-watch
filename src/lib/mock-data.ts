@@ -251,7 +251,7 @@ export const vendors: VendorRecord[] = [
     slug: "resend",
     name: "Resend",
     description: "Email infrastructure and sending API updates.",
-    sources: [{ name: "Resend Changelog", url: "https://resend.com/changelog", type: "changelog_page" }],
+    sources: [{ name: "Resend Changelog RSS", url: "https://resend.com/changelog/index.xml", type: "rss" }],
   },
   {
     slug: "linear",
