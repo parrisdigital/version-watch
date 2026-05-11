@@ -36,6 +36,16 @@ function readNumber(name, fallback) {
   return value;
 }
 
+function readPositiveInteger(name, fallback) {
+  const value = readNumber(name, fallback);
+
+  if (!Number.isInteger(value)) {
+    throw new Error(`${name} must be a positive integer.`);
+  }
+
+  return value;
+}
+
 function hoursBetween(now, isoTimestamp) {
   return (now - Date.parse(isoTimestamp)) / (60 * 60 * 1000);
 }
@@ -164,18 +174,18 @@ const convexUrl =
   process.env.NEXT_PUBLIC_CONVEX_URL ||
   DEFAULT_PRODUCTION_CONVEX_URL;
 const sinceHours = readNumber("SINCE_HOURS", 8);
-const eventLimit = Math.trunc(readNumber("EVENT_LIMIT", 24));
+const eventLimit = readPositiveInteger("EVENT_LIMIT", 24);
 const maxLatestEventAgeHours = readNumber("MAX_LATEST_EVENT_AGE_HOURS", 72);
 const maxFeedRefreshAgeHours = readNumber("MAX_FEED_REFRESH_AGE_HOURS", 5);
 const maxSourceLagHours = readNumber("MAX_SOURCE_LAG_HOURS", 8);
 const maxSourceLagGraceHours = readNumber("MAX_SOURCE_LAG_GRACE_HOURS", 1);
 const maxSourceLagMultiplier = readNumber("MAX_SOURCE_LAG_MULTIPLIER", 2);
-const maxDegradedSourceCount = Math.trunc(readNumber("MAX_DEGRADED_SOURCE_COUNT", 1));
-const maxConsecutiveSourceFailures = Math.trunc(readNumber("MAX_CONSECUTIVE_SOURCE_FAILURES", 1));
-const maxRecentFailureSourceCount = Math.trunc(readNumber("MAX_RECENT_FAILURE_SOURCE_COUNT", 1));
-const maxRecentFailuresPerSource = Math.trunc(readNumber("MAX_RECENT_FAILURES_PER_SOURCE", 1));
+const maxDegradedSourceCount = readPositiveInteger("MAX_DEGRADED_SOURCE_COUNT", 1);
+const maxConsecutiveSourceFailures = readPositiveInteger("MAX_CONSECUTIVE_SOURCE_FAILURES", 1);
+const maxRecentFailureSourceCount = readPositiveInteger("MAX_RECENT_FAILURE_SOURCE_COUNT", 1);
+const maxRecentFailuresPerSource = readPositiveInteger("MAX_RECENT_FAILURES_PER_SOURCE", 1);
 const maxFutureSkewHours = readNumber("MAX_FUTURE_SKEW_HOURS", 1);
-const healthQueryAttempts = Math.trunc(readNumber("PRODUCTION_HEALTH_QUERY_ATTEMPTS", 3));
+const healthQueryAttempts = readPositiveInteger("PRODUCTION_HEALTH_QUERY_ATTEMPTS", 3);
 const healthQueryRetryDelayMs = readNumber("PRODUCTION_HEALTH_QUERY_RETRY_DELAY_MS", 1500);
 
 const client = new ConvexHttpClient(convexUrl);
