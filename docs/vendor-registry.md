@@ -196,10 +196,10 @@ Version Watch launches with 18 vendors across AI, developer workflow, platform i
 
 - Tier: B
 - Primary sources:
-  - `https://resend.com/changelog`
-- Source types: `changelog_page`
-- Cadence: 12 hours
-- Parser strategy: generic list parser
+  - `https://resend.com/changelog/index.xml`
+- Source types: `rss`
+- Cadence: 1 hour
+- Parser strategy: RSS parser
 - Risk: low
 
 ### Linear

@@ -5,6 +5,25 @@ import { buildSourceLinkQualityReport } from "@/lib/source-link-quality";
 import { events, vendors } from "@/lib/mock-data";
 
 describe("source link audit", () => {
+  it("accepts Resend changelog detail links from the registered RSS feed", () => {
+    const report = auditSourceLinks({
+      vendors: vendors.filter((vendor) => vendor.slug === "resend"),
+      updates: [
+        {
+          id: "resend-auth0-integration",
+          vendor_slug: "resend",
+          title: "Auth0 Integration",
+          source_url: "https://resend.com/changelog/auth0-integration",
+          source_detail_url: "https://resend.com/changelog/auth0-integration",
+          source_surface_url: "https://resend.com/changelog/index.xml",
+        },
+      ],
+    });
+
+    expect(report.error_count).toBe(0);
+    expect(report.warning_count).toBe(0);
+  });
+
   it("flags known blog URLs published from changelog sources", () => {
     const report = auditSourceLinks({
       vendors: vendors.filter((vendor) => vendor.slug === "supabase"),
