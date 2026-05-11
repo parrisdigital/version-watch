@@ -53,7 +53,16 @@ type SourceFetchTarget = {
 };
 
 function sourceLooksLikeDirectFeed(source: SourceFetchTarget) {
-  return source.sourceType === "rss" || /(?:rss|feed|atom).*\.(?:xml|rss)$|\/feed\/?$/i.test(source.url);
+  if (source.sourceType === "rss") {
+    return true;
+  }
+
+  try {
+    const path = new URL(source.url).pathname.toLowerCase();
+    return path.endsWith(".xml") || path.endsWith(".rss") || path.endsWith(".atom") || /\/feed\/?$/.test(path);
+  } catch {
+    return /\.(?:xml|rss|atom)(?:$|[?#])|\/feed\/?$/i.test(source.url);
+  }
 }
 
 function canUseConditionalCache(source: SourceFetchTarget) {
@@ -61,9 +70,13 @@ function canUseConditionalCache(source: SourceFetchTarget) {
 }
 
 function buildFetchHeaders(userAgent: string, source?: SourceFetchTarget) {
+  const accept = sourceLooksLikeDirectFeed(source ?? { url: "" })
+    ? "application/rss+xml,application/atom+xml,application/xml;q=0.9,text/xml;q=0.8,*/*;q=0.7"
+    : "text/markdown,text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7";
+
   const headers: Record<string, string> = {
     "User-Agent": userAgent,
-    Accept: "text/markdown,text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7",
+    Accept: accept,
     "Accept-Language": "en-US,en;q=0.9",
   };
 
@@ -289,7 +302,7 @@ async function ingestSource(ctx: any, source: any, runType: RunType, force: bool
 
     let parsedEntries: ParsedSourceEntry[] = [];
 
-    if (source.sourceType === "rss" || /(?:rss|feed|atom).*\.(?:xml|rss)$|\/feed\/?$/i.test(source.url)) {
+    if (sourceLooksLikeDirectFeed(source)) {
       parsedEntries = await parseFeedEntries(sourceResponse.body, source.url);
     }
 
