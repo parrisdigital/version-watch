@@ -110,6 +110,55 @@ function groupFailureRuns(runs) {
   return Array.from(groups.values());
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function getErrorMessage(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isRetryableHealthQueryError(error) {
+  const message = getErrorMessage(error).toLowerCase();
+
+  return (
+    message.includes("systemtimeouterror") ||
+    message.includes("request timed out") ||
+    message.includes("fetch failed") ||
+    message.includes("socket hang up") ||
+    message.includes("econnreset") ||
+    message.includes("etimedout") ||
+    message.includes("503") ||
+    message.includes("504")
+  );
+}
+
+async function queryProductionFreshnessWithRetry(client, args, options) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= options.attempts; attempt += 1) {
+    try {
+      return await client.query(api.ops.productionFreshness, args);
+    } catch (error) {
+      lastError = error;
+
+      if (attempt >= options.attempts || !isRetryableHealthQueryError(error)) {
+        throw error;
+      }
+
+      const delayMs = options.retryDelayMs * attempt;
+      console.warn(
+        `Production freshness query failed on attempt ${attempt}/${options.attempts}: ${getErrorMessage(error)}. Retrying in ${delayMs}ms.`,
+      );
+      await sleep(delayMs);
+    }
+  }
+
+  throw lastError;
+}
+
 const convexUrl =
   process.env.CONVEX_URL ||
   process.env.NEXT_PUBLIC_CONVEX_URL ||
@@ -126,12 +175,21 @@ const maxConsecutiveSourceFailures = Math.trunc(readNumber("MAX_CONSECUTIVE_SOUR
 const maxRecentFailureSourceCount = Math.trunc(readNumber("MAX_RECENT_FAILURE_SOURCE_COUNT", 1));
 const maxRecentFailuresPerSource = Math.trunc(readNumber("MAX_RECENT_FAILURES_PER_SOURCE", 1));
 const maxFutureSkewHours = readNumber("MAX_FUTURE_SKEW_HOURS", 1);
+const healthQueryAttempts = Math.trunc(readNumber("PRODUCTION_HEALTH_QUERY_ATTEMPTS", 3));
+const healthQueryRetryDelayMs = readNumber("PRODUCTION_HEALTH_QUERY_RETRY_DELAY_MS", 1500);
 
 const client = new ConvexHttpClient(convexUrl);
-const report = await client.query(api.ops.productionFreshness, {
-  sinceHours,
-  eventLimit,
-});
+const report = await queryProductionFreshnessWithRetry(
+  client,
+  {
+    sinceHours,
+    eventLimit,
+  },
+  {
+    attempts: healthQueryAttempts,
+    retryDelayMs: healthQueryRetryDelayMs,
+  },
+);
 
 const now = Date.now();
 const failures = [];
