@@ -69,9 +69,28 @@ function canUseConditionalCache(source: SourceFetchTarget) {
   return sourceLooksLikeDirectFeed(source) || !source.parserKey || !FEED_PARSER_KEYS.has(source.parserKey);
 }
 
-function buildFetchHeaders(userAgent: string, source?: SourceFetchTarget) {
+function sourceNeedsHtmlFirstAccept(source?: SourceFetchTarget) {
+  if (!source) {
+    return false;
+  }
+
+  if (source.parserKey === "xai:docs_page") {
+    return true;
+  }
+
+  try {
+    const url = new URL(source.url);
+    return url.hostname === "docs.x.ai" && url.pathname.replace(/\/$/, "") === "/developers/release-notes";
+  } catch {
+    return /docs\.x\.ai\/developers\/release-notes\/?$/i.test(source.url);
+  }
+}
+
+export function buildFetchHeaders(userAgent: string, source?: SourceFetchTarget) {
   const accept = sourceLooksLikeDirectFeed(source ?? { url: "" })
     ? "application/rss+xml,application/atom+xml,application/xml;q=0.9,text/xml;q=0.8,*/*;q=0.7"
+    : sourceNeedsHtmlFirstAccept(source)
+      ? "text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7"
     : "text/markdown,text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.7";
 
   const headers: Record<string, string> = {
