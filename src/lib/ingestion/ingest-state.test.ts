@@ -5,6 +5,7 @@ import {
   classifyThrownError,
   SourceIngestionError,
 } from "../../../convex/ingestionErrors";
+import { buildFetchHeaders } from "../../../convex/ingest";
 import {
   findSameSourceCandidateByTitle,
   getFailureBackoffUntil,
@@ -20,6 +21,30 @@ import {
   getLifecycleStateAfterSuccess,
   shouldPollLifecycleState,
 } from "../../../convex/sourceLifecycle";
+
+describe("buildFetchHeaders", () => {
+  it("requests xAI release notes as HTML instead of the stripped Markdown view", () => {
+    const headers = buildFetchHeaders("VersionWatchBot/1.0", {
+      url: "https://docs.x.ai/developers/release-notes",
+      parserKey: "xai:docs_page",
+      sourceType: "docs_page",
+    });
+
+    expect(headers.Accept).toContain("text/html");
+    expect(headers.Accept).not.toContain("text/markdown");
+  });
+
+  it("keeps direct feeds on RSS/XML-first accept headers", () => {
+    const headers = buildFetchHeaders("VersionWatchBot/1.0", {
+      url: "https://resend.com/changelog/index.xml",
+      parserKey: "resend:rss",
+      sourceType: "rss",
+    });
+
+    expect(headers.Accept).toContain("application/rss+xml");
+    expect(headers.Accept).not.toContain("text/html");
+  });
+});
 
 describe("hasMeaningfulTitle", () => {
   it("allows short semver release titles for GitHub release sources", () => {
