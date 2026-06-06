@@ -34,6 +34,17 @@ describe("buildFetchHeaders", () => {
     expect(headers.Accept).not.toContain("text/markdown");
   });
 
+  it("requests Factory release notes as HTML so RSS discovery can see alternate links", () => {
+    const headers = buildFetchHeaders("VersionWatchBot/1.0", {
+      url: "https://docs.factory.ai/changelog/release-notes",
+      parserKey: "factory-droid:changelog_page",
+      sourceType: "changelog_page",
+    });
+
+    expect(headers.Accept).toContain("text/html");
+    expect(headers.Accept).not.toContain("text/markdown");
+  });
+
   it("keeps direct feeds on RSS/XML-first accept headers", () => {
     const headers = buildFetchHeaders("VersionWatchBot/1.0", {
       url: "https://resend.com/changelog/index.xml",

@@ -90,11 +90,22 @@ function sourceNeedsHtmlFirstAccept(source?: SourceFetchTarget) {
     return true;
   }
 
+  if (source.parserKey === "factory-droid:changelog_page") {
+    return true;
+  }
+
   try {
     const url = new URL(source.url);
+    if (url.hostname === "docs.factory.ai" && url.pathname.replace(/\/$/, "") === "/changelog/release-notes") {
+      return true;
+    }
+
     return url.hostname === "docs.x.ai" && url.pathname.replace(/\/$/, "") === "/developers/release-notes";
   } catch {
-    return /docs\.x\.ai\/developers\/release-notes\/?$/i.test(source.url);
+    return (
+      /docs\.factory\.ai\/changelog\/release-notes\/?$/i.test(source.url) ||
+      /docs\.x\.ai\/developers\/release-notes\/?$/i.test(source.url)
+    );
   }
 }
 
