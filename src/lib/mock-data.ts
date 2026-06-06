@@ -278,6 +278,18 @@ export const vendors: VendorRecord[] = [
     sources: [{ name: "GitHub Releases", url: "https://github.com/pingdotgg/t3code/releases", type: "changelog_page" }],
   },
   {
+    slug: "claude-code",
+    name: "Claude Code",
+    description: "Anthropic's agentic coding CLI, IDE, and background agent release notes.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/anthropics/claude-code/releases.atom", type: "rss" }],
+  },
+  {
+    slug: "kilo-code",
+    name: "Kilo Code",
+    description: "Open-source AI coding agent releases across IDE, CLI, and cloud workflows.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/Kilo-Org/kilocode/releases.atom", type: "rss" }],
+  },
+  {
     slug: "opencode",
     name: "OpenCode",
     description: "Open-source coding agent updates across core, desktop, and SDK.",

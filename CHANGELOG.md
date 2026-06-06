@@ -6,6 +6,10 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+### Added
+
+- Add Claude Code and Kilo Code to the vendor directory with official GitHub release feeds and a self-hosted Kilo Code mark.
+
 ### Changed
 
 - Rename the former Windsurf vendor entry to Devin Desktop, switch its tracked source to the official Devin Desktop changelog, and add the official Devin logo asset.

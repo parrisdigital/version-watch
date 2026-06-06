@@ -1,270 +1,61 @@
 # Vendor Registry
 
-## Launch Coverage Summary
+Version Watch tracks official source surfaces for developer platforms, frameworks, AI tools, infrastructure services, and adjacent workflow products.
 
-Version Watch launches with 18 vendors across AI, developer workflow, platform infrastructure, backend services, and mobile platforms.
+The authoritative registry lives in [`src/lib/mock-data.ts`](../src/lib/mock-data.ts). Public pages and APIs read from the seeded Convex registry in production, while this document explains the standards used to add and maintain vendors.
 
-### Tier A
+## Current Coverage
 
-- OpenAI
-- Anthropic
-- Google Gemini
-- Vercel
-- Stripe
-- GitHub
-- Cloudflare
-- Cursor
+The public registry currently covers 62 vendors. Coverage is grouped into:
 
-### Tier B
+- AI Models & APIs
+- AI Coding Agents
+- Editors & IDEs
+- Hosting & Edge
+- Design Systems & UI
+- Frameworks & Tooling
+- Auth
+- Databases
+- Mobile
+- Dev Workflow
+- Browsers
+- Observability
+- Payments & Email
+- Search & Web Data
 
-- Supabase
-- Firebase
-- Apple Developer
-- Android Developers
-- Firecrawl
-- Exa
-- Clerk
-- Resend
-- Linear
-- Docker
+Recent AI-coding additions include Claude Code and Kilo Code, both using official GitHub release Atom feeds.
 
 ## Registry Rules
 
-- every vendor must have at least one official source URL
-- every vendor must have a locked tier
-- every source must declare a source type, cadence, parser strategy, and risk level
-- Tier A sources get first parser investment and first review attention
+- Every vendor must have at least one official source URL.
+- Prefer machine-readable feeds when the vendor exposes them: RSS, Atom, GitHub releases, or raw changelog files.
+- Use a custom parser only when a high-value source does not expose a stable feed.
+- Do not add brittle scraped sources when an official feed is missing or currently broken.
+- Vendor slugs should remain stable after publication so public URLs and API filters do not break.
+- Renames should preserve the existing slug when possible and update the display name, description, source, logo, and source-link audit rules.
+- Logo assets should render clearly in light and dark mode.
 
-## Vendor Definitions
+## Source Types
 
-### OpenAI
+- `rss`: RSS or Atom feeds, preferred when available.
+- `github_release`: GitHub release pages or repository release feeds.
+- `changelog_page`: chronological product changelog pages.
+- `docs_page`: documentation release notes.
+- `blog`: official product or engineering blog feeds.
 
-- Tier: A
-- Primary sources:
-  - `https://platform.openai.com/docs/changelog`
-  - `https://help.openai.com/en/articles/11428266-codex-changelog/`
-- Source types: `docs_page`, `changelog_page`
-- Cadence: 4 hours
-- Parser strategy: custom parser
-- Risk: medium
-- Notes: OpenAI surfaces are high-value but sometimes spread across docs and help center properties
+## Review Checklist
 
-### Anthropic
+Before adding a vendor:
 
-- Tier: A
-- Primary sources:
-  - `https://docs.anthropic.com/en/release-notes/api`
-  - `https://support.anthropic.com/en/articles/12138966-release-notes`
-- Source types: `docs_page`, `changelog_page`
-- Cadence: 4 hours
-- Parser strategy: custom parser
-- Risk: medium
+1. Confirm the source is official and public.
+2. Confirm the source returns fresh content without authentication.
+3. Prefer a direct feed over a rendered docs page.
+4. Add category, logo, affected-stack metadata, and auto-publish eligibility when appropriate.
+5. Add or adjust parser tests for non-feed sources.
+6. Run local tests, build, source coverage, vendor coverage, production health, and secret scanning before deployment.
 
-### Google Gemini
+## Maintenance Notes
 
-- Tier: A
-- Primary sources:
-  - `https://ai.google.dev/gemini-api/docs/changelog`
-- Source types: `docs_page`
-- Cadence: 4 hours
-- Parser strategy: docs parser
-- Risk: medium
+The registry intentionally favors reliable official surfaces over breadth. If a vendor has a visible changelog page but no stable feed, add it only after confirming the parser is robust enough for production health checks.
 
-### Vercel
-
-- Tier: A
-- Primary sources:
-  - `https://vercel.com/changelog`
-- Source types: `changelog_page`
-- Cadence: 4 hours
-- Parser strategy: custom parser
-- Risk: low
-
-### Stripe
-
-- Tier: A
-- Primary sources:
-  - `https://docs.stripe.com/changelog`
-- Source types: `changelog_page`
-- Cadence: 4 hours
-- Parser strategy: custom parser
-- Risk: low
-
-### GitHub
-
-- Tier: A
-- Primary sources:
-  - `https://github.blog/changelog/`
-- Source types: `blog`
-- Cadence: 4 hours
-- Parser strategy: custom parser
-- Risk: low
-
-### Cloudflare
-
-- Tier: A
-- Primary sources:
-  - `https://developers.cloudflare.com/changelog/`
-- Source types: `changelog_page`
-- Cadence: 4 hours
-- Parser strategy: custom parser
-- Risk: low
-
-### Cursor
-
-- Tier: A
-- Primary sources:
-  - `https://cursor.com/changelog/`
-- Source types: `changelog_page`
-- Cadence: 4 hours
-- Parser strategy: custom parser
-- Risk: low
-
-### Supabase
-
-- Tier: B
-- Primary sources:
-  - `https://supabase.com/changelog`
-- Source types: `changelog_page`
-- Cadence: 12 hours
-- Parser strategy: generic list parser
-- Risk: low
-
-### Firebase
-
-- Tier: B
-- Primary sources:
-  - `https://firebase.google.com/support/release-notes`
-- Source types: `docs_page`
-- Cadence: 12 hours
-- Parser strategy: docs parser
-- Risk: medium
-- Notes: Firebase release notes are broad and may require selective extraction
-
-### Apple Developer
-
-- Tier: B
-- Primary sources:
-  - `https://developer.apple.com/documentation/xcode-release-notes/`
-- Source types: `docs_page`
-- Cadence: 12 hours plus daily deep diff
-- Parser strategy: docs parser
-- Risk: high
-- Notes: Apple update surfaces can change structure and often benefit from deep diff monitoring
-
-### Android Developers
-
-- Tier: B
-- Primary sources:
-  - `https://developer.android.com/about/versions/17/release-notes`
-- Source types: `docs_page`
-- Cadence: 12 hours plus daily deep diff
-- Parser strategy: docs parser
-- Risk: high
-
-### Firecrawl
-
-- Tier: B
-- Primary sources:
-  - `https://www.firecrawl.dev/changelog`
-- Source types: `changelog_page`
-- Cadence: 12 hours
-- Parser strategy: generic list parser
-- Risk: low
-
-### Exa
-
-- Tier: B
-- Primary sources:
-  - `https://exa.ai/docs/changelog`
-- Source types: `docs_page`
-- Cadence: 12 hours
-- Parser strategy: docs parser
-- Risk: medium
-
-### Clerk
-
-- Tier: B
-- Primary sources:
-  - `https://clerk.com/changelog`
-- Source types: `changelog_page`
-- Cadence: 12 hours
-- Parser strategy: generic list parser
-- Risk: low
-
-### Resend
-
-- Tier: B
-- Primary sources:
-  - `https://resend.com/changelog/index.xml`
-- Source types: `rss`
-- Cadence: 1 hour
-- Parser strategy: RSS parser
-- Risk: low
-
-### Linear
-
-- Tier: B
-- Primary sources:
-  - `https://linear.app/changelog`
-- Source types: `changelog_page`
-- Cadence: 12 hours
-- Parser strategy: generic list parser
-- Risk: low
-
-### Docker
-
-- Tier: B
-- Primary sources:
-  - `https://docs.docker.com/desktop/release-notes/`
-- Source types: `docs_page`
-- Cadence: 12 hours
-- Parser strategy: docs parser
-- Risk: medium
-- Notes: Docker has fragmented release surfaces; v1 tracks Docker Desktop as the canonical public source
-
-## Parser Priority
-
-### First custom parsers
-
-- OpenAI
-- Anthropic
-- Vercel
-- Stripe
-- GitHub
-- Cloudflare
-- Cursor
-
-### Generic list parser candidates
-
-- Supabase
-- Firecrawl
-- Clerk
-- Resend
-- Linear
-
-### Docs parser candidates
-
-- Gemini
-- Firebase
-- Apple Developer
-- Android Developers
-- Exa
-- Docker
-
-## Source Health Expectations
-
-Highest parser risk:
-
-- Apple Developer
-- Android Developers
-- Firebase
-
-Highest importance if broken:
-
-- OpenAI
-- Anthropic
-- Vercel
-- Stripe
-- GitHub
-- Cursor
+Detailed ingestion behavior is documented in [Ingestion strategy](./ingestion-strategy.md), [Classification and ranking](./classification-and-ranking.md), and [Deployment and ops](./deployment-and-ops.md).

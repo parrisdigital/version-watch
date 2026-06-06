@@ -135,6 +135,8 @@ const VENDOR_STACKS: Record<string, string[]> = {
   windsurf: ["developer-workflow", "agents", "llms", "desktop-app"],
   "google-antigravity": ["developer-workflow", "agents", "llms"],
   docker: ["containers", "developer-workflow", "infra"],
+  "claude-code": ["developer-workflow", "agents", "llms", "terminal"],
+  "kilo-code": ["developer-workflow", "agents", "llms", "editor"],
   "hermes-agent": ["agents", "developer-workflow", "automation"],
   "t3-code": ["developer-workflow", "llms", "desktop-app"],
   opencode: ["developer-workflow", "llms", "agents"],

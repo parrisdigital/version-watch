@@ -14,6 +14,10 @@ describe("changed vendor refresh helpers", () => {
         { slug: "windsurf", name: "Devin Desktop" },
         { slug: "github", name: "GitHub" },
       ];
+      const vendorNameBySlug = new Map(vendors.map((vendor) => [vendor.slug, vendor.name]));
+      const eventSeeds = [
+        { slug: "github-release-example", vendorSlug: "github" },
+      ];
     `;
 
     expect(extractVendorSlugs(source)).toEqual(["github", "windsurf"]);
@@ -70,5 +74,37 @@ describe("changed vendor refresh helpers", () => {
     `;
 
     expect(getChangedVendorSlugs({ diffText, vendorSlugs: ["github"] })).toEqual([]);
+  });
+
+  it("does not match vendor names or URL fragments as changed vendor slugs", () => {
+    const diffText = [
+      "diff --git a/src/lib/mock-data.ts b/src/lib/mock-data.ts",
+      "@@ -4,0 +4,1 @@",
+      '+ description: "Anthropic agent releases from GitHub.",',
+      '+ sources: [{ name: "GitHub Releases", url: "https://github.com/anthropics/claude-code/releases.atom", type: "rss" }],',
+    ].join("\n");
+
+    expect(getChangedVendorSlugs({ diffText, vendorSlugs: ["anthropic", "claude-code", "github"] })).toEqual([]);
+  });
+
+  it("does not map structural insertion lines to the previous vendor", () => {
+    const diffText = [
+      "diff --git a/src/lib/mock-data.ts b/src/lib/mock-data.ts",
+      "@@ -10,0 +10,2 @@",
+      "+  {",
+      '+    slug: "claude-code",',
+    ].join("\n");
+    const vendorLineRanges = [
+      { slug: "t3-code", startLine: 10, endLine: 10 },
+      { slug: "claude-code", startLine: 11, endLine: 12 },
+    ];
+
+    expect(
+      getChangedVendorSlugs({
+        diffText,
+        vendorSlugs: ["claude-code", "t3-code"],
+        vendorLineRanges,
+      }),
+    ).toEqual(["claude-code"]);
   });
 });

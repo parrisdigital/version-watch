@@ -27,8 +27,10 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   xai: "AI Models & APIs",
 
   // AI Coding Agents
+  "claude-code": "AI Coding Agents",
   cline: "AI Coding Agents",
   "hermes-agent": "AI Coding Agents",
+  "kilo-code": "AI Coding Agents",
   openclaw: "AI Coding Agents",
   opencode: "AI Coding Agents",
   "t3-code": "AI Coding Agents",

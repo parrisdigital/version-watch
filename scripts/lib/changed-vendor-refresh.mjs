@@ -17,10 +17,14 @@ const vendorAffectingFiles = new Set([
 ]);
 
 export function extractVendorSlugs(source) {
+  const registryStart = source.indexOf("export const vendors");
+  const registryEnd = source.indexOf("const vendorNameBySlug", registryStart);
+  const registrySource =
+    registryStart >= 0 && registryEnd > registryStart ? source.slice(registryStart, registryEnd) : source;
   const slugs = new Set();
   const slugPattern = /\bslug:\s*["']([^"']+)["']/g;
 
-  for (const match of source.matchAll(slugPattern)) {
+  for (const match of registrySource.matchAll(slugPattern)) {
     if (match[1]) {
       slugs.add(match[1]);
     }
@@ -66,9 +70,16 @@ function detectSlugsInText(text, vendorSlugs) {
 
   for (const slug of vendorSlugs) {
     const escapedSlug = escapeRegExp(slug);
-    const tokenPattern = new RegExp(`(^|[^A-Za-z0-9_-])${escapedSlug}([^A-Za-z0-9_-]|$)`);
+    const syntaxPattern = new RegExp(
+      [
+        String.raw`\bslug:\s*["']${escapedSlug}["']`,
+        String.raw`["']${escapedSlug}["']\s*[:,\]}]?`,
+        String.raw`["']${escapedSlug}:`,
+        String.raw`\b${escapedSlug}:`,
+      ].join("|"),
+    );
 
-    if (tokenPattern.test(text)) {
+    if (syntaxPattern.test(text)) {
       slugs.push(slug);
     }
   }
@@ -78,6 +89,10 @@ function detectSlugsInText(text, vendorSlugs) {
 
 function findVendorForLine(lineNumber, vendorLineRanges) {
   return vendorLineRanges.find((range) => lineNumber >= range.startLine && lineNumber <= range.endLine)?.slug;
+}
+
+function isStructuralOnlyDiffLine(text) {
+  return /^[{}\][,;\s]*$/.test(text);
 }
 
 function parseDiffPath(line) {
@@ -123,7 +138,11 @@ export function getChangedVendorSlugs({ diffText, vendorSlugs, vendorLineRanges 
         changedSlugs.add(slug);
       }
 
-      if (currentPath === "src/lib/mock-data.ts" && newLineNumber !== undefined) {
+      if (
+        currentPath === "src/lib/mock-data.ts" &&
+        newLineNumber !== undefined &&
+        !isStructuralOnlyDiffLine(changedText)
+      ) {
         const slugFromLine = findVendorForLine(newLineNumber, vendorLineRanges);
 
         if (slugFromLine) {
