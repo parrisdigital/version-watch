@@ -228,18 +228,38 @@ const FEED_PARSER_KEYS = new Set([
   "zed:changelog_page",
 ]);
 
-async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
-  const parser = new Parser();
+function shouldIncludeRichFeedContentInExcerpt(fallbackUrl: string) {
+  // factory-droid: Factory's Mintlify RSS keeps version numbers in content:encoded
+  // while item titles remain generic "CLI Updates" labels.
+  try {
+    const url = new URL(fallbackUrl);
+    return url.hostname === "docs.factory.ai" && url.pathname.startsWith("/changelog/release-notes");
+  } catch {
+    return /docs\.factory\.ai\/changelog\/release-notes/i.test(fallbackUrl);
+  }
+}
+
+export async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
+  const parser = new Parser({
+    customFields: {
+      item: [["content:encoded", "contentEncoded"]],
+    },
+  });
 
   try {
     const feed = await parser.parseString(feedXml);
+    const includeRichContent = shouldIncludeRichFeedContentInExcerpt(fallbackUrl);
+
     return (feed.items ?? [])
       .map((item) => {
         const publishedAt = Date.parse(item.isoDate ?? item.pubDate ?? "");
         const title = cleanText(item.title);
-        const excerpt = cleanText(
-          item.contentSnippet ?? item.summary ?? item.content ?? item["content:encoded"] ?? title,
-        );
+        const shortExcerpt = cleanText(item.contentSnippet ?? item.summary ?? "");
+        const contentEncoded = cleanText((item as any).contentEncoded ?? item["content:encoded"] ?? "");
+        const richContent = cleanText(contentEncoded || item.content || "");
+        const excerpt = includeRichContent
+          ? cleanText([richContent, shortExcerpt, title].filter(Boolean).join(" "))
+          : cleanText(shortExcerpt || richContent || title);
         const link = item.link ? new URL(item.link, fallbackUrl).toString() : fallbackUrl;
         const githubUrl =
           link.includes("github.com") ? link : cleanText(item.content ?? "").includes("github.com") ? link : undefined;

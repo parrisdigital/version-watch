@@ -5,7 +5,7 @@ import {
   classifyThrownError,
   SourceIngestionError,
 } from "../../../convex/ingestionErrors";
-import { buildFetchHeaders, buildFetchTargetForRun } from "../../../convex/ingest";
+import { buildFetchHeaders, buildFetchTargetForRun, parseFeedEntries } from "../../../convex/ingest";
 import {
   findSameSourceCandidateByTitle,
   getFailureBackoffUntil,
@@ -54,6 +54,33 @@ describe("buildFetchHeaders", () => {
 
     expect(headers.Accept).toContain("application/rss+xml");
     expect(headers.Accept).not.toContain("text/html");
+  });
+});
+
+describe("parseFeedEntries", () => {
+  it("keeps Factory RSS content in the excerpt so version titles can be normalized", async () => {
+    const entries = await parseFeedEntries(
+      `<?xml version="1.0" encoding="UTF-8"?>
+      <rss xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">
+        <channel>
+          <title>Release notes</title>
+          <item>
+            <title>CLI Updates</title>
+            <description>GitLab code review setup and chat stability fixes</description>
+            <link>https://docs.factory.ai/changelog/release-notes#june-5</link>
+            <pubDate>Sat, 06 Jun 2026 00:59:44 GMT</pubDate>
+            <content:encoded><![CDATA[<p><code>v0.142.0</code></p><h2>Improvements</h2>]]></content:encoded>
+          </item>
+        </channel>
+      </rss>`,
+      "https://docs.factory.ai/changelog/release-notes",
+    );
+
+    expect(entries[0]).toMatchObject({
+      title: "CLI Updates",
+      url: "https://docs.factory.ai/changelog/release-notes#june-5",
+    });
+    expect(entries[0]?.excerpt).toContain("v0.142.0");
   });
 });
 
