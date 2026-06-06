@@ -1,0 +1,27 @@
+scripts/refresh-changed-vendors.mjs
+  s_856cb04848cf51::t_f2298973ddb7b1 8,12,15-19,102,147-154
+scripts/lib/changed-vendor-refresh.mjs
+  s_856cb04848cf51::t_331a264ea48a70 36-75
+src/lib/ingestion/changed-vendor-refresh.test.ts
+  s_856cb04848cf51::t_9ac73ae6871063 5,9,28-64
+CHANGELOG.md
+  s_856cb04848cf51::t_073e59a0767c85 9-14,121
+package.json
+  s_856cb04848cf51::t_efe44c30cabe59 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "8ebe6c4031e6ea1c9f368ca863d647126863b9de",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
