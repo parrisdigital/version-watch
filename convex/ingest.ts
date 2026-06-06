@@ -199,6 +199,7 @@ const FEED_PARSER_KEYS = new Set([
   "convex:changelog_page",
   "pnpm:changelog_page",
   "fastify:changelog_page",
+  "factory-droid:changelog_page",
   "langchain:changelog_page",
   "netlify:changelog_page",
   "neon:changelog_page",

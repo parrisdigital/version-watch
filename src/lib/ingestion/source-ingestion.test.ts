@@ -1253,4 +1253,26 @@ describe("normalizeParsedEntry", () => {
     expect(normalized.releaseClass).toBe("breaking");
     expect(normalized.summary).toContain("billing_cycle_anchor");
   });
+
+  it("normalizes Factory Droid RSS items into unique version titles", () => {
+    const normalized = normalizeParsedEntry({
+      vendorSlug: "factory-droid",
+      vendorName: "Factory Droid",
+      sourceName: "Factory Release Notes",
+      sourceType: "changelog_page",
+      entry: {
+        title: "CLI Updates",
+        url: "https://docs.factory.ai/changelog/release-notes#june-5",
+        excerpt:
+          "v0.142.0 Improvements GitLab code review setup - The install-code-review skill now configures review pipelines.",
+        publishedAt: Date.parse("2026-06-06T00:59:44.000Z"),
+      },
+    });
+
+    expect(normalized.rawTitle).toBe("Factory Droid v0.142.0");
+    expect(normalized.title).toBe("Factory Droid v0.142.0");
+    expect(normalized.affectedStack).toEqual(
+      expect.arrayContaining(["developer-workflow", "agents", "llms"]),
+    );
+  });
 });

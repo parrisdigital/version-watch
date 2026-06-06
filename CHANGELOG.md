@@ -9,6 +9,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 ### Added
 
 - Add Claude Code and Kilo Code to the vendor directory with official GitHub release feeds and a self-hosted Kilo Code mark.
+- Add Factory Droid to the vendor directory with its official release-notes feed and self-hosted Factory icon.
 
 ### Changed
 

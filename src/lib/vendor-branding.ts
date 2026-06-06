@@ -54,6 +54,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   brave: { logoUrl: "https://cdn.simpleicons.org/brave" },
   windsurf: { logoUrl: "/logos/devin.png", renderMode: "image", fill: true },
   "google-antigravity": { logoUrl: "https://antigravity.google/favicon.ico", renderMode: "image", fill: true },
+  "factory-droid": { logoUrl: "/logos/factory-droid.svg", renderMode: "image", fill: true },
   docker: { logoUrl: "https://cdn.simpleicons.org/docker" },
   "claude-code": { logoUrl: "https://cdn.simpleicons.org/anthropic" },
   "kilo-code": { logoUrl: "/logos/kilo-code.svg", renderMode: "image", fill: true },

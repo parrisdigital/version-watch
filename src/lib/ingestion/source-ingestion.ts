@@ -134,6 +134,7 @@ const VENDOR_STACKS: Record<string, string[]> = {
   brave: ["browser", "privacy", "llms"],
   windsurf: ["developer-workflow", "agents", "llms", "desktop-app"],
   "google-antigravity": ["developer-workflow", "agents", "llms"],
+  "factory-droid": ["developer-workflow", "agents", "llms", "automation"],
   docker: ["containers", "developer-workflow", "infra"],
   "claude-code": ["developer-workflow", "agents", "llms", "terminal"],
   "kilo-code": ["developer-workflow", "agents", "llms", "editor"],
@@ -2770,6 +2771,17 @@ function slugify(value: string) {
     .slice(0, 80);
 }
 
+function normalizeVendorSpecificTitle(vendorSlug: string, title: string, excerpt: string) {
+  if (vendorSlug === "factory-droid" && /^cli updates$/i.test(title)) {
+    const version = excerpt.match(/\bv\d+\.\d+(?:\.\d+)?(?:[-+.\w]*)?\b/i)?.[0];
+    if (version) {
+      return `Factory Droid ${version}`;
+    }
+  }
+
+  return title;
+}
+
 export function normalizeParsedEntry({
   vendorSlug,
   vendorName,
@@ -2777,18 +2789,19 @@ export function normalizeParsedEntry({
   sourceType,
   entry,
 }: NormalizeInput): NormalizedParsedEntry {
-  const categories = classifyCategories(entry.title, sourceType);
-  const combinedText = `${entry.title} ${entry.excerpt}`.trim();
+  const title = normalizeVendorSpecificTitle(vendorSlug, entry.title, entry.excerpt);
+  const categories = classifyCategories(title, sourceType);
+  const combinedText = `${title} ${entry.excerpt}`.trim();
   const affectedStack = classifyAffectedStack(vendorSlug, combinedText);
   const whoShouldCare = classifyAudience(categories, affectedStack);
-  const summary = truncateSentence(entry.excerpt || entry.title, 240) || entry.title;
+  const summary = truncateSentence(entry.excerpt || title, 240) || title;
 
   const signal = deriveSignalMetadata({
     id: `${vendorSlug}:${entry.url}`,
-    slug: slugify(`${vendorSlug}-${entry.title}`),
+    slug: slugify(`${vendorSlug}-${title}`),
     vendorSlug,
     vendorName,
-    title: entry.title,
+    title,
     summary,
     whatChanged: summary,
     whyItMatters: "",
@@ -2802,9 +2815,9 @@ export function normalizeParsedEntry({
   });
 
   return {
-    slug: slugify(`${vendorSlug}-${new Date(entry.publishedAt).toISOString().slice(0, 10)}-${entry.title}`),
+    slug: slugify(`${vendorSlug}-${new Date(entry.publishedAt).toISOString().slice(0, 10)}-${title}`),
     title: signal.displayTitle,
-    rawTitle: entry.title,
+    rawTitle: title,
     summary,
     whatChanged: summary,
     whyItMatters: signal.whyItMatters,

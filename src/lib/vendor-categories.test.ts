@@ -22,6 +22,7 @@ describe("vendor categories", () => {
     expect(getCategoryForSlug("meta-ai")).toBe("AI Models & APIs");
     expect(getCategoryForSlug("claude-code")).toBe("AI Coding Agents");
     expect(getCategoryForSlug("cline")).toBe("AI Coding Agents");
+    expect(getCategoryForSlug("factory-droid")).toBe("AI Coding Agents");
     expect(getCategoryForSlug("kilo-code")).toBe("AI Coding Agents");
     expect(getCategoryForSlug("firecrawl")).toBe("Search & Web Data");
     expect(getCategoryForSlug("exa")).toBe("Search & Web Data");

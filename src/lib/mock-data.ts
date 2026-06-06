@@ -202,6 +202,18 @@ export const vendors: VendorRecord[] = [
     sources: [{ name: "Antigravity Changelog", url: "https://antigravity.google/changelog", type: "changelog_page" }],
   },
   {
+    slug: "factory-droid",
+    name: "Factory Droid",
+    description: "Factory App and Droid CLI release notes for autonomous software development workflows.",
+    sources: [
+      {
+        name: "Factory Release Notes",
+        url: "https://docs.factory.ai/changelog/release-notes",
+        type: "changelog_page",
+      },
+    ],
+  },
+  {
     slug: "supabase",
     name: "Supabase",
     description: "Database, auth, and backend platform changes.",

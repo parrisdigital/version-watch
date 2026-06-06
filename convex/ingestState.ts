@@ -186,6 +186,7 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "dp-code",
   "docker",
   "exa",
+  "factory-droid",
   "firebase",
   "firecrawl",
   "gemini",
