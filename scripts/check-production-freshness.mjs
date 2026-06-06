@@ -17,6 +17,8 @@ const noisyTitlePatterns = [
 const knownBlockedSourceUrls = new Set([
   // Railway currently returns a Cloudflare managed challenge to server-side fetches and no official feed endpoint.
   "https://railway.com/changelog",
+  // OpenRouter currently redirects the public changelog docs path to a missing markdown page for server fetches.
+  "https://openrouter.ai/docs/changelog",
 ]);
 const nonMonitoredLifecycleStates = new Set(["paused", "unsupported"]);
 

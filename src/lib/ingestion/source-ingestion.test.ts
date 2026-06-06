@@ -299,6 +299,100 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-23T00:00:00.000Z"));
   });
 
+  it("parses Replit Agent markdown update headings from the current update page", () => {
+    const markdown = `
+      # June 5, 2026
+
+      ## Agent
+
+      ### Improve your search ranking with SEO Agent
+
+      SEO Agent reviews your published app and finds the issues that keep search engines and AI tools from discovering it.
+
+      ## Billing
+
+      ### Use Stripe in collaborative workspaces
+
+      Stripe now works in collaborative workspaces, so your whole team can build, test, and monetize the same app together.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "replit-agent:changelog_page",
+      sourceUrl: "https://docs.replit.com/updates",
+      html: markdown,
+    });
+
+    expect(entries.map((entry) => entry.title)).toEqual([
+      "Improve your search ranking with SEO Agent",
+      "Use Stripe in collaborative workspaces",
+    ]);
+    expect(entries[0]).toMatchObject({
+      url: "https://docs.replit.com/updates#improve-your-search-ranking-with-seo-agent",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-06-05T00:00:00.000Z"));
+  });
+
+  it("parses Mistral changelog entries from server-rendered timeline blocks", () => {
+    const html = `
+      <main>
+        <div id="date-2026-05-28" data-changelog-entry="true">
+          <h2>May 28</h2>
+          <div class="changelog-content">
+            <ul>
+              <li>We launched Vibe, our unified agent at chat.mistral.ai, available in three modes: OTHER</li>
+            </ul>
+          </div>
+        </div>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "mistral-ai:docs_page",
+      sourceUrl: "https://docs.mistral.ai/resources/changelogs",
+      html,
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      title: "We launched Vibe, our unified agent at chat.mistral.ai, available in three modes:",
+      url: "https://docs.mistral.ai/resources/changelogs#date-2026-05-28",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-05-28T00:00:00.000Z"));
+  });
+
+  it("parses Figma REST API dated changelog sections", () => {
+    const html = `
+      <article>
+        <div class="theme-doc-markdown">
+          <h2 id="2026-03-25">March 25, 2026</h2>
+          <p>Added an oEmbed API to retrieve oEmbed data for Figma files and published Makes.</p>
+          <h2 id="2026-01-26">January 26, 2026</h2>
+          <ul>
+            <li>Added complexStrokeProperties to all supported node types.</li>
+          </ul>
+        </div>
+      </article>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "figma:docs_page",
+      sourceUrl: "https://developers.figma.com/docs/rest-api/changelog/",
+      html,
+    });
+
+    expect(entries.map((entry) => entry.title)).toEqual([
+      "Added an oEmbed API to retrieve oEmbed data for Figma files and published Makes.",
+      "Added complexStrokeProperties to all supported node types.",
+    ]);
+    expect(entries[0]).toMatchObject({
+      url: "https://developers.figma.com/docs/rest-api/changelog/#2026-03-25",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-03-25T00:00:00.000Z"));
+  });
+
   it("parses shadcnspace timeline entries with concatenated version and day text", () => {
     const html = `
       <main>

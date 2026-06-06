@@ -62,6 +62,12 @@ async function readFromConvex<T>(read: () => Promise<T>, fallback: () => T): Pro
   }
 }
 
+const fallbackUnsupportedVendorSlugs = new Set(["railway", "openrouter"]);
+
+function isFallbackUnsupportedVendor(slug: string) {
+  return fallbackUnsupportedVendorSlugs.has(slug);
+}
+
 function attachScores(items: SiteEvent[]): SiteEvent[] {
   return items.map((event) => ({
     ...event,
@@ -187,24 +193,28 @@ function fallbackVendorFreshnessRecords(slug?: string) {
 
   return {
     checkedAt: now,
-    vendors: filteredVendors.map((vendor) => ({
-      vendor: vendor.name,
-      vendorSlug: vendor.slug,
-      lifecycleState: vendor.slug === "railway" ? "unsupported" : "active",
-      freshnessTier: "standard",
-      latestAttemptAt: null,
-      latestSuccessAt: null,
-      latestFailureAt: null,
-      nextDueAt: null,
-      backoffUntil: null,
-      activeSourceCount: vendor.slug === "railway" ? 0 : vendor.sources.length,
-      degradedSourceCount: 0,
-      failingSourceCount: 0,
-      staleSourceCount: 0,
-      pausedSourceCount: 0,
-      unsupportedSourceCount: vendor.slug === "railway" ? vendor.sources.length : 0,
-      queuedRefresh: false,
-    })),
+    vendors: filteredVendors.map((vendor) => {
+      const unsupported = isFallbackUnsupportedVendor(vendor.slug);
+
+      return {
+        vendor: vendor.name,
+        vendorSlug: vendor.slug,
+        lifecycleState: unsupported ? "unsupported" : "active",
+        freshnessTier: "standard",
+        latestAttemptAt: null,
+        latestSuccessAt: null,
+        latestFailureAt: null,
+        nextDueAt: null,
+        backoffUntil: null,
+        activeSourceCount: unsupported ? 0 : vendor.sources.length,
+        degradedSourceCount: 0,
+        failingSourceCount: 0,
+        staleSourceCount: 0,
+        pausedSourceCount: 0,
+        unsupportedSourceCount: unsupported ? vendor.sources.length : 0,
+        queuedRefresh: false,
+      };
+    }),
   };
 }
 

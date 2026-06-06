@@ -23,10 +23,14 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   gemini: "AI Models & APIs",
   groq: "AI Models & APIs",
   "meta-ai": "AI Models & APIs",
+  "mistral-ai": "AI Models & APIs",
   openai: "AI Models & APIs",
+  openrouter: "AI Models & APIs",
+  perplexity: "AI Models & APIs",
   xai: "AI Models & APIs",
 
   // AI Coding Agents
+  amp: "AI Coding Agents",
   "claude-code": "AI Coding Agents",
   cline: "AI Coding Agents",
   "factory-droid": "AI Coding Agents",
@@ -34,13 +38,16 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   "kilo-code": "AI Coding Agents",
   openclaw: "AI Coding Agents",
   opencode: "AI Coding Agents",
+  "replit-agent": "AI Coding Agents",
   "t3-code": "AI Coding Agents",
+  v0: "AI Coding Agents",
 
   // Editors & IDEs
   "augment-code": "Editors & IDEs",
   cursor: "Editors & IDEs",
   "dp-code": "Editors & IDEs",
   "google-antigravity": "Editors & IDEs",
+  kiro: "Editors & IDEs",
   vscode: "Editors & IDEs",
   windsurf: "Editors & IDEs",
   zed: "Editors & IDEs",
@@ -53,6 +60,9 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   vercel: "Hosting & Edge",
 
   // Design Systems & UI
+  "base-ui": "Design Systems & UI",
+  figma: "Design Systems & UI",
+  heroui: "Design Systems & UI",
   shadcn: "Design Systems & UI",
   "shadcn-studio": "Design Systems & UI",
   shadcnblocks: "Design Systems & UI",
@@ -64,7 +74,9 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   fastify: "Frameworks & Tooling",
   hono: "Frameworks & Tooling",
   langchain: "Frameworks & Tooling",
+  "model-context-protocol": "Frameworks & Tooling",
   pnpm: "Frameworks & Tooling",
+  tanstack: "Frameworks & Tooling",
   uv: "Frameworks & Tooling",
   vite: "Frameworks & Tooling",
 

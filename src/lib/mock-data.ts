@@ -118,6 +118,30 @@ export const vendors: VendorRecord[] = [
     sources: [{ name: "Groq Changelog", url: "https://console.groq.com/docs/changelog", type: "docs_page" }],
   },
   {
+    slug: "openrouter",
+    name: "OpenRouter",
+    description: "Unified model routing, API, provider, SDK, and model availability updates.",
+    sources: [{ name: "OpenRouter Changelog", url: "https://openrouter.ai/docs/changelog", type: "docs_page" }],
+  },
+  {
+    slug: "mistral-ai",
+    name: "Mistral AI",
+    description: "Mistral model, API, SDK, and platform changelog updates.",
+    sources: [{ name: "Mistral Changelog", url: "https://docs.mistral.ai/resources/changelogs", type: "docs_page" }],
+  },
+  {
+    slug: "perplexity",
+    name: "Perplexity",
+    description: "Perplexity API, Sonar, Search, Agent, model, and tooling changes.",
+    sources: [
+      {
+        name: "Perplexity API Changelog",
+        url: "https://docs.perplexity.ai/docs/resources/changelog/rss.xml",
+        type: "rss",
+      },
+    ],
+  },
+  {
     slug: "vercel",
     name: "Vercel",
     description: "Hosting, runtime, AI SDK, and deployment changes.",
@@ -212,6 +236,30 @@ export const vendors: VendorRecord[] = [
         type: "changelog_page",
       },
     ],
+  },
+  {
+    slug: "kiro",
+    name: "Kiro",
+    description: "Agentic IDE, CLI, web, model, and workflow release notes from Kiro.",
+    sources: [{ name: "Kiro Changelog", url: "https://kiro.dev/changelog/feed.rss", type: "rss" }],
+  },
+  {
+    slug: "amp",
+    name: "Amp",
+    description: "Sourcegraph's agentic coding tool updates across editor, CLI, and agent workflows.",
+    sources: [{ name: "Amp News", url: "https://ampcode.com/news.rss", type: "rss" }],
+  },
+  {
+    slug: "replit-agent",
+    name: "Replit Agent",
+    description: "Replit Agent, workspace, integrations, deployment, and collaborative app-building updates.",
+    sources: [{ name: "Replit Updates", url: "https://docs.replit.com/updates", type: "changelog_page" }],
+  },
+  {
+    slug: "v0",
+    name: "v0",
+    description: "Vercel's AI app builder, design agent, sandbox, and deployment workflow updates.",
+    sources: [{ name: "v0 Changelog", url: "https://v0.app/changelog", type: "changelog_page" }],
   },
   {
     slug: "supabase",
@@ -350,6 +398,30 @@ export const vendors: VendorRecord[] = [
     sources: [{ name: "shadcnspace Changelog", url: "https://shadcnspace.com/changelog", type: "changelog_page" }],
   },
   {
+    slug: "figma",
+    name: "Figma",
+    description: "Figma REST API, Dev Mode, design platform, and developer workflow updates.",
+    sources: [
+      {
+        name: "REST API Changelog",
+        url: "https://developers.figma.com/docs/rest-api/changelog/",
+        type: "docs_page",
+      },
+    ],
+  },
+  {
+    slug: "base-ui",
+    name: "Base UI",
+    description: "Unstyled accessible React component release notes from the Base UI project.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/mui/base-ui/releases.atom", type: "rss" }],
+  },
+  {
+    slug: "heroui",
+    name: "HeroUI",
+    description: "Accessible React UI components, design system, docs, and template releases.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/heroui-inc/heroui/releases.atom", type: "rss" }],
+  },
+  {
     slug: "hono",
     name: "Hono",
     description: "Web standards-first framework releases for edge and server runtimes.",
@@ -396,6 +468,27 @@ export const vendors: VendorRecord[] = [
     name: "uv",
     description: "Python package, environment, and workflow tool releases.",
     sources: [{ name: "GitHub Releases", url: "https://github.com/astral-sh/uv/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "model-context-protocol",
+    name: "Model Context Protocol",
+    description: "MCP specification releases for agent tools, resources, prompts, and protocol clients.",
+    sources: [
+      {
+        name: "Specification Releases",
+        url: "https://github.com/modelcontextprotocol/modelcontextprotocol/releases.atom",
+        type: "rss",
+      },
+    ],
+  },
+  {
+    slug: "tanstack",
+    name: "TanStack",
+    description: "TypeScript tooling releases across TanStack Query, Router, Start, and framework adapters.",
+    sources: [
+      { name: "TanStack Query Releases", url: "https://github.com/TanStack/query/releases.atom", type: "rss" },
+      { name: "TanStack Router Releases", url: "https://github.com/TanStack/router/releases.atom", type: "rss" },
+    ],
   },
   {
     slug: "convex",

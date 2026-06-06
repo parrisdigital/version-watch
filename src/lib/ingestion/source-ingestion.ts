@@ -111,6 +111,9 @@ const VENDOR_STACKS: Record<string, string[]> = {
   xai: ["llms", "agents", "api"],
   "meta-ai": ["llms", "agents", "sdk"],
   groq: ["llms", "agents", "api"],
+  openrouter: ["llms", "api", "models"],
+  "mistral-ai": ["llms", "api", "models"],
+  perplexity: ["llms", "search", "api"],
   vercel: ["hosting", "deployments", "frontend-infra"],
   stripe: ["payments", "subscriptions"],
   github: ["developer-workflow", "ci-cd"],
@@ -135,6 +138,10 @@ const VENDOR_STACKS: Record<string, string[]> = {
   windsurf: ["developer-workflow", "agents", "llms", "desktop-app"],
   "google-antigravity": ["developer-workflow", "agents", "llms"],
   "factory-droid": ["developer-workflow", "agents", "llms", "automation"],
+  kiro: ["editor", "developer-workflow", "agents", "llms"],
+  amp: ["developer-workflow", "agents", "llms", "editor"],
+  "replit-agent": ["developer-workflow", "agents", "llms", "hosting"],
+  v0: ["developer-workflow", "agents", "frontend-ui", "hosting"],
   docker: ["containers", "developer-workflow", "infra"],
   "claude-code": ["developer-workflow", "agents", "llms", "terminal"],
   "kilo-code": ["developer-workflow", "agents", "llms", "editor"],
@@ -147,6 +154,9 @@ const VENDOR_STACKS: Record<string, string[]> = {
   "shadcn-studio": ["frontend-ui", "design-system", "developer-workflow"],
   shadcnblocks: ["frontend-ui", "design-system", "developer-workflow"],
   shadcnspace: ["frontend-ui", "design-system", "developer-workflow"],
+  figma: ["design-system", "developer-workflow", "api"],
+  "base-ui": ["frontend-ui", "design-system", "react"],
+  heroui: ["frontend-ui", "design-system", "react"],
   hono: ["framework", "backend", "edge-compute"],
   bun: ["runtime", "tooling", "backend"],
   vite: ["frontend-infra", "developer-workflow", "tooling"],
@@ -155,6 +165,8 @@ const VENDOR_STACKS: Record<string, string[]> = {
   pnpm: ["tooling", "developer-workflow", "frontend-infra"],
   fastify: ["framework", "backend", "developer-workflow"],
   uv: ["tooling", "developer-workflow", "backend"],
+  "model-context-protocol": ["agents", "protocol", "developer-workflow"],
+  tanstack: ["frontend-infra", "developer-workflow", "react"],
   convex: ["backend", "database", "developer-workflow"],
   workos: ["auth", "developer-workflow", "security"],
   posthog: ["analytics", "observability", "experimentation"],
@@ -1087,6 +1099,10 @@ function isWarpParserKey(parserKey: string) {
 function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: string) {
   const lines = markdown.split(/\r?\n/);
 
+  if (parserKey === "replit-agent:changelog_page") {
+    return parseReplitUpdateEntries(sourceUrl, lines);
+  }
+
   if (parserKey.startsWith("stripe:")) {
     return parseStripeMarkdownEntries(sourceUrl, lines);
   }
@@ -1135,6 +1151,40 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
   }
 
   return parseGenericMarkdownEntries(sourceUrl, lines, parserKey);
+}
+
+function parseReplitUpdateEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  const pageDate = lines
+    .map((line) => stripMarkdown(line.replace(/^#\s+/, "")))
+    .map((line) => parseDateFromText(line))
+    .find((publishedAt): publishedAt is number => Boolean(publishedAt));
+
+  if (!pageDate) {
+    return entries;
+  }
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const headingMatch = lines[index]?.trim().match(/^###\s+(.+)$/);
+    if (!headingMatch) {
+      continue;
+    }
+
+    const title = stripMarkdown(headingMatch[1]!);
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: `${sourceUrl.split("#")[0]}#${slugifyHeading(title)}`,
+      excerpt: collectMarkdownExcerpt(lines, index + 1) || title,
+      publishedAt: pageDate,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
 }
 
 function parseMdxAttributes(value: string) {
@@ -1719,6 +1769,101 @@ function parseGenericMarkdownEntries(sourceUrl: string, lines: string[], parserK
       excerpt: collectMarkdownExcerpt(lines, index + 1) || title,
       publishedAt,
       parseConfidence: "medium",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function cleanMistralChangelogText(value: string) {
+  return cleanText(value)
+    .replace(/\b(MODEL RELEASED|API UPDATED|OTHER)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseMistralChangelogEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const element of $('[data-changelog-entry="true"]').toArray()) {
+    const id = $(element).attr("id") ?? "";
+    const dateMatch = id.match(/^date-(20\d{2})-(\d{2})-(\d{2})$/);
+    if (!dateMatch) {
+      continue;
+    }
+
+    const publishedAt = Date.UTC(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3]));
+    const titleText = cleanMistralChangelogText(
+      $(element).find(".changelog-content li, .changelog-content p").first().text(),
+    );
+    if (!isMeaningfulTitle(titleText)) {
+      continue;
+    }
+
+    const excerpt =
+      cleanMistralChangelogText($(element).find(".changelog-content").first().text()) ||
+      titleText;
+
+    entries.push({
+      title: truncateSentence(titleText, 160),
+      url: `${sourceUrl.split("#")[0]}#${encodeURIComponent(id)}`,
+      excerpt: truncateSentence(excerpt),
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseFigmaRestApiChangelogEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $(".theme-doc-markdown").length > 0 ? $(".theme-doc-markdown").first() : $("article").first();
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const heading of root.find("h2").toArray()) {
+    const dateText = cleanText($(heading).text());
+    const publishedAt = parseDateFromText(dateText);
+    if (!publishedAt) {
+      continue;
+    }
+
+    const parts: string[] = [];
+    for (const sibling of $(heading).nextUntil("h2").toArray()) {
+      const candidates = ["p", "li"].includes(sibling.tagName?.toLowerCase?.() ?? "")
+        ? [sibling]
+        : $(sibling).find("p, li").toArray();
+
+      for (const element of candidates) {
+        const text = cleanText($(element).text());
+        if (!text || text.length < 24 || isDateLike(text)) {
+          continue;
+        }
+
+        parts.push(text);
+        if (parts.join(" ").length >= 280) {
+          break;
+        }
+      }
+
+      if (parts.join(" ").length >= 280) {
+        break;
+      }
+    }
+
+    const title = parts[0] ?? dateText;
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const id = $(heading).attr("id");
+    entries.push({
+      title: truncateSentence(title, 160),
+      url: id ? `${sourceUrl.split("#")[0]}#${encodeURIComponent(id)}` : sourceUrl,
+      excerpt: truncateSentence(parts.join(" ") || title),
+      publishedAt,
+      parseConfidence: "high",
     });
   }
 
@@ -2492,6 +2637,20 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "firebase:docs_page") {
     const entries = parseFirebaseEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "mistral-ai:docs_page") {
+    const entries = parseMistralChangelogEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "figma:docs_page") {
+    const entries = parseFigmaRestApiChangelogEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }

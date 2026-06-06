@@ -6,6 +6,20 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+## [0.1.5] - 2026-06-06
+
+### Added
+
+- Add Kiro, Amp, Replit Agent, v0, OpenRouter, Mistral AI, Perplexity, Figma, Model Context Protocol, Base UI, HeroUI, and TanStack to the vendor directory.
+- Add stable RSS or GitHub Atom sources for Kiro, Amp, Perplexity, Model Context Protocol, Base UI, HeroUI, and TanStack.
+- Add parser coverage for Replit Agent markdown updates, Mistral AI timeline entries, and Figma REST API changelog sections.
+- Add category, logo, stack, and freshness metadata for the new vendors.
+
+### Changed
+
+- Mark OpenRouter's public changelog path as unsupported until it exposes a machine-fetchable source, keeping production health clean while still documenting the official surface.
+- Update the vendor registry documentation to reflect the expanded 75-vendor coverage.
+
 ## [0.1.4] - 2026-06-06
 
 ### Added
@@ -98,6 +112,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.5]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.5
 [0.1.4]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.4
 [0.1.3]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.3
 [0.1.2]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.2

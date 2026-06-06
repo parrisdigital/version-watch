@@ -6,7 +6,7 @@ The authoritative registry lives in [`src/lib/mock-data.ts`](../src/lib/mock-dat
 
 ## Current Coverage
 
-The public registry currently covers 63 vendors. Coverage is grouped into:
+The public registry currently covers 75 vendors. Coverage is grouped into:
 
 - AI Models & APIs
 - AI Coding Agents
@@ -23,7 +23,7 @@ The public registry currently covers 63 vendors. Coverage is grouped into:
 - Payments & Email
 - Search & Web Data
 
-Recent AI-coding additions include Claude Code, Kilo Code, and Factory Droid, all using official machine-readable release feeds when available.
+Recent AI-coding and platform additions include Kiro, Amp, Replit Agent, v0, OpenRouter, Mistral AI, Perplexity, Figma, Model Context Protocol, Base UI, HeroUI, and TanStack. These use official machine-readable release feeds where available; sources without a stable machine-readable surface stay explicitly unsupported instead of degrading production health.
 
 ## Registry Rules
 
