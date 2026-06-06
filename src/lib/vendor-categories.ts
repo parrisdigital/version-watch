@@ -31,14 +31,22 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
 
   // AI Coding Agents
   amp: "AI Coding Agents",
+  aider: "AI Coding Agents",
   "claude-code": "AI Coding Agents",
   cline: "AI Coding Agents",
+  coderabbit: "AI Coding Agents",
+  "continue": "AI Coding Agents",
   "factory-droid": "AI Coding Agents",
+  "github-copilot": "AI Coding Agents",
+  goose: "AI Coding Agents",
   "hermes-agent": "AI Coding Agents",
   "kilo-code": "AI Coding Agents",
   openclaw: "AI Coding Agents",
+  openhands: "AI Coding Agents",
   opencode: "AI Coding Agents",
+  qodo: "AI Coding Agents",
   "replit-agent": "AI Coding Agents",
+  "roo-code": "AI Coding Agents",
   "t3-code": "AI Coding Agents",
   v0: "AI Coding Agents",
 

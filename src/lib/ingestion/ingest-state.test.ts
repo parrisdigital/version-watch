@@ -109,15 +109,23 @@ describe("buildFetchTargetForRun", () => {
 describe("isAutoPublishVendorSlug", () => {
   it("auto-publishes high-confidence official entries for active newly added vendors", () => {
     expect([
+      "aider",
       "amp",
       "base-ui",
+      "coderabbit",
+      "continue",
       "figma",
+      "github-copilot",
+      "goose",
       "heroui",
       "kiro",
       "mistral-ai",
       "model-context-protocol",
+      "openhands",
       "perplexity",
+      "qodo",
       "replit-agent",
+      "roo-code",
       "tanstack",
       "v0",
     ].every((slug) => isAutoPublishVendorSlug(slug))).toBe(true);

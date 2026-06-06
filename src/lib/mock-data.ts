@@ -262,6 +262,60 @@ export const vendors: VendorRecord[] = [
     sources: [{ name: "v0 Changelog", url: "https://v0.app/changelog", type: "changelog_page" }],
   },
   {
+    slug: "github-copilot",
+    name: "GitHub Copilot",
+    description: "GitHub Copilot coding assistant, agent mode, code review, CLI, and IDE integration updates.",
+    sources: [
+      {
+        name: "GitHub Copilot Changelog",
+        url: "https://github.blog/changelog/label/copilot/feed/",
+        type: "rss",
+      },
+    ],
+  },
+  {
+    slug: "coderabbit",
+    name: "CodeRabbit",
+    description: "AI code review, planning, pull request analysis, and developer workflow updates.",
+    sources: [{ name: "CodeRabbit Changelog", url: "https://docs.coderabbit.ai/changelog/rss.xml", type: "rss" }],
+  },
+  {
+    slug: "qodo",
+    name: "Qodo",
+    description: "AI code review, test generation, quality gates, and coding workflow platform updates.",
+    sources: [{ name: "Qodo Changelog", url: "https://docs.qodo.ai/changelog/rss.xml", type: "rss" }],
+  },
+  {
+    slug: "continue",
+    name: "Continue",
+    description: "Open-source AI coding assistant, agent, autocomplete, and IDE extension releases.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/continuedev/continue/releases.atom", type: "rss" }],
+  },
+  {
+    slug: "openhands",
+    name: "OpenHands",
+    description: "Open-source autonomous software development agent releases and platform updates.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/OpenHands/OpenHands/releases.atom", type: "rss" }],
+  },
+  {
+    slug: "goose",
+    name: "Goose",
+    description: "Open-source local AI agent releases for desktop, CLI, MCP, and developer automation workflows.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/aaif-goose/goose/releases.atom", type: "rss" }],
+  },
+  {
+    slug: "aider",
+    name: "Aider",
+    description: "Terminal AI pair programmer releases for code editing, repository workflows, and model support.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/Aider-AI/aider/releases.atom", type: "rss" }],
+  },
+  {
+    slug: "roo-code",
+    name: "Roo Code",
+    description: "Open-source VS Code AI agent releases for coding, planning, MCP, and automated developer workflows.",
+    sources: [{ name: "GitHub Releases", url: "https://github.com/RooCodeInc/Roo-Code/releases.atom", type: "rss" }],
+  },
+  {
     slug: "supabase",
     name: "Supabase",
     description: "Database, auth, and backend platform changes.",

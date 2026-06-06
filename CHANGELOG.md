@@ -6,6 +6,16 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+## [0.1.9] - 2026-06-06
+
+### Added
+
+- Add GitHub Copilot, CodeRabbit, Qodo, Continue, OpenHands, Goose, Aider, and Roo Code to the vendor directory with official machine-readable sources and self-hosted official logo assets.
+
+### Changed
+
+- Add category, stack, freshness, and auto-publish metadata for the new AI coding and code review vendors.
+
 ## [0.1.8] - 2026-06-06
 
 ### Fixed
@@ -130,6 +140,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.9]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.9
 [0.1.8]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.8
 [0.1.7]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.7
 [0.1.6]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.6
