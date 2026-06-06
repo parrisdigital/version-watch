@@ -1,6 +1,6 @@
 /*
- * All vendor logos are rendered as monochrome masks inheriting `currentColor`,
- * so they look correct in both light and dark modes without per-brand color tricks.
+ * Most vendor logos are rendered as monochrome masks inheriting `currentColor`,
+ * while exact official raster/color marks use image mode.
  * The "fill" flag expands the glyph to 80% of the mark (for wordmarks like exa
  * whose source files have built-in padding, or compact marks that visually read
  * small at the default 58%).
@@ -24,9 +24,9 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   xai: { logoUrl: "https://docs.x.ai/favicon.ico", renderMode: "image", fill: true },
   "meta-ai": { logoUrl: "https://cdn.simpleicons.org/meta" },
   groq: { logoUrl: "https://console.groq.com/favicon.ico", renderMode: "image", fill: true },
-  openrouter: { logoUrl: "https://cdn.simpleicons.org/openrouter" },
-  "mistral-ai": { logoUrl: "https://cdn.simpleicons.org/mistralai" },
-  perplexity: { logoUrl: "https://cdn.simpleicons.org/perplexity" },
+  openrouter: { logoUrl: "/logos/openrouter.png", renderMode: "image", fill: true },
+  "mistral-ai": { logoUrl: "/logos/mistral-ai.png", renderMode: "image", fill: true },
+  perplexity: { logoUrl: "/logos/perplexity.svg", renderMode: "image", fill: true },
   vercel: { logoUrl: "https://cdn.simpleicons.org/vercel" },
   stripe: { logoUrl: "https://cdn.simpleicons.org/stripe" },
   github: { logoUrl: "https://cdn.simpleicons.org/github" },
@@ -58,10 +58,10 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   windsurf: { logoUrl: "/logos/devin.png", renderMode: "image", fill: true },
   "google-antigravity": { logoUrl: "https://antigravity.google/favicon.ico", renderMode: "image", fill: true },
   "factory-droid": { logoUrl: "/logos/factory-droid.svg", renderMode: "image", fill: true },
-  kiro: { logoUrl: "https://kiro.dev/icon.svg?fe599162bb293ea0", renderMode: "image", fill: true },
-  amp: { logoUrl: "https://ampcode.com/favicon.ico", renderMode: "image", fill: true },
-  "replit-agent": { logoUrl: "https://cdn.simpleicons.org/replit" },
-  v0: { logoUrl: "https://cdn.simpleicons.org/v0" },
+  kiro: { logoUrl: "/logos/kiro.svg", renderMode: "image", fill: true },
+  amp: { logoUrl: "/logos/amp.svg", renderMode: "image", fill: true },
+  "replit-agent": { logoUrl: "/logos/replit-agent.png", renderMode: "image", fill: true },
+  v0: { logoUrl: "/logos/v0.svg", renderMode: "image", fill: true },
   docker: { logoUrl: "https://cdn.simpleicons.org/docker" },
   "claude-code": { logoUrl: "https://cdn.simpleicons.org/anthropic" },
   "kilo-code": { logoUrl: "/logos/kilo-code.svg", renderMode: "image", fill: true },
@@ -78,9 +78,9 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   "shadcn-studio": { logoUrl: "/logos/shadcn-studio.png", renderMode: "image", fill: true },
   shadcnblocks: { logoUrl: "/logos/shadcnblocks.svg", fill: true },
   shadcnspace: { logoUrl: "/logos/shadcnspace.png", renderMode: "image", fill: true },
-  figma: { logoUrl: "https://cdn.simpleicons.org/figma" },
-  "base-ui": { logoUrl: "https://cdn.simpleicons.org/mui" },
-  heroui: { logoUrl: "https://cdn.simpleicons.org/heroui" },
+  figma: { logoUrl: "/logos/figma.ico", renderMode: "image", fill: true },
+  "base-ui": { logoUrl: "/logos/base-ui.svg", renderMode: "image", fill: true },
+  heroui: { logoUrl: "/logos/heroui.svg", renderMode: "image", fill: true },
   hono: { logoUrl: "https://cdn.simpleicons.org/hono" },
   bun: { logoUrl: "https://cdn.simpleicons.org/bun" },
   vite: { logoUrl: "https://cdn.simpleicons.org/vite" },
@@ -89,8 +89,8 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   pnpm: { logoUrl: "https://cdn.simpleicons.org/pnpm" },
   fastify: { logoUrl: "https://cdn.simpleicons.org/fastify" },
   uv: { logoUrl: "https://cdn.simpleicons.org/uv" },
-  "model-context-protocol": { logoUrl: "https://cdn.simpleicons.org/modelcontextprotocol" },
-  tanstack: { logoUrl: "https://cdn.simpleicons.org/tanstack" },
+  "model-context-protocol": { logoUrl: "/logos/model-context-protocol.png", renderMode: "image", fill: true },
+  tanstack: { logoUrl: "/logos/tanstack.png", renderMode: "image", fill: true },
   convex: { logoUrl: "https://cdn.simpleicons.org/convex" },
   workos: {
     logoUrl: "https://cdn.prod.website-files.com/621f54116cab10f6e9215d8b/621f548d3bca3b62c4bfe1c2_Favicon%2032x32.png",
