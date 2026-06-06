@@ -244,6 +244,11 @@ describe("hasMeaningfulTitle", () => {
     expect(hasMeaningfulTitle("May 23 - 29", "https://support.bolt.new/release-notes/rss.xml")).toBe(false);
     expect(hasMeaningfulTitle("Apr 25 - May 1", "https://support.bolt.new/release-notes/rss.xml")).toBe(false);
   });
+
+  it("rejects generic feed section labels so specific headings can replace them", () => {
+    expect(hasMeaningfulTitle("Improvements", "https://support.bolt.new/release-notes/rss.xml")).toBe(false);
+    expect(hasMeaningfulTitle("New features", "https://support.bolt.new/release-notes/rss.xml")).toBe(false);
+  });
 });
 
 describe("findSameSourceCandidateByTitle", () => {

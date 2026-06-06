@@ -103,6 +103,15 @@ const MAX_BACKOFF_MS = 6 * 60 * 60 * 1000;
 const CIRCUIT_BREAKER_BACKOFF_MS = 24 * 60 * 60 * 1000;
 const DATE_RANGE_TITLE_PATTERN =
   /^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\s*-\s*(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+)?\d{1,2}$/i;
+const GENERIC_SECTION_TITLES = new Set([
+  "bug fixes",
+  "enhancements",
+  "features",
+  "fixes",
+  "improvements",
+  "new features",
+  "updates",
+]);
 
 function isFinitePositive(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
@@ -349,6 +358,10 @@ export function hasMeaningfulTitle(title: string, sourceUrl?: string) {
   const normalizedLower = normalizeTitleKey(normalized);
 
   if (DATE_RANGE_TITLE_PATTERN.test(normalized)) {
+    return false;
+  }
+
+  if (GENERIC_SECTION_TITLES.has(normalizedLower)) {
     return false;
   }
 
