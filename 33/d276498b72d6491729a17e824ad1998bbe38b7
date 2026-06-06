@@ -1,0 +1,43 @@
+src/lib/vendor-categories.test.ts
+  s_856cb04848cf51::t_3cdd30e3a1592e 30-31
+src/lib/mock-data.ts
+  s_856cb04848cf51::t_8fe78a3a2b3dbe 294-296,304-320
+src/lib/ingestion/source-ingestion.test.ts
+  s_856cb04848cf51::t_ad25169378083b 358-440
+public/logos/shadcnblocks.svg
+  s_856cb04848cf51::t_e39a27e62e5d72 1-8
+convex/ingestState.ts
+  s_856cb04848cf51::t_95b40aff1f7281 224-225
+src/lib/ingestion/source-ingestion.ts
+  s_856cb04848cf51::t_3ba25dc6ec2262 750-752,761
+  s_856cb04848cf51::t_c1ac8256b926a7 756-757,768
+  s_856cb04848cf51::t_adb5767708c631 2435-2445
+  s_856cb04848cf51::t_e4d476c6a0a4e0 144-145
+  s_856cb04848cf51::t_74dba66b683c67 668-749,753-755,758-760,762-767,769-776
+src/lib/vendor-categories.ts
+  s_856cb04848cf51::t_112b8177afded6 54-55
+src/lib/vendor-branding.ts
+  s_856cb04848cf51::t_77a02558ece473 66,68-69
+package.json
+  s_856cb04848cf51::t_31e4f91dd196f9 3
+package-lock.json
+  ai_agent 3,9
+CHANGELOG.md
+  s_856cb04848cf51::t_1bea61140811b7 11-22,78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "33d276498b72d6491729a17e824ad1998bbe38b7",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
