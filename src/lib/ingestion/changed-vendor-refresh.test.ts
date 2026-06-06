@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   extractVendorSlugs,
+  extractVendorSourceUrls,
   filterVendorAffectingFiles,
   getChangedVendorSlugs,
   getVendorLineRanges,
+  hasOnlyUnsupportedSources,
 } from "../../../scripts/lib/changed-vendor-refresh.mjs";
 
 describe("changed vendor refresh helpers", () => {
@@ -21,6 +23,45 @@ describe("changed vendor refresh helpers", () => {
     `;
 
     expect(extractVendorSlugs(source)).toEqual(["github", "windsurf"]);
+  });
+
+  it("extracts source URLs for current registry vendors", () => {
+    const source = `
+      export const vendors = [
+        {
+          slug: "openrouter",
+          sources: [{ name: "OpenRouter Changelog", url: "https://openrouter.ai/docs/changelog", type: "docs_page" }],
+        },
+        {
+          slug: "tanstack",
+          sources: [
+            { name: "Query", url: "https://github.com/TanStack/query/releases.atom", type: "rss" },
+            { name: "Router", url: "https://github.com/TanStack/router/releases.atom", type: "rss" },
+          ],
+        },
+      ];
+      const vendorNameBySlug = new Map(vendors.map((vendor) => [vendor.slug, vendor.name]));
+    `;
+
+    const sourceUrls = extractVendorSourceUrls(source);
+
+    expect(sourceUrls.get("openrouter")).toEqual(["https://openrouter.ai/docs/changelog"]);
+    expect(sourceUrls.get("tanstack")).toEqual([
+      "https://github.com/TanStack/query/releases.atom",
+      "https://github.com/TanStack/router/releases.atom",
+    ]);
+  });
+
+  it("detects vendors whose current sources are intentionally unsupported", () => {
+    const sourceUrls = new Map([
+      ["openrouter", ["https://openrouter.ai/docs/changelog"]],
+      ["mixed", ["https://openrouter.ai/docs/changelog", "https://example.com/feed.xml"]],
+    ]);
+    const unsupportedSourceUrls = new Set(["https://openrouter.ai/docs/changelog"]);
+
+    expect(hasOnlyUnsupportedSources("openrouter", sourceUrls, unsupportedSourceUrls)).toBe(true);
+    expect(hasOnlyUnsupportedSources("mixed", sourceUrls, unsupportedSourceUrls)).toBe(false);
+    expect(hasOnlyUnsupportedSources("missing", sourceUrls, unsupportedSourceUrls)).toBe(false);
   });
 
   it("keeps only files that can affect vendor ingestion", () => {

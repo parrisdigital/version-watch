@@ -5,10 +5,17 @@ import { readFile } from "node:fs/promises";
 
 import {
   extractVendorSlugs,
+  extractVendorSourceUrls,
   filterVendorAffectingFiles,
   getChangedVendorSlugs,
   getVendorLineRanges,
+  hasOnlyUnsupportedSources,
 } from "./lib/changed-vendor-refresh.mjs";
+
+const unsupportedSourceUrls = new Set([
+  "https://railway.com/changelog",
+  "https://openrouter.ai/docs/changelog",
+]);
 
 function runGit(args, options = {}) {
   const result = spawnSync("git", args, {
@@ -92,6 +99,7 @@ async function main() {
 
   const mockDataSource = await readFile("src/lib/mock-data.ts", "utf8");
   const vendorSlugs = extractVendorSlugs(mockDataSource);
+  const vendorSourceUrls = extractVendorSourceUrls(mockDataSource);
   const vendorLineRanges = getVendorLineRanges(mockDataSource);
   const diffText = runGit(["diff", "--unified=0", baseSha, headSha, "--", ...relevantFiles]);
   const changedVendorSlugs = getChangedVendorSlugs({ diffText, vendorSlugs, vendorLineRanges });
@@ -135,6 +143,15 @@ async function main() {
     });
 
     console.log(JSON.stringify(result, null, 2));
+
+    if (
+      result.failures === 0 &&
+      result.sourcesProcessed === 0 &&
+      hasOnlyUnsupportedSources(vendorSlug, vendorSourceUrls, unsupportedSourceUrls)
+    ) {
+      console.log(`Skipping ${vendorSlug}; all current sources are intentionally unsupported.`);
+      continue;
+    }
 
     if (result.skipped || result.failures > 0 || result.sourcesProcessed === 0) {
       failed = true;

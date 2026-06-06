@@ -33,6 +33,46 @@ export function extractVendorSlugs(source) {
   return [...slugs].sort();
 }
 
+export function extractVendorSourceUrls(source) {
+  const registryStart = source.indexOf("export const vendors");
+  const registryEnd = source.indexOf("const vendorNameBySlug", registryStart);
+  const registrySource =
+    registryStart >= 0 && registryEnd > registryStart ? source.slice(registryStart, registryEnd) : source;
+  const markers = [];
+  const slugPattern = /\bslug:\s*["']([^"']+)["']/g;
+
+  for (const match of registrySource.matchAll(slugPattern)) {
+    if (match[1] && match.index !== undefined) {
+      markers.push({ slug: match[1], index: match.index });
+    }
+  }
+
+  const sourceUrls = new Map();
+
+  markers.forEach((marker, index) => {
+    const nextMarker = markers[index + 1];
+    const block = registrySource.slice(marker.index, nextMarker?.index ?? registrySource.length);
+    const urls = [];
+    const urlPattern = /\burl:\s*["']([^"']+)["']/g;
+
+    for (const match of block.matchAll(urlPattern)) {
+      if (match[1]) {
+        urls.push(match[1]);
+      }
+    }
+
+    sourceUrls.set(marker.slug, urls);
+  });
+
+  return sourceUrls;
+}
+
+export function hasOnlyUnsupportedSources(vendorSlug, vendorSourceUrls, unsupportedSourceUrls) {
+  const urls = vendorSourceUrls.get(vendorSlug) ?? [];
+
+  return urls.length > 0 && urls.every((url) => unsupportedSourceUrls.has(url));
+}
+
 export function getVendorLineRanges(source) {
   const lines = source.split(/\r?\n/);
   const markers = [];

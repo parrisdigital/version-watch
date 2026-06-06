@@ -6,6 +6,12 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+## [0.1.6] - 2026-06-06
+
+### Fixed
+
+- Treat changed vendors whose current sources are intentionally unsupported as clean refresh skips, preventing post-deploy freshness jobs from failing on documented but non-pollable sources like OpenRouter.
+
 ## [0.1.5] - 2026-06-06
 
 ### Added
@@ -112,6 +118,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.6]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.6
 [0.1.5]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.5
 [0.1.4]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.4
 [0.1.3]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.3
