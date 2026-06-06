@@ -22,6 +22,7 @@ import {
   getLifecycleStateAfterSuccess,
   shouldPollLifecycleState,
 } from "../../../convex/sourceLifecycle";
+import { isStaleDuplicateEventTitle } from "../../../convex/lib/publish";
 
 describe("buildFetchHeaders", () => {
   it("requests xAI release notes as HTML instead of the stripped Markdown view", () => {
@@ -274,6 +275,14 @@ describe("findSameSourceCandidateByTitle", () => {
     expect(findSameSourceCandidateByTitle(candidates, "Updates the elements.update() method to return a Promise")).toBe(
       candidates[1],
     );
+  });
+});
+
+describe("isStaleDuplicateEventTitle", () => {
+  it("flags feed bucket and generic section labels", () => {
+    expect(isStaleDuplicateEventTitle("Dec 15-Jan 23")).toBe(true);
+    expect(isStaleDuplicateEventTitle("New features")).toBe(true);
+    expect(isStaleDuplicateEventTitle("Database settings consolidated")).toBe(false);
   });
 });
 

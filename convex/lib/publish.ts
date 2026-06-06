@@ -13,6 +13,23 @@ function slugify(value: string) {
     .slice(0, 96);
 }
 
+const DATE_RANGE_TITLE_PATTERN =
+  /^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\s*-\s*(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+)?\d{1,2}$/i;
+const GENERIC_SECTION_TITLES = new Set([
+  "bug fixes",
+  "enhancements",
+  "features",
+  "fixes",
+  "improvements",
+  "new features",
+  "updates",
+]);
+
+export function isStaleDuplicateEventTitle(title: string) {
+  const normalized = cleanText(title).toLowerCase();
+  return DATE_RANGE_TITLE_PATTERN.test(normalized) || GENERIC_SECTION_TITLES.has(normalized);
+}
+
 export function buildCandidateSlug(vendorSlug: string, publishedAt: number, title: string) {
   const datePrefix = new Date(publishedAt).toISOString().slice(0, 10);
   return slugify(`${vendorSlug}-${datePrefix}-${title}`);
@@ -74,6 +91,36 @@ export async function publishRawCandidate(ctx: any, rawCandidate: any) {
     ...eventPayload,
     createdAt: Date.now(),
   });
+}
+
+export async function hideStaleDuplicateEvents(ctx: any, rawCandidate: any, activeEventId: any) {
+  const duplicateEvents = await ctx.db
+    .query("changeEvents")
+    .withIndex("by_vendor_and_published", (q: any) =>
+      q.eq("vendorId", rawCandidate.vendorId).eq("publishedAt", rawCandidate.rawPublishedAt),
+    )
+    .collect();
+  let hidden = 0;
+
+  for (const event of duplicateEvents) {
+    if (
+      event._id === activeEventId ||
+      event.visibility !== "public" ||
+      event.sourceId !== rawCandidate.sourceId ||
+      event.sourceUrl !== rawCandidate.sourceUrl ||
+      !isStaleDuplicateEventTitle(event.title)
+    ) {
+      continue;
+    }
+
+    await ctx.db.patch(event._id, {
+      visibility: "hidden" as const,
+      updatedAt: Date.now(),
+    });
+    hidden += 1;
+  }
+
+  return hidden;
 }
 
 export async function hidePublishedRawCandidate(ctx: any, rawCandidateId: any) {

@@ -2,7 +2,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { v } from "convex/values";
 
 import { sourceErrorCodeValidator } from "./ingestionErrors";
-import { hidePublishedRawCandidate, publishRawCandidate } from "./lib/publish";
+import { hidePublishedRawCandidate, hideStaleDuplicateEvents, publishRawCandidate } from "./lib/publish";
 import {
   getLifecycleStateAfterFailure,
   getLifecycleStateAfterSuccess,
@@ -805,6 +805,7 @@ export const persistSourceEntries = internalMutation({
       if (rawCandidate.status === "published") {
         const publishedId = await publishRawCandidate(ctx, rawCandidate);
         if (publishedId) {
+          await hideStaleDuplicateEvents(ctx, rawCandidate, publishedId);
           published += 1;
         }
       } else if (heldForFutureDate) {
