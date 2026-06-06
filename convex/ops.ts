@@ -11,6 +11,8 @@ import {
 
 const STALE_SOURCE_GRACE_MINUTES = 60;
 const RECENT_INGESTION_RUN_LIMIT = 2000;
+const OPEN_REFRESH_REQUEST_LIMIT = 2000;
+const OPEN_REFRESH_REQUEST_STATUSES = ["queued", "running"] as const;
 
 function getStatusForSource(source: any) {
   const lifecycleState = getEffectiveLifecycleState(source);
@@ -207,6 +209,27 @@ function formatVendorFreshness(vendor: any, sources: any[], refreshRequests: any
   };
 }
 
+async function getOpenRefreshRequests(ctx: any, vendorSlug?: string) {
+  const batches = await Promise.all(
+    OPEN_REFRESH_REQUEST_STATUSES.map((status) => {
+      if (vendorSlug) {
+        return ctx.db
+          .query("refreshRequests")
+          .withIndex("by_vendor_slug_and_status", (q: any) => q.eq("vendorSlug", vendorSlug).eq("status", status))
+          .take(OPEN_REFRESH_REQUEST_LIMIT);
+      }
+
+      return ctx.db
+        .query("refreshRequests")
+        .withIndex("by_status_and_requested", (q: any) => q.eq("status", status))
+        .order("desc")
+        .take(OPEN_REFRESH_REQUEST_LIMIT);
+    }),
+  );
+
+  return batches.flat();
+}
+
 export const sourceHealth = query({
   args: {},
   returns: v.array(v.any()),
@@ -348,7 +371,7 @@ export const vendorFreshness = query({
         ].filter(Boolean)
       : await ctx.db.query("vendors").withIndex("by_active_and_sort_order", (q) => q.eq("isActive", true)).collect();
     const allSources = await ctx.db.query("sources").collect();
-    const refreshRequests = await ctx.db.query("refreshRequests").collect();
+    const refreshRequests = await getOpenRefreshRequests(ctx, args.slug);
 
     const records = vendors.map((vendor: any) => {
       const sources = allSources.filter((source) => String(source.vendorId) === String(vendor._id));

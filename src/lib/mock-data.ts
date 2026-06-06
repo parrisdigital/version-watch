@@ -245,7 +245,7 @@ export const vendors: VendorRecord[] = [
     slug: "clerk",
     name: "Clerk",
     description: "Authentication and org platform changes.",
-    sources: [{ name: "Clerk Changelog", url: "https://clerk.com/changelog", type: "changelog_page" }],
+    sources: [{ name: "Clerk Changelog", url: "https://clerk.com/changelog.md", type: "changelog_page" }],
   },
   {
     slug: "resend",
