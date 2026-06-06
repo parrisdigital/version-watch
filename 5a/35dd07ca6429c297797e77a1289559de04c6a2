@@ -1,0 +1,28 @@
+package.json
+  s_856cb04848cf51::t_c8627093bffb48 3
+  s_856cb04848cf51::t_285ad4683b0c0e 21-24,28-29,31-34,36,40-42,45,47
+src/lib/source-link-audit.ts
+  s_856cb04848cf51::t_644f1601f27410 100-119,144
+scripts/lib/source-link-audit.mjs
+  s_856cb04848cf51::t_644f1601f27410 57-76,92
+CHANGELOG.md
+  s_856cb04848cf51::t_d9bc3378e8f15c 9-12,18,22-24,32-35,66
+src/lib/source-link-quality.test.ts
+  s_856cb04848cf51::t_644f1601f27410 27-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "5a35dd07ca6429c297797e77a1289559de04c6a2",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
