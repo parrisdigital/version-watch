@@ -27,6 +27,8 @@ describe("vendor categories", () => {
 
   it("keeps shadcn ecosystem vendors in design systems and UI", () => {
     expect(getCategoryForSlug("shadcn")).toBe("Design Systems & UI");
+    expect(getCategoryForSlug("shadcn-studio")).toBe("Design Systems & UI");
+    expect(getCategoryForSlug("shadcnblocks")).toBe("Design Systems & UI");
     expect(getCategoryForSlug("shadcnspace")).toBe("Design Systems & UI");
   });
 });

@@ -51,6 +51,8 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
 
   // Design Systems & UI
   shadcn: "Design Systems & UI",
+  "shadcn-studio": "Design Systems & UI",
+  shadcnblocks: "Design Systems & UI",
   shadcnspace: "Design Systems & UI",
 
   // Frameworks & Tooling

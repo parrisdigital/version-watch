@@ -355,6 +355,89 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-14T00:00:00.000Z"));
   });
 
+  it("parses Synara release entries from the former DP Code source", () => {
+    const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const now = new Date();
+    const monthLabel = monthLabels[now.getUTCMonth()];
+    const html = `
+      <main>
+        <div id="v0-1-3">
+          <span>${monthLabel} 5</span>
+          <h2>Synara 0.1.3</h2>
+          <p>The chat side panel is clearer for busy sessions.</p>
+        </div>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "dp-code:changelog_page",
+      sourceUrl: "https://www.trysynara.com/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Synara 0.1.3",
+      url: "https://www.trysynara.com/changelog#v0-1-3",
+      excerpt: "The chat side panel is clearer for busy sessions.",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 5));
+  });
+
+  it("parses shadcn Studio CHANGELOG.md entries", () => {
+    const markdown = `
+      # Changelog
+
+      ## v1.0.0 (2025-11-19)
+
+      ### Added
+
+      - Added blocks and registries for easier access to component variants.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "shadcn-studio:changelog_page",
+      sourceUrl: "https://raw.githubusercontent.com/shadcnstudio/shadcn-studio/main/CHANGELOG.md",
+      html: markdown,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "v1.0.0 (2025-11-19)",
+      excerpt: "Added blocks and registries for easier access to component variants.",
+      parseConfidence: "medium",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2025-11-19T00:00:00.000Z"));
+  });
+
+  it("parses shadcnblocks changelog cards without nested section headings", () => {
+    const html = `
+      <main>
+        <a href="/changelog/page/2">Older entries</a>
+        <div>
+          <span>Released</span>
+          <a href="/changelog/new-blocks-may-2026">New Blocks - May 2026</a>
+          <time>May 30, 2026</time>
+          <p>Added 111 new blocks across marketing and application sections.</p>
+        </div>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "shadcnblocks:changelog_page",
+      sourceUrl: "https://www.shadcnblocks.com/changelog",
+      html,
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      title: "New Blocks - May 2026",
+      url: "https://www.shadcnblocks.com/changelog/new-blocks-may-2026",
+      excerpt: "Added 111 new blocks across marketing and application sections.",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-05-30T00:00:00.000Z"));
+  });
+
   it("parses Warp version headings", () => {
     const html = `
       <main>
