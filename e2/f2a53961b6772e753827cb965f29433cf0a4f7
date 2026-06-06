@@ -1,0 +1,28 @@
+src/lib/ingestion/source-ingestion.ts
+  s_856cb04848cf51::t_1333f110f5b776 1174,1216-1246
+  s_856cb04848cf51::t_d424a40b456c90 919-922,1159-1173,1175-1214
+src/lib/mock-data.ts
+  s_856cb04848cf51::t_d424a40b456c90 248
+convex/ops.ts
+  s_856cb04848cf51::t_d424a40b456c90 14-15,212-232,374
+src/lib/ops/production-health-guards.test.ts
+  s_856cb04848cf51::t_d424a40b456c90 1-18
+src/lib/ingestion/source-ingestion.test.ts
+  s_856cb04848cf51::t_d424a40b456c90 156-196
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "e2f2a53961b6772e753827cb965f29433cf0a4f7",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
