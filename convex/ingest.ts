@@ -41,6 +41,8 @@ const BROWSER_RETRY_STATUSES = new Set([403, 404, 406, 429]);
 const FETCH_TIMEOUT_MS = 30 * 1000;
 const WATCHDOG_STALE_AFTER_MS = 270 * 60 * 1000;
 const WATCHDOG_RUNNING_GRACE_MS = 30 * 60 * 1000;
+const DATE_RANGE_FEED_TITLE_PATTERN =
+  /^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\s*-\s*(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+)?\d{1,2}$/i;
 
 type RunType = "scheduled" | "manual" | "deep_diff" | "watchdog";
 
@@ -256,9 +258,7 @@ function shouldUseRichFeedHeadingAsTitle(fallbackUrl: string, title: string) {
       /^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}, \d{4}$/i.test(
         normalizedTitle,
       ) ||
-      /^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\s*-\s*\d{1,2}$/i.test(
-        normalizedTitle,
-      );
+      DATE_RANGE_FEED_TITLE_PATTERN.test(normalizedTitle);
 
     return isDateBucket && ["docs.lovable.dev", "support.bolt.new"].includes(url.hostname);
   } catch {
@@ -284,7 +284,7 @@ function isRichFeedHeadingCandidate(value: string) {
     text.length >= 4 &&
     !RICH_FEED_HEADING_NOISE.has(lower) &&
     !/^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}(?:, \d{4})?$/i.test(text) &&
-    !/^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\s*-\s*\d{1,2}$/i.test(text)
+    !DATE_RANGE_FEED_TITLE_PATTERN.test(text)
   );
 }
 

@@ -99,6 +99,16 @@ describe("parseFeedEntries", () => {
               <p>Your project's database settings now live in one place.</p>
             ]]></content:encoded>
           </item>
+          <item>
+            <title>Dec 15-Jan 23</title>
+            <link>https://support.bolt.new/release-notes#dec-15-jan-23</link>
+            <pubDate>Mon, 05 Jan 2026 05:40:05 GMT</pubDate>
+            <content:encoded><![CDATA[
+              <h2>New features</h2>
+              <h3>Private site sharing</h3>
+              <p>You can now share working prototypes privately.</p>
+            ]]></content:encoded>
+          </item>
         </channel>
       </rss>`,
       "https://support.bolt.new/release-notes/rss.xml",
@@ -107,6 +117,10 @@ describe("parseFeedEntries", () => {
     expect(entries[0]).toMatchObject({
       title: "Database settings consolidated",
       url: "https://support.bolt.new/release-notes#may-23-29",
+    });
+    expect(entries[1]).toMatchObject({
+      title: "Private site sharing",
+      url: "https://support.bolt.new/release-notes#dec-15-jan-23",
     });
   });
 
