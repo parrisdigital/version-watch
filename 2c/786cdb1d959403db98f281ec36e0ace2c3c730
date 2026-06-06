@@ -1,0 +1,19 @@
+src/lib/vendor-branding.ts
+  s_856cb04848cf51::t_0765492c9ed3b4 74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "2c786cdb1d959403db98f281ec36e0ace2c3c730",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
