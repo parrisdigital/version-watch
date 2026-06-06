@@ -52,7 +52,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   zed: { logoUrl: "https://cdn.simpleicons.org/zedindustries" },
   dia: { logoUrl: "https://www.diabrowser.com/favicon.svg", renderMode: "image", fill: true },
   brave: { logoUrl: "https://cdn.simpleicons.org/brave" },
-  windsurf: { logoUrl: "https://windsurf.com/favicon.ico", renderMode: "image", fill: true },
+  windsurf: { logoUrl: "/logos/devin.png", renderMode: "image", fill: true },
   "google-antigravity": { logoUrl: "https://antigravity.google/favicon.ico", renderMode: "image", fill: true },
   docker: { logoUrl: "https://cdn.simpleicons.org/docker" },
   "hermes-agent": {

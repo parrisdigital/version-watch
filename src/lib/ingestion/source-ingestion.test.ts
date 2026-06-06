@@ -384,6 +384,44 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 5));
   });
 
+  it("parses Devin Desktop MDX changelog entries from the former Windsurf source", () => {
+    const markdown = `
+      # Changelog
+
+      <Update label="v3.0.28" description="June 6, 2026">
+        * Hardened migration from Windsurf on Windows to preserve shortcut icon.
+        * Improved handling of file context in Devin Local agent
+
+        <Accordion title="Download 3.0.28" defaultOpen>
+          <Release darwinArm64="https://example.com/Devin-darwin-arm64-3.0.28.zip" />
+        </Accordion>
+      </Update>
+
+      <Update label="v3.0.12" description="June 2, 2026">
+        Windsurf is now [Devin Desktop](https://devin.ai/blog/windsurf-is-now-devin-desktop).
+      </Update>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "windsurf:changelog_page",
+      sourceUrl: "https://docs.devin.ai/desktop/changelog.md",
+      html: markdown,
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      title: "Devin Desktop v3.0.28",
+      url: "https://docs.devin.ai/desktop/changelog#v3-0-28",
+      excerpt: "Hardened migration from Windsurf on Windows to preserve shortcut icon. Improved handling of file context in Devin Local agent",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-06-06T00:00:00.000Z"));
+    expect(entries[1]).toMatchObject({
+      title: "Devin Desktop v3.0.12",
+      excerpt: "Windsurf is now Devin Desktop.",
+    });
+  });
+
   it("parses shadcn Studio CHANGELOG.md entries", () => {
     const markdown = `
       # Changelog

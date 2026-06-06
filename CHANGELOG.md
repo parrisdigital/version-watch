@@ -6,6 +6,10 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+### Changed
+
+- Rename the former Windsurf vendor entry to Devin Desktop, switch its tracked source to the official Devin Desktop changelog, and add the official Devin logo asset.
+
 ### Fixed
 
 - Treat legacy DP Code/Synara GitHub release links as accepted historical source details in source-link audits.

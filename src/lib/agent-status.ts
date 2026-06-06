@@ -38,7 +38,6 @@ export const MAX_EXPECTED_REFRESH_AGE_MINUTES = 5 * 60;
 const STALE_SOURCE_GRACE_MINUTES = 60;
 const unsupportedSourceUrls = new Set([
   "https://railway.com/changelog",
-  "https://windsurf.com/changelog",
 ]);
 
 function minutesBetween(now: number, isoTimestamp: string | null | undefined) {

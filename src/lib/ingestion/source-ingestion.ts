@@ -132,7 +132,7 @@ const VENDOR_STACKS: Record<string, string[]> = {
   zed: ["editor", "developer-workflow", "llms"],
   dia: ["browser", "developer-workflow", "llms"],
   brave: ["browser", "privacy", "llms"],
-  windsurf: ["developer-workflow", "agents", "llms"],
+  windsurf: ["developer-workflow", "agents", "llms", "desktop-app"],
   "google-antigravity": ["developer-workflow", "agents", "llms"],
   docker: ["containers", "developer-workflow", "infra"],
   "hermes-agent": ["agents", "developer-workflow", "automation"],
@@ -1112,6 +1112,10 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
     return parseRailwayMarkdownEntries(sourceUrl, lines);
   }
 
+  if (parserKey === "windsurf:changelog_page") {
+    return parseDevinDesktopMarkdownEntries(sourceUrl, markdown);
+  }
+
   if (parserKey === "xai:docs_page") {
     return parseMonthGroupedMarkdownEntries(
       sliceDelimitedMarkdownSection(lines, "===/developers/release-notes==="),
@@ -1128,6 +1132,57 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
   }
 
   return parseGenericMarkdownEntries(sourceUrl, lines, parserKey);
+}
+
+function parseMdxAttributes(value: string) {
+  const attributes = new Map<string, string>();
+  const attributePattern = /([A-Za-z][A-Za-z0-9_-]*)="([^"]*)"/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = attributePattern.exec(value)) !== null) {
+    attributes.set(match[1]!, match[2]!);
+  }
+
+  return attributes;
+}
+
+function stripMdxBlocks(value: string) {
+  return value
+    .replace(/<Accordion\b[\s\S]*?<\/Accordion>/gi, " ")
+    .replace(/<Release\b[\s\S]*?\/>/gi, " ")
+    .replace(/<img\b[\s\S]*?\/>/gi, " ")
+    .replace(/<[^>]+>/g, " ");
+}
+
+function parseDevinDesktopMarkdownEntries(sourceUrl: string, markdown: string) {
+  const entries: ParsedSourceEntry[] = [];
+  const htmlSourceUrl = sourceUrl.replace(/\.md$/i, "");
+  const updatePattern = /<Update\b([^>]*)>([\s\S]*?)<\/Update>/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = updatePattern.exec(markdown)) !== null) {
+    const attributes = parseMdxAttributes(match[1]!);
+    const label = cleanText(attributes.get("label"));
+    const description = cleanText(attributes.get("description"));
+    const publishedAt = parseDateFromText(description);
+    if (!label || !publishedAt) {
+      continue;
+    }
+
+    const body = stripMdxBlocks(match[2]!);
+    const lines = body.split(/\r?\n/);
+    const excerpt = collectMarkdownExcerpt(lines, 0) || `Devin Desktop ${label}`;
+
+    entries.push({
+      title: `Devin Desktop ${label}`,
+      url: `${htmlSourceUrl}#${slugifyHeading(label)}`,
+      excerpt,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
 }
 
 function parseStripeMarkdownEntries(sourceUrl: string, lines: string[]) {

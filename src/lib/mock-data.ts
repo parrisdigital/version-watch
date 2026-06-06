@@ -191,9 +191,9 @@ export const vendors: VendorRecord[] = [
   },
   {
     slug: "windsurf",
-    name: "Windsurf",
-    description: "AI coding editor, agent workflow, and IDE release updates.",
-    sources: [{ name: "Windsurf Changelog", url: "https://windsurf.com/changelog", type: "changelog_page" }],
+    name: "Devin Desktop",
+    description: "Agent-first IDE formerly known as Windsurf, now part of Devin and Cognition.",
+    sources: [{ name: "Devin Desktop Changelog", url: "https://docs.devin.ai/desktop/changelog", type: "changelog_page" }],
   },
   {
     slug: "google-antigravity",

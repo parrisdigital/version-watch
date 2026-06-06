@@ -131,11 +131,16 @@ function getContentHash(body: string) {
 
 async function fetchText(source: SourceFetchTarget | string) {
   const sourceTarget = typeof source === "string" ? { url: source } : source;
-  let response = await fetchTextOnce(sourceTarget, DEFAULT_INGESTION_USER_AGENT);
+  const fetchTarget =
+    sourceTarget.parserKey === "windsurf:changelog_page" &&
+    sourceTarget.url.replace(/\/$/, "") === "https://docs.devin.ai/desktop/changelog"
+      ? { ...sourceTarget, url: "https://docs.devin.ai/desktop/changelog.md" }
+      : sourceTarget;
+  let response = await fetchTextOnce(fetchTarget, DEFAULT_INGESTION_USER_AGENT);
 
   if (!response.ok && BROWSER_RETRY_STATUSES.has(response.status)) {
     await response.body?.cancel();
-    response = await fetchTextOnce(sourceTarget, BROWSER_FALLBACK_USER_AGENT);
+    response = await fetchTextOnce(fetchTarget, BROWSER_FALLBACK_USER_AGENT);
   }
 
   if (response.status === 304) {
@@ -146,8 +151,8 @@ async function fetchText(source: SourceFetchTarget | string) {
       url: response.url,
       status: response.status,
       body: "",
-      etag: response.headers.get("etag") ?? sourceTarget.etag,
-      lastModified: response.headers.get("last-modified") ?? sourceTarget.lastModified,
+      etag: response.headers.get("etag") ?? fetchTarget.etag,
+      lastModified: response.headers.get("last-modified") ?? fetchTarget.lastModified,
       contentHash: undefined,
     };
   }
