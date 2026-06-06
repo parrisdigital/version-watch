@@ -1,0 +1,21 @@
+convex/schema.ts
+  s_856cb04848cf51::t_bd8121b040808a 180-182
+convex/ops.ts
+  s_856cb04848cf51::t_3ffc76c03eb2a5 13,253-257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "e77933acfdf92aa9fd7a950025ebf584227f3238",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
