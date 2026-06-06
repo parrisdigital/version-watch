@@ -1,0 +1,36 @@
+CHANGELOG.md
+  s_856cb04848cf51::t_a164ef5e018b1f 9-14
+  s_856cb04848cf51::t_4d872bb9405901 127
+public/logos/perplexity.svg
+  s_856cb04848cf51::t_d3ae3e938a3ee6 1-41
+package.json
+  s_856cb04848cf51::t_c2fe4003f7af5a 3
+public/logos/v0.svg
+  s_856cb04848cf51::t_d3ae3e938a3ee6 1-26
+src/lib/vendor-branding.ts
+  s_856cb04848cf51::t_fde3e5a2c86f76 2-3,27-29,61-64,81-83,92-93
+public/logos/base-ui.svg
+  s_856cb04848cf51::t_d3ae3e938a3ee6 1-10
+public/logos/amp.svg
+  s_856cb04848cf51::t_ecff16c8d0c826 1-5
+public/logos/heroui.svg
+  s_856cb04848cf51::t_54c0e26109f8df 1-3
+public/logos/kiro.svg
+  s_856cb04848cf51::t_793041b2a51188 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "b2bb66619bc4ed41620c3a2b09b1b567b74075e2",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
