@@ -15,9 +15,13 @@ import {
   nextCursorForPublicCluster,
   serializePublicCluster,
 } from "@/lib/public-clusters";
-import { getAllPublicEvents } from "@/lib/site-data";
+import { getPublicUpdatesPage } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
+
+const CLUSTER_EVENT_WINDOW_MULTIPLIER = 5;
+const CLUSTER_EVENT_WINDOW_MIN = 50;
+const CLUSTER_EVENT_WINDOW_MAX = 100;
 
 export function OPTIONS() {
   return new Response(null, { headers: PUBLIC_AGENT_HEADERS });
@@ -36,6 +40,31 @@ function responseFilters(filters: UpdateFilters) {
   };
 }
 
+function getClusterEventWindowLimit(limit: number) {
+  return Math.min(
+    CLUSTER_EVENT_WINDOW_MAX,
+    Math.max(CLUSTER_EVENT_WINDOW_MIN, limit * CLUSTER_EVENT_WINDOW_MULTIPLIER),
+  );
+}
+
+function cursorForClusterWindow(filters: UpdateFilters) {
+  if (!filters.cursorPosition) {
+    return undefined;
+  }
+
+  if (filters.cursorPosition.id.startsWith("single_")) {
+    return {
+      publishedAt: filters.cursorPosition.publishedAt,
+      id: filters.cursorPosition.id.slice("single_".length),
+    };
+  }
+
+  return {
+    publishedAt: filters.cursorPosition.publishedAt,
+    id: "\uffff",
+  };
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const parsed = parseUpdateFilters(searchParams);
@@ -45,7 +74,12 @@ export async function GET(request: Request) {
   }
 
   const baseUrl = getPublicBaseUrl(request.url);
-  const events = await getAllPublicEvents();
+  const eventPage = await getPublicUpdatesPage({
+    ...parsed.filters,
+    cursorPosition: cursorForClusterWindow(parsed.filters),
+    limit: getClusterEventWindowLimit(parsed.filters.limit),
+  });
+  const events = eventPage.events;
   const matches = filterEventsForPublicUpdateMatches(events, parsed.filters);
   const clusters = clusterChangeEvents(matches, { minClusterSize: 2, windowHours: 24 }).sort(comparePublicClusters);
   const eligible = parsed.filters.cursorPosition
@@ -61,7 +95,8 @@ export async function GET(request: Request) {
       status_url: new URL("/api/v1/status", baseUrl).toString(),
       count: page.length,
       total_count: clusters.length,
-      next_cursor: lastCluster && eligible.length > page.length ? nextCursorForPublicCluster(lastCluster) : null,
+      next_cursor:
+        lastCluster && (eligible.length > page.length || eventPage.next_cursor) ? nextCursorForPublicCluster(lastCluster) : null,
       filters: responseFilters(parsed.filters),
       clusters: page.map((cluster) => serializePublicCluster(cluster, baseUrl)),
     },
