@@ -5,7 +5,7 @@ import {
   classifyThrownError,
   SourceIngestionError,
 } from "../../../convex/ingestionErrors";
-import { buildFetchHeaders } from "../../../convex/ingest";
+import { buildFetchHeaders, buildFetchTargetForRun } from "../../../convex/ingest";
 import {
   findSameSourceCandidateByTitle,
   getFailureBackoffUntil,
@@ -43,6 +43,27 @@ describe("buildFetchHeaders", () => {
 
     expect(headers.Accept).toContain("application/rss+xml");
     expect(headers.Accept).not.toContain("text/html");
+  });
+});
+
+describe("buildFetchTargetForRun", () => {
+  it("strips conditional cache validators during forced refreshes", () => {
+    const source = {
+      url: "https://github.com/anthropics/claude-code/releases.atom",
+      parserKey: "claude-code:rss",
+      sourceType: "rss",
+      etag: 'W/"release-feed"',
+      lastModified: "Sat, 06 Jun 2026 16:45:00 GMT",
+    };
+
+    expect(buildFetchTargetForRun(source, false)).toEqual(source);
+    expect(buildFetchTargetForRun(source, true)).toEqual({
+      url: source.url,
+      parserKey: source.parserKey,
+      sourceType: source.sourceType,
+      etag: undefined,
+      lastModified: undefined,
+    });
   });
 });
 

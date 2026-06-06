@@ -69,6 +69,18 @@ function canUseConditionalCache(source: SourceFetchTarget) {
   return sourceLooksLikeDirectFeed(source) || !source.parserKey || !FEED_PARSER_KEYS.has(source.parserKey);
 }
 
+export function buildFetchTargetForRun(source: SourceFetchTarget, force: boolean): SourceFetchTarget {
+  if (!force) {
+    return source;
+  }
+
+  return {
+    ...source,
+    etag: undefined,
+    lastModified: undefined,
+  };
+}
+
 function sourceNeedsHtmlFirstAccept(source?: SourceFetchTarget) {
   if (!source) {
     return false;
@@ -297,7 +309,7 @@ async function ingestSource(ctx: any, source: any, runType: RunType, force: bool
   const startedAt = Date.now();
 
   try {
-    const sourceResponse = await fetchText(source);
+    const sourceResponse = await fetchText(buildFetchTargetForRun(source, force));
     if (!sourceResponse.ok) {
       throw new SourceIngestionError(
         classifyHttpStatus(sourceResponse.status),
