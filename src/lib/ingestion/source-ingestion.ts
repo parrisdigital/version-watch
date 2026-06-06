@@ -1169,6 +1169,10 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
     return parseTabnineMarkdownEntries(sourceUrl, lines);
   }
 
+  if (parserKey === "amazon-q-developer:docs_page") {
+    return parseAmazonQDeveloperMarkdownEntries(sourceUrl, lines);
+  }
+
   return parseGenericMarkdownEntries(sourceUrl, lines, parserKey);
 }
 
@@ -1815,6 +1819,57 @@ function parseTabnineMarkdownEntries(sourceUrl: string, lines: string[]) {
       title: `Tabnine ${version}`,
       url: `${detailBaseUrl}#${version.toLowerCase()}`,
       excerpt: collectMarkdownExcerpt(lines, index + 1) || `Tabnine ${version}`,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function splitMarkdownTableRow(line: string) {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|") || !trimmed.endsWith("|")) {
+    return [];
+  }
+
+  return trimmed
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isMarkdownTableSeparator(cells: string[]) {
+  return cells.length > 0 && cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/\s+/g, "")));
+}
+
+function firstMarkdownLinkHref(value: string) {
+  return value.match(/\[[^\]]+\]\(([^)]+)\)/)?.[1];
+}
+
+function parseAmazonQDeveloperMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const line of lines) {
+    const cells = splitMarkdownTableRow(line);
+    if (cells.length < 3 || isMarkdownTableSeparator(cells)) {
+      continue;
+    }
+
+    const [rawTitle, rawExcerpt, rawDate] = cells;
+    const title = stripMarkdown(rawTitle);
+    const excerpt = truncateSentence(stripMarkdown(rawExcerpt));
+    const publishedAt = parseDateFromText(stripMarkdown(rawDate));
+
+    if (/^change$/i.test(title) || !isMeaningfulTitle(title) || !excerpt || !publishedAt) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(firstMarkdownLinkHref(rawTitle), sourceUrl),
+      excerpt,
       publishedAt,
       parseConfidence: "high",
     });

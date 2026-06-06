@@ -145,6 +145,29 @@ May 28, 2026
     });
   });
 
+  it("parses Amazon Q Developer Markdown document-history tables", () => {
+    const entries = parseHtmlEntries({
+      parserKey: "amazon-q-developer:docs_page",
+      sourceUrl: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.html",
+      html: `
+# Document history for Amazon Q Developer User Guide
+
+| Change | Description | Date |
+| --- |--- |--- |
+| [Updated managed policies: AmazonQFullAccess and AmazonQDeveloperAccess](#doc-history) | Added \`q:CreateArtifact\` permissions to enable Amazon Q artifacts preview. | May 21, 2026 |
+| [Updated Builder ID unsubscribe instructions](#doc-history) | Added guidance for unsubscribing a personal account when the Amazon Q Developer Profile has been deleted. | March 19, 2026 |
+`,
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      title: "Updated managed policies: AmazonQFullAccess and AmazonQDeveloperAccess",
+      url: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.html#doc-history",
+      publishedAt: Date.parse("2026-05-21T00:00:00.000Z"),
+      parseConfidence: "high",
+    });
+  });
+
   it("parses PostHog Gatsby page-data changelog nodes", () => {
     const pageData = JSON.stringify({
       result: {
