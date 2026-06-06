@@ -1,0 +1,21 @@
+src/lib/ingestion/ingest-state.test.ts
+  s_856cb04848cf51::t_0a5943bb331c2e 102-111,121-123
+convex/ingest.ts
+  s_856cb04848cf51::t_ed736cf64ad8c9 44-45,261,287
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "edc45f374773b762b238e1c9240cea8a5a3f6254",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
