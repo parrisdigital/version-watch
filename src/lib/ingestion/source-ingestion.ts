@@ -916,6 +916,10 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
     return parseFirecrawlMarkdownEntries(sourceUrl, lines);
   }
 
+  if (parserKey === "clerk:changelog_page") {
+    return parseClerkMarkdownEntries(sourceUrl, lines);
+  }
+
   if (parserKey === "railway:changelog_page") {
     return parseRailwayMarkdownEntries(sourceUrl, lines);
   }
@@ -1150,6 +1154,96 @@ function parseFirecrawlMarkdownEntries(sourceUrl: string, lines: string[]) {
   }
 
   return dedupeEntries(entries);
+}
+
+function parseClerkMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  let activeTitle: string | null = null;
+  let activeUrl = sourceUrl.replace(/\.md$/i, "");
+  let activeDate: number | null = null;
+  let activeStartIndex = -1;
+
+  const flush = () => {
+    if (!activeTitle || !activeDate) {
+      return;
+    }
+
+    entries.push({
+      title: activeTitle,
+      url: cleanMarkdownUrl(activeUrl, sourceUrl),
+      excerpt: collectClerkMarkdownExcerpt(lines, activeStartIndex + 1) || activeTitle,
+      publishedAt: activeDate,
+      parseConfidence: "high",
+    });
+  };
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const trimmed = lines[index]?.trim() ?? "";
+    const headingMatch = trimmed.match(/^#\s+(.+)$/);
+
+    if (headingMatch) {
+      const title = stripMarkdown(headingMatch[1]!);
+      if (/^clerk changelog$/i.test(title)) {
+        continue;
+      }
+
+      flush();
+      activeTitle = isMeaningfulTitle(title) ? title : null;
+      activeUrl = sourceUrl.replace(/\.md$/i, "");
+      activeDate = null;
+      activeStartIndex = index;
+      continue;
+    }
+
+    if (!activeTitle) {
+      continue;
+    }
+
+    const urlMatch = trimmed.match(/^URL:\s*(\S+)$/i);
+    if (urlMatch) {
+      activeUrl = urlMatch[1]!;
+      continue;
+    }
+
+    const dateMatch = trimmed.match(/^Date:\s*(\d{4}-\d{2}-\d{2})$/i);
+    if (dateMatch) {
+      activeDate = parseDateText(dateMatch[1]!, null);
+    }
+  }
+
+  flush();
+  return dedupeEntries(entries);
+}
+
+function collectClerkMarkdownExcerpt(lines: string[], startIndex: number) {
+  const parts: string[] = [];
+
+  for (let index = startIndex; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    if (!line) {
+      continue;
+    }
+
+    if (/^#\s+/.test(line) || /^---+$/.test(line)) {
+      break;
+    }
+
+    if (/^(URL|Date|Category):/i.test(line)) {
+      continue;
+    }
+
+    const descriptionMatch = line.match(/^Description:\s*(.*)$/i);
+    const text = stripMarkdown(descriptionMatch ? descriptionMatch[1]! : line.replace(/^[-*]\s+/, ""));
+    if (text.length >= 24 && !isDateLike(text)) {
+      parts.push(text);
+    }
+
+    if (parts.join(" ").length >= 260) {
+      break;
+    }
+  }
+
+  return truncateSentence(parts.join(" "));
 }
 
 function parseRailwayMarkdownEntries(sourceUrl: string, lines: string[]) {

@@ -153,6 +153,47 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-17T00:00:00.000Z"));
   });
 
+  it("parses Clerk Markdown changelog exports", () => {
+    const markdown = `
+      # Clerk Changelog
+
+      # Prebuilt Organization components for iOS and Android
+      URL: https://clerk.com/changelog/2026-06-05-ios-android-organization-management.md
+      Date: 2026-06-05
+      Category: SDK
+      Description:
+
+      Clerk's native mobile SDKs now include prebuilt Organization management UI for iOS and Android.
+
+      ---
+
+      # Email Logs public beta
+      URL: https://clerk.com/changelog/2026-06-01-email-logs-public-beta.md
+      Date: 2026-06-01
+      Category: Product
+      Description: Inspect transactional email delivery events from the Clerk Dashboard.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "clerk:changelog_page",
+      sourceUrl: "https://clerk.com/changelog.md",
+      html: markdown,
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      title: "Prebuilt Organization components for iOS and Android",
+      url: "https://clerk.com/changelog/2026-06-05-ios-android-organization-management",
+      excerpt: "Clerk's native mobile SDKs now include prebuilt Organization management UI for iOS and Android.",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-06-05T00:00:00.000Z"));
+    expect(entries[1]).toMatchObject({
+      title: "Email Logs public beta",
+      url: "https://clerk.com/changelog/2026-06-01-email-logs-public-beta",
+    });
+  });
+
   it("parses xAI month-grouped release notes", () => {
     const html = `
       <main>
