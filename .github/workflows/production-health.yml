@@ -4,16 +4,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: "23 */4 * * *"
-  pull_request:
-    paths:
-      - ".github/workflows/production-health.yml"
-      - "scripts/check-production-freshness.mjs"
-      - "scripts/check-source-links.mjs"
-      - "scripts/check-vendor-coverage.mjs"
-      - "scripts/lib/source-link-audit.mjs"
-      - "package.json"
-      - "package-lock.json"
-      - "convex/ops.ts"
 
 concurrency:
   group: production-health-${{ github.ref }}

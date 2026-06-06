@@ -177,7 +177,9 @@ export default defineSchema({
     errorCode: v.optional(sourceErrorCodeValidator),
     errorMessage: v.optional(v.string()),
     runType: v.union(v.literal("scheduled"), v.literal("manual"), v.literal("deep_diff"), v.literal("watchdog")),
-  }).index("by_source_and_start", ["sourceId", "startedAt"]),
+  })
+    .index("by_source_and_start", ["sourceId", "startedAt"])
+    .index("by_started_at", ["startedAt"]),
 
   refreshRuns: defineTable({
     startedAt: v.number(),
