@@ -111,9 +111,7 @@ function formatRefreshRun(run: any) {
   };
 }
 
-async function formatSourceHealth(ctx: any, source: any) {
-  const vendor = await ctx.db.get(source.vendorId);
-
+function formatSourceHealthWithVendor(source: any, vendor: any) {
   if (!vendor) {
     return null;
   }
@@ -136,6 +134,11 @@ async function formatSourceHealth(ctx: any, source: any) {
     pollIntervalMinutes: source.pollIntervalMinutes,
     consecutiveFailures: source.consecutiveFailures ?? 0,
   };
+}
+
+async function formatSourceHealth(ctx: any, source: any) {
+  const vendor = await ctx.db.get(source.vendorId);
+  return formatSourceHealthWithVendor(source, vendor);
 }
 
 function getLatestTimestamp(sources: any[], field: string) {
@@ -275,19 +278,19 @@ export const productionFreshness = query({
       .take(eventLimit);
     const ingestionRuns = await ctx.db
       .query("ingestionRuns")
-      .withIndex("by_started_at", (q) => q.gte("startedAt", since))
+      .withIndex("by_started_at")
       .order("desc")
       .take(RECENT_INGESTION_RUN_LIMIT);
     const refreshRuns = await ctx.db.query("refreshRuns").withIndex("by_started_at").order("desc").take(100);
 
     const sourceHealth = await Promise.all(
       monitoredSources
-        .map((source) => formatSourceHealth(ctx, source)),
+        .map((source) => formatSourceHealthWithVendor(source, vendorById.get(source.vendorId))),
     );
 
     const latestEvents = await Promise.all(
       events.map(async (event) => {
-        const vendor = await ctx.db.get(event.vendorId);
+        const vendor = vendorById.get(event.vendorId);
         return {
           slug: event.slug,
           vendorName: vendor?.name ?? "Unknown vendor",

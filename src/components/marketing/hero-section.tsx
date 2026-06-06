@@ -17,7 +17,7 @@ type HeroSectionProps = {
  */
 export function HeroSection({ vendorCount, freshnessSummary }: HeroSectionProps) {
   return (
-    <section className="relative isolate flex min-h-dvh w-full flex-col overflow-hidden">
+    <section className="relative isolate flex min-h-svh w-full flex-col overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10" aria-hidden="true">
         <HeroShader />
         <div className="absolute inset-x-0 bottom-0 h-56 bg-linear-to-b from-transparent to-[var(--background)]" />

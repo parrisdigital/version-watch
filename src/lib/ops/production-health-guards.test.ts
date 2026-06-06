@@ -13,6 +13,7 @@ describe("production health query guardrails", () => {
     expect(opsSource).toContain("RECENT_INGESTION_RUN_LIMIT");
     expect(opsSource).toContain("OPEN_REFRESH_REQUEST_LIMIT");
     expect(opsSource).not.toMatch(/query\("ingestionRuns"\)\.collect\(\)/);
+    expect(opsSource).not.toMatch(/query\("ingestionRuns"\)[\s\S]*?q\.gte\("startedAt", since\)/);
     expect(opsSource).not.toMatch(/query\("refreshRequests"\)\.collect\(\)/);
   });
 });

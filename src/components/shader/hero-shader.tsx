@@ -11,7 +11,8 @@ import { readShaderPalette } from "./palettes";
  * - Monochrome. Three drifting blobs blended into the canvas color; the
  *   third blob tracks the pointer with a smooth lerp for perceived weight.
  * - Theme-aware. Observes `<html class>` and swaps palettes without reload.
- * - Reduced-motion safe. Paints once at a stable time offset and stops.
+ * - Scroll-safe. Paints at a stable time offset and only redraws on resize,
+ *   theme changes, and short desktop pointer-settle bursts.
  *
  * Known-good init order (this is what the previous version got wrong and
  * why it sometimes appeared blank until refresh):
@@ -107,6 +108,11 @@ void main() {
 }
 `;
 
+const STABLE_TIME_SECONDS = 2.4;
+const MAX_DPR = 1.35;
+const RESIZE_DELTA_PX = 2;
+const POINTER_SETTLE_FRAMES = 18;
+
 function compileShader(gl: WebGLRenderingContext, type: number, source: string) {
   const shader = gl.createShader(type);
   if (!shader) throw new Error("Failed to create shader");
@@ -131,7 +137,11 @@ export function HeroShader({ className = "" }: HeroShaderProps) {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const gl = (canvas.getContext("webgl", { antialias: false, alpha: false }) ??
+    const gl = (canvas.getContext("webgl", {
+      antialias: false,
+      alpha: false,
+      powerPreference: "low-power",
+    }) ??
       canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
     if (!gl) return;
 
@@ -174,20 +184,24 @@ export function HeroShader({ className = "" }: HeroShaderProps) {
     const uTintC = gl.getUniformLocation(program, "u_tintC");
     const uDensity = gl.getUniformLocation(program, "u_density");
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.75);
     const mouse = { x: 0.5, y: 0.45 };
     const target = { x: 0.5, y: 0.45 };
 
     function resize() {
       if (!gl || !canvas) return;
-      const w = Math.max(1, Math.floor(canvas.clientWidth * dpr));
-      const h = Math.max(1, Math.floor(canvas.clientHeight * dpr));
-      if (canvas.width !== w || canvas.height !== h) {
+      const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+      const w = Math.max(1, Math.round(canvas.clientWidth * dpr));
+      const h = Math.max(1, Math.round(canvas.clientHeight * dpr));
+      const changed =
+        Math.abs(canvas.width - w) > RESIZE_DELTA_PX ||
+        Math.abs(canvas.height - h) > RESIZE_DELTA_PX;
+
+      if (changed) {
         canvas.width = w;
         canvas.height = h;
-        gl.viewport(0, 0, w, h);
-        gl.uniform2f(uResolution, w, h);
       }
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.uniform2f(uResolution, canvas.width, canvas.height);
     }
 
     function applyPalette() {
@@ -205,38 +219,67 @@ export function HeroShader({ className = "" }: HeroShaderProps) {
     resize();
     applyPalette();
     gl.uniform2f(uMouse, mouse.x, mouse.y);
-    gl.uniform1f(uTime, 0);
+    gl.uniform1f(uTime, STABLE_TIME_SECONDS);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-    const resizeObserver = new ResizeObserver(() => resize());
-    resizeObserver.observe(canvas);
+    let drawRafId = 0;
+    let pointerRafId = 0;
+    let visible = true;
+    const reducedQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const pointerQuery = window.matchMedia("(pointer: coarse)");
+    let prefersReduced = reducedQuery.matches;
+    let isCoarsePointer = pointerQuery.matches;
+    let settleFrames = 0;
+
+    function draw() {
+      if (!gl || !visible) return;
+      gl.uniform1f(uTime, STABLE_TIME_SECONDS);
+      gl.uniform2f(uMouse, mouse.x, mouse.y);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+
+    function scheduleDraw() {
+      if (drawRafId) return;
+      drawRafId = requestAnimationFrame(() => {
+        drawRafId = 0;
+        resize();
+        draw();
+      });
+    }
+
+    const resizeObserver = new ResizeObserver(() => scheduleDraw());
+    resizeObserver.observe(canvas.parentElement ?? canvas);
 
     const themeObserver = new MutationObserver(() => {
       applyPalette();
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      scheduleDraw();
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
       attributeFilter: ["class"],
     });
 
-    const reducedQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    let prefersReduced = reducedQuery.matches;
     const reducedHandler = (e: MediaQueryListEvent) => {
       prefersReduced = e.matches;
+      if (prefersReduced) {
+        cancelAnimationFrame(pointerRafId);
+        pointerRafId = 0;
+        settleFrames = 0;
+      }
+      scheduleDraw();
     };
     reducedQuery.addEventListener("change", reducedHandler);
 
-    let rafId = 0;
-    let visible = true;
+    const pointerHandler = (e: MediaQueryListEvent) => {
+      isCoarsePointer = e.matches;
+      scheduleDraw();
+    };
+    pointerQuery.addEventListener("change", pointerHandler);
 
     const observer = new IntersectionObserver(
       (entries) => {
-        const nextVisible = entries[0]?.isIntersecting ?? true;
-        if (nextVisible && !visible && !prefersReduced) {
-          rafId = requestAnimationFrame(render);
-        }
-        visible = nextVisible;
+        visible = entries[0]?.isIntersecting ?? true;
+        if (visible) scheduleDraw();
       },
       { rootMargin: "120px" },
     );
@@ -250,38 +293,49 @@ export function HeroShader({ className = "" }: HeroShaderProps) {
       // can exit the frame naturally rather than sticking to the border.
       target.x = Math.min(1.25, Math.max(-0.25, x));
       target.y = Math.min(1.25, Math.max(-0.25, y));
+      if (!prefersReduced && !isCoarsePointer) {
+        settleFrames = POINTER_SETTLE_FRAMES;
+        schedulePointerFrame();
+      }
     }
     window.addEventListener("pointermove", handlePointerMove, { passive: true });
 
-    const startedAt = performance.now();
-
-    function render(now: number) {
-      if (!gl) return;
-      const t = (now - startedAt) / 1000;
-
-      // Framerate-tolerant ease — larger factor reaches target faster.
+    // Framerate-tolerant ease — larger factor reaches target faster.
+    function renderPointerFrame() {
+      pointerRafId = 0;
+      if (!gl || !visible || prefersReduced || isCoarsePointer) return;
       const ease = 0.08;
       mouse.x += (target.x - mouse.x) * ease;
       mouse.y += (target.y - mouse.y) * ease;
 
-      gl.uniform1f(uTime, prefersReduced ? 2.4 : t);
-      gl.uniform2f(uMouse, mouse.x, mouse.y);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      draw();
+      settleFrames -= 1;
 
-      if (visible && !prefersReduced) {
-        rafId = requestAnimationFrame(render);
+      if (settleFrames > 0) {
+        schedulePointerFrame();
       }
     }
 
-    rafId = requestAnimationFrame(render);
+    function schedulePointerFrame() {
+      if (pointerRafId || !visible || prefersReduced || isCoarsePointer) return;
+      pointerRafId = requestAnimationFrame(renderPointerFrame);
+    }
+
+    window.addEventListener("resize", scheduleDraw, { passive: true });
+    window.addEventListener("orientationchange", scheduleDraw, { passive: true });
+    scheduleDraw();
 
     return () => {
-      cancelAnimationFrame(rafId);
+      cancelAnimationFrame(drawRafId);
+      cancelAnimationFrame(pointerRafId);
       resizeObserver.disconnect();
       themeObserver.disconnect();
       observer.disconnect();
       reducedQuery.removeEventListener("change", reducedHandler);
+      pointerQuery.removeEventListener("change", pointerHandler);
       window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("resize", scheduleDraw);
+      window.removeEventListener("orientationchange", scheduleDraw);
     };
   }, []);
 
@@ -289,7 +343,7 @@ export function HeroShader({ className = "" }: HeroShaderProps) {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className={`block size-full ${className}`}
+      className={`block size-full transform-gpu [backface-visibility:hidden] [contain:strict] ${className}`}
     />
   );
 }

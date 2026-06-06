@@ -6,6 +6,8 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+## [0.1.4] - 2026-06-06
+
 ### Added
 
 - Add Claude Code and Kilo Code to the vendor directory with official GitHub release feeds and a self-hosted Kilo Code mark.
@@ -18,6 +20,9 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ### Fixed
 
+- Stabilize the homepage WebGL hero shader during desktop and mobile scrolling by removing continuous animation redraws and using a stable viewport height.
+- Keep production freshness health within Convex read limits by using bounded recent-run reads and reusing the existing vendor map.
+- Add the explicit Next.js smooth-scroll metadata expected by the app router.
 - Treat legacy DP Code/Synara GitHub release links as accepted historical source details in source-link audits.
 - Report intentionally unsupported zero-update vendors as vendor coverage notes instead of warnings.
 
@@ -93,6 +98,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.4]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.4
 [0.1.3]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.3
 [0.1.2]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.2
 [0.1.1]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.1
