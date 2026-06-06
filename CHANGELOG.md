@@ -8,6 +8,18 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 No unreleased changes yet.
 
+## [0.1.3] - 2026-06-06
+
+### Added
+
+- Add shadcn Studio and shadcnblocks to the vendor directory with official changelog sources and self-hosted logo assets.
+- Add parser coverage for shadcnblocks changelog cards and shadcn Studio `CHANGELOG.md` entries.
+
+### Changed
+
+- Rename the former DP Code directory entry to Synara while preserving the `dp-code` slug for existing public URLs.
+- Update the Synara source to the official Synara changelog and replace the stale DP Code favicon with a self-hosted Synara logo.
+
 ## [0.1.2] - 2026-06-06
 
 ### Changed
@@ -63,6 +75,7 @@ No unreleased changes yet.
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.3]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.3
 [0.1.2]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.2
 [0.1.1]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.1
 [0.1.0]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.0

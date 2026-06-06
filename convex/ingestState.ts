@@ -221,6 +221,8 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "langchain",
   "resend",
   "shadcn",
+  "shadcn-studio",
+  "shadcnblocks",
   "shadcnspace",
   "stripe",
   "supabase",

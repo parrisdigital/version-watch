@@ -291,15 +291,33 @@ export const vendors: VendorRecord[] = [
   },
   {
     slug: "dp-code",
-    name: "DP Code",
-    description: "AI coding IDE releases and workflow updates.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/Emanuele-web04/dpcode/releases", type: "changelog_page" }],
+    name: "Synara",
+    description: "AI coding IDE releases and workflow updates, formerly published as DP Code.",
+    sources: [{ name: "Synara Changelog", url: "https://www.trysynara.com/changelog", type: "changelog_page" }],
   },
   {
     slug: "shadcn",
     name: "shadcn/ui",
     description: "Component registry, CLI, and UI system releases.",
     sources: [{ name: "GitHub Releases", url: "https://github.com/shadcn-ui/ui/releases", type: "changelog_page" }],
+  },
+  {
+    slug: "shadcn-studio",
+    name: "shadcn Studio",
+    description: "shadcn/ui component variants, blocks, registries, templates, themes, and Figma kit releases.",
+    sources: [
+      {
+        name: "CHANGELOG.md",
+        url: "https://raw.githubusercontent.com/shadcnstudio/shadcn-studio/main/CHANGELOG.md",
+        type: "changelog_page",
+      },
+    ],
+  },
+  {
+    slug: "shadcnblocks",
+    name: "shadcnblocks",
+    description: "shadcn/ui blocks, templates, admin kits, Figma assets, and page builder releases.",
+    sources: [{ name: "shadcnblocks Changelog", url: "https://www.shadcnblocks.com/changelog", type: "changelog_page" }],
   },
   {
     slug: "shadcnspace",

@@ -141,6 +141,8 @@ const VENDOR_STACKS: Record<string, string[]> = {
   openusage: ["developer-workflow", "observability", "tooling"],
   "dp-code": ["developer-workflow", "llms", "desktop-app"],
   shadcn: ["frontend-ui", "design-system", "developer-workflow"],
+  "shadcn-studio": ["frontend-ui", "design-system", "developer-workflow"],
+  shadcnblocks: ["frontend-ui", "design-system", "developer-workflow"],
   shadcnspace: ["frontend-ui", "design-system", "developer-workflow"],
   hono: ["framework", "backend", "edge-compute"],
   bun: ["runtime", "tooling", "backend"],
@@ -661,6 +663,115 @@ function parseShadcnspaceEntries(sourceUrl: string, html: string) {
   }
 
   return dedupeEntries(entries);
+}
+
+function parseMonthDayWithInferredYear(text: string, now = new Date()) {
+  const value = cleanText(text);
+  const match = value.match(
+    /^(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+(\d{1,2})$/i,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const currentYear = now.getUTCFullYear();
+  const month = MONTH_INDEX[match[1]!.toLowerCase()] ?? 0;
+  const day = Number(match[2]);
+  const futureGraceMs = 30 * 24 * 60 * 60 * 1000;
+  const currentYearDate = Date.UTC(currentYear, month, day);
+
+  if (currentYearDate > now.getTime() + futureGraceMs) {
+    return Date.UTC(currentYear - 1, month, day);
+  }
+
+  return currentYearDate;
+}
+
+function parseSynaraEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const heading of root.find("h2").toArray()) {
+    const title = cleanText($(heading).text());
+    if (!/^Synara\s+\d+\.\d+\.\d+/i.test(title)) {
+      continue;
+    }
+
+    const container = $(heading).closest("article, li, section, div").first();
+    const containerText = cleanText(container.text());
+    const dateMatch = containerText.match(
+      /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2}\b/i,
+    );
+    const publishedAt = dateMatch ? parseMonthDayWithInferredYear(dateMatch[0]) : null;
+    if (!publishedAt) {
+      continue;
+    }
+
+    const id = container.attr("id") ?? $(heading).attr("id");
+    const fallbackExcerpt = truncateSentence(
+      containerText
+        .replace(dateMatch?.[0] ?? "", "")
+        .replace(/—\s*link to\s+Synara\s+[\d.]+/i, "")
+        .replace(title, "")
+        .trim(),
+    );
+
+    entries.push({
+      title,
+      url: id ? `${sourceUrl.split("#")[0]}#${encodeURIComponent(id)}` : sourceUrl,
+      excerpt: collectContainerExcerpt($, heading, title) || fallbackExcerpt || title,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseShadcnblocksEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const root = $("main").length > 0 ? $("main").first() : $("body");
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const link of root.find('a[href^="/changelog/"]').toArray()) {
+    const href = $(link).attr("href");
+    const title = cleanText($(link).text());
+    if (!href || /\/changelog\/page\//i.test(href) || !isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const container = $(link).closest("article, li, section, div").first();
+    const containerText = cleanText(container.text());
+    const dateMatch = containerText.match(
+      /\b(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2},\s+\d{4}\b/i,
+    );
+    const dateText = dateMatch?.[0];
+    const publishedAt = dateText ? parseDateText(dateText, null) : null;
+    if (!publishedAt || !dateText) {
+      continue;
+    }
+
+    const paragraphExcerpt = truncateSentence(cleanText(container.find("p").first().text()));
+    const fallbackExcerpt = truncateSentence(
+      containerText
+        .replace(/^released/i, "")
+        .replace(title, "")
+        .replace(dateText, "")
+        .trim(),
+    );
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(href, sourceUrl),
+      excerpt: paragraphExcerpt || fallbackExcerpt || title,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries).sort((left, right) => right.publishedAt - left.publishedAt);
 }
 
 function parseWarpEntries(sourceUrl: string, html: string) {
@@ -2316,6 +2427,20 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "shadcnspace:changelog_page") {
     const entries = parseShadcnspaceEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "dp-code:changelog_page") {
+    const entries = parseSynaraEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "shadcnblocks:changelog_page") {
+    const entries = parseShadcnblocksEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }
