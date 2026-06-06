@@ -10,6 +10,7 @@ import {
 } from "./sourceFreshness";
 
 const STALE_SOURCE_GRACE_MINUTES = 60;
+const RECENT_INGESTION_RUN_LIMIT = 2000;
 
 function getStatusForSource(source: any) {
   const lifecycleState = getEffectiveLifecycleState(source);
@@ -249,7 +250,11 @@ export const productionFreshness = query({
       .withIndex("by_visibility_and_published", (q) => q.eq("visibility", "public"))
       .order("desc")
       .take(eventLimit);
-    const ingestionRuns = await ctx.db.query("ingestionRuns").collect();
+    const ingestionRuns = await ctx.db
+      .query("ingestionRuns")
+      .withIndex("by_started_at", (q) => q.gte("startedAt", since))
+      .order("desc")
+      .take(RECENT_INGESTION_RUN_LIMIT);
     const refreshRuns = await ctx.db.query("refreshRuns").withIndex("by_started_at").order("desc").take(100);
 
     const sourceHealth = await Promise.all(
