@@ -232,6 +232,7 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "vite",
   "vscode",
   "warp",
+  "windsurf",
   "workos",
   "xai",
   "zed",
