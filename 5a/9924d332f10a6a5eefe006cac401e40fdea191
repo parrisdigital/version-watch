@@ -1,0 +1,19 @@
+src/app/api/v1/clusters/route.ts
+  s_856cb04848cf51::t_118980c523241d 18,22-25,43-67,77-82,98-99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "5a9924d332f10a6a5eefe006cac401e40fdea191",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
