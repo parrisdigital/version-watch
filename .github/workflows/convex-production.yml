@@ -19,6 +19,8 @@ on:
       - "src/lib/mock-data.ts"
       - "src/lib/ingestion/**"
       - "src/lib/classification/**"
+      - "scripts/refresh-changed-vendors.mjs"
+      - "scripts/lib/changed-vendor-refresh.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/convex-production.yml"
@@ -45,6 +47,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -163,6 +167,13 @@ jobs:
 
           console.log(JSON.stringify(result, null, 2));
           NODE
+
+      - name: Force refresh changed vendors
+        if: ${{ github.event_name == 'push' }}
+        run: npm run refresh:changed-vendors
+        env:
+          GITHUB_BEFORE: ${{ github.event.before }}
+          GITHUB_HEAD_SHA: ${{ github.sha }}
 
       - name: Wait for production deploy window
         run: sleep 180

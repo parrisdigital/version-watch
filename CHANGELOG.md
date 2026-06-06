@@ -9,6 +9,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 ### Changed
 
 - Rename the former Windsurf vendor entry to Devin Desktop, switch its tracked source to the official Devin Desktop changelog, and add the official Devin logo asset.
+- Force-refresh vendor slugs touched by a production deploy before production coverage runs, preventing fresh-source skips after parser or source changes.
 
 ### Fixed
 
