@@ -6,20 +6,32 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+No unreleased changes yet.
+
+## [0.1.2] - 2026-06-06
+
 ### Changed
 
 - Consolidate dependency maintenance by grouping future Dependabot npm and GitHub Actions updates.
 - Update maintenance dependencies and GitHub Actions versions used by project workflows.
 - Keep automated Dependabot version PRs scoped to minor and patch updates; major upgrades remain manual maintenance.
+- Update Next.js, Convex, Vitest, React, Radix, Playwright, and related maintenance dependencies.
 
 ### Fixed
 
+- Restore production health by moving Clerk ingestion to Clerk's Markdown changelog surface.
+- Bound production freshness and vendor freshness Convex queries so growing ingestion and refresh request tables do not break public status pages.
+- Add production health regression coverage for high-growth Convex query reads.
 - Hold future-dated upstream changelog entries out of the public feed until they are within the public freshness skew window.
 - Correct shadcnspace changelog parsing so versions and exact release dates match the upstream timeline.
 - Move shadcn ecosystem vendors into a clearer Design Systems & UI directory category.
 - Make forced admin refreshes reparse unchanged source content, and allow source-link repair rules to target exact URL fragments.
 - Update the Warp changelog source URL after the previous markdown endpoint began returning 404s.
 - Reactivate paused sources when they remain present in the active registry after a source repair.
+
+### Security
+
+- Clear npm audit findings for Next.js, Vitest, Convex/ws, and brace-expansion.
 
 ## [0.1.1] - 2026-04-30
 
@@ -51,5 +63,6 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.2]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.2
 [0.1.1]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.1
 [0.1.0]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.0

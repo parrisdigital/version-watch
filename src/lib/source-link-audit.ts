@@ -97,6 +97,26 @@ export function hasPathPrefix(candidateUrl: string, sourceUrl: string) {
   return candidateHost === sourceHost && (candidatePath === sourcePath || candidatePath.startsWith(`${sourcePath}/`));
 }
 
+function markdownIndexCoversPath(candidateUrl: string, sourceUrl: string) {
+  const candidate = parseUrl(candidateUrl);
+  const source = parseUrl(sourceUrl);
+
+  if (!candidate || !source) {
+    return false;
+  }
+
+  const candidateHost = normalizeHost(candidate.hostname);
+  const sourceHost = normalizeHost(source.hostname);
+  if (candidateHost !== sourceHost || !/\.(?:md|txt)$/i.test(source.pathname)) {
+    return false;
+  }
+
+  const sourcePath = source.pathname.replace(/\.(?:md|txt)$/i, "").replace(/\/$/, "") || "/";
+  const candidatePath = candidate.pathname.replace(/\/$/, "") || "/";
+
+  return candidatePath === sourcePath || candidatePath.startsWith(`${sourcePath}/`);
+}
+
 export function getDetailUrl(update: SourceLinkAuditUpdate) {
   return update.source_detail_url ?? update.source_url ?? "";
 }
@@ -121,7 +141,7 @@ export function sourceCoversUpdate(source: SourceLinkAuditSource, update: Source
     return false;
   }
 
-  if (updateUrl === sourceUrl || hasPathPrefix(updateUrl, sourceUrl)) {
+  if (updateUrl === sourceUrl || hasPathPrefix(updateUrl, sourceUrl) || markdownIndexCoversPath(detailUrl, source.url)) {
     return true;
   }
 

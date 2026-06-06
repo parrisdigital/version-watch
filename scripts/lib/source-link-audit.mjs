@@ -54,6 +54,26 @@ function hasPathPrefix(candidateUrl, sourceUrl) {
   return candidateHost === sourceHost && (candidatePath === sourcePath || candidatePath.startsWith(`${sourcePath}/`));
 }
 
+function markdownIndexCoversPath(candidateUrl, sourceUrl) {
+  const candidate = parseUrl(candidateUrl);
+  const source = parseUrl(sourceUrl);
+
+  if (!candidate || !source) {
+    return false;
+  }
+
+  const candidateHost = normalizeHost(candidate.hostname);
+  const sourceHost = normalizeHost(source.hostname);
+  if (candidateHost !== sourceHost || !/\.(?:md|txt)$/i.test(source.pathname)) {
+    return false;
+  }
+
+  const sourcePath = source.pathname.replace(/\.(?:md|txt)$/i, "").replace(/\/$/, "") || "/";
+  const candidatePath = candidate.pathname.replace(/\/$/, "") || "/";
+
+  return candidatePath === sourcePath || candidatePath.startsWith(`${sourcePath}/`);
+}
+
 function isKnownBlocked(vendorSlug, sourceUrl) {
   const patterns = BLOCKED_DETAIL_PATTERNS[vendorSlug] ?? [];
   return patterns.some((pattern) => pattern.test(sourceUrl));
@@ -69,7 +89,7 @@ function sourceCoversUpdate(source, update) {
   const updateUrl = normalizedUrlWithoutHash(update.source_url);
   const sourceUrl = normalizedUrlWithoutHash(source.url);
 
-  if (updateUrl === sourceUrl || hasPathPrefix(updateUrl, sourceUrl)) {
+  if (updateUrl === sourceUrl || hasPathPrefix(updateUrl, sourceUrl) || markdownIndexCoversPath(update.source_url, source.url)) {
     return true;
   }
 
