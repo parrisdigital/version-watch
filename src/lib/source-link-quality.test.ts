@@ -24,6 +24,30 @@ describe("source link audit", () => {
     expect(report.warning_count).toBe(0);
   });
 
+  it("accepts detail links from registered Markdown changelog indexes", () => {
+    const report = auditSourceLinks({
+      vendors: [
+        {
+          slug: "clerk",
+          sources: [{ name: "Clerk Changelog", type: "changelog_page", url: "https://clerk.com/changelog.md" }],
+        },
+      ],
+      updates: [
+        {
+          id: "clerk-email-logs",
+          vendor_slug: "clerk",
+          title: "Email Logs public beta",
+          source_url: "https://clerk.com/changelog/2026-06-01-email-logs-public-beta",
+          source_detail_url: "https://clerk.com/changelog/2026-06-01-email-logs-public-beta",
+          source_surface_url: "https://clerk.com/changelog.md",
+        },
+      ],
+    });
+
+    expect(report.error_count).toBe(0);
+    expect(report.warning_count).toBe(0);
+  });
+
   it("flags known blog URLs published from changelog sources", () => {
     const report = auditSourceLinks({
       vendors: vendors.filter((vendor) => vendor.slug === "supabase"),
