@@ -10,6 +10,7 @@ import {
   findSameSourceCandidateByTitle,
   getFailureBackoffUntil,
   hasMeaningfulTitle,
+  isAutoPublishVendorSlug,
   isReasonablePublishDate,
   isOfficialSourceUrl,
   shouldPollSource,
@@ -102,6 +103,28 @@ describe("buildFetchTargetForRun", () => {
       etag: undefined,
       lastModified: undefined,
     });
+  });
+});
+
+describe("isAutoPublishVendorSlug", () => {
+  it("auto-publishes high-confidence official entries for active newly added vendors", () => {
+    expect([
+      "amp",
+      "base-ui",
+      "figma",
+      "heroui",
+      "kiro",
+      "mistral-ai",
+      "model-context-protocol",
+      "perplexity",
+      "replit-agent",
+      "tanstack",
+      "v0",
+    ].every((slug) => isAutoPublishVendorSlug(slug))).toBe(true);
+  });
+
+  it("keeps unsupported OpenRouter out of auto-publish until it has a machine-fetchable source", () => {
+    expect(isAutoPublishVendorSlug("openrouter")).toBe(false);
   });
 });
 

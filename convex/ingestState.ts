@@ -179,7 +179,9 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "android-developers",
   "anthropic",
   "apple-developer",
+  "amp",
   "bun",
+  "base-ui",
   "clerk",
   "cloudflare",
   "cursor",
@@ -188,13 +190,18 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "exa",
   "factory-droid",
   "firebase",
+  "figma",
   "firecrawl",
   "gemini",
   "google-antigravity",
   "github",
   "hermes-agent",
+  "heroui",
   "hono",
+  "kiro",
   "linear",
+  "mistral-ai",
+  "model-context-protocol",
   "openai",
   "openclaw",
   "opencode",
@@ -217,7 +224,9 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "prisma",
   "neon",
   "planetscale",
+  "perplexity",
   "expo",
+  "replit-agent",
   "sentry",
   "better-auth",
   "meta-ai",
@@ -230,7 +239,9 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "stripe",
   "supabase",
   "t3-code",
+  "tanstack",
   "uv",
+  "v0",
   "vercel",
   "vite",
   "vscode",
@@ -240,6 +251,10 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "xai",
   "zed",
 ]);
+
+export function isAutoPublishVendorSlug(vendorSlug: string) {
+  return AUTO_PUBLISH_VENDOR_SLUGS.has(vendorSlug);
+}
 
 const NOISE_TITLE_PATTERNS = [
   /^release notes$/i,
@@ -374,7 +389,7 @@ function shouldAutoPublishCandidate(item: any, vendor: any, source: any, now: nu
     return false;
   }
 
-  if (!AUTO_PUBLISH_VENDOR_SLUGS.has(vendor.slug)) {
+  if (!isAutoPublishVendorSlug(vendor.slug)) {
     return false;
   }
 

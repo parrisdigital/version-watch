@@ -6,6 +6,12 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+## [0.1.8] - 2026-06-06
+
+### Fixed
+
+- Auto-publish high-confidence official entries for the newly added active vendors so production vendor coverage has public update rows after refresh.
+
 ## [0.1.7] - 2026-06-06
 
 ### Changed
@@ -124,6 +130,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.8]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.8
 [0.1.7]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.7
 [0.1.6]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.6
 [0.1.5]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.5
