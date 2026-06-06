@@ -150,6 +150,13 @@ const VENDOR_STACKS: Record<string, string[]> = {
   goose: ["developer-workflow", "agents", "llms", "mcp"],
   aider: ["developer-workflow", "agents", "llms", "terminal"],
   "roo-code": ["developer-workflow", "agents", "llms", "editor"],
+  lovable: ["developer-workflow", "agents", "frontend-ui", "hosting"],
+  bolt: ["developer-workflow", "agents", "frontend-ui", "hosting"],
+  tabnine: ["developer-workflow", "agents", "llms", "editor"],
+  "sourcegraph-cody": ["developer-workflow", "agents", "code-search", "editor"],
+  "gemini-code-assist": ["developer-workflow", "agents", "llms", "editor"],
+  "amazon-q-developer": ["developer-workflow", "agents", "aws", "editor"],
+  "jetbrains-junie": ["developer-workflow", "agents", "llms", "editor"],
   docker: ["containers", "developer-workflow", "infra"],
   "claude-code": ["developer-workflow", "agents", "llms", "terminal"],
   "kilo-code": ["developer-workflow", "agents", "llms", "editor"],
@@ -1158,6 +1165,10 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
     return parseNeonMarkdownEntries(sourceUrl, lines);
   }
 
+  if (parserKey === "tabnine:docs_page") {
+    return parseTabnineMarkdownEntries(sourceUrl, lines);
+  }
+
   return parseGenericMarkdownEntries(sourceUrl, lines, parserKey);
 }
 
@@ -1783,6 +1794,35 @@ function parseGenericMarkdownEntries(sourceUrl: string, lines: string[], parserK
   return dedupeEntries(entries);
 }
 
+function parseTabnineMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  const detailBaseUrl = sourceUrl.replace(/\.md$/i, "");
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const headingMatch = lines[index]?.trim().match(/^#{2,4}\s+(v\d+\.\d+(?:\.\d+)?(?:[-+.][a-z0-9]+)*)/i);
+    if (!headingMatch) {
+      continue;
+    }
+
+    const version = headingMatch[1]!;
+    const dateLine = lines.slice(index + 1, index + 6).map(stripMarkdown).find((line) => parseDateFromText(line));
+    const publishedAt = dateLine ? parseDateFromText(dateLine) : null;
+    if (!publishedAt) {
+      continue;
+    }
+
+    entries.push({
+      title: `Tabnine ${version}`,
+      url: `${detailBaseUrl}#${version.toLowerCase()}`,
+      excerpt: collectMarkdownExcerpt(lines, index + 1) || `Tabnine ${version}`,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
 function cleanMistralChangelogText(value: string) {
   return cleanText(value)
     .replace(/\b(MODEL RELEASED|API UPDATED|OTHER)\b/g, "")
@@ -1918,6 +1958,36 @@ function parseAnthropicProductEntries(sourceUrl: string, html: string) {
     });
     activeDate = null;
     pendingTitle = null;
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseAmazonQDeveloperDocHistoryEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const row of $("table tr").toArray()) {
+    const cells = $(row).find("td, th").toArray();
+    if (cells.length < 3) {
+      continue;
+    }
+
+    const title = cleanText($(cells[0]).text());
+    const excerpt = cleanText($(cells[1]).text());
+    const publishedAt = parseDateFromText($(cells[2]).text());
+
+    if (!isMeaningfulTitle(title) || !excerpt || !publishedAt) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: sourceUrl,
+      excerpt,
+      publishedAt,
+      parseConfidence: "high",
+    });
   }
 
   return dedupeEntries(entries);
@@ -2638,6 +2708,13 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "android-developers:docs_page") {
     const entries = parseAndroidReleaseEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "amazon-q-developer:docs_page") {
+    const entries = parseAmazonQDeveloperDocHistoryEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }

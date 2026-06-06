@@ -59,6 +59,49 @@ describe("buildFetchHeaders", () => {
 });
 
 describe("parseFeedEntries", () => {
+  it("uses rich Mintlify headings for date-bucket feed titles", async () => {
+    const entries = await parseFeedEntries(
+      `<?xml version="1.0" encoding="UTF-8"?>
+      <rss xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">
+        <channel>
+          <title>Lovable changelog</title>
+          <item>
+            <title>Jun 5, 2026</title>
+            <link>https://docs.lovable.dev/changelog#jun-5-2026</link>
+            <pubDate>Sat, 06 Jun 2026 21:15:51 GMT</pubDate>
+            <content:encoded><![CDATA[<h3>Toggle WHOIS privacy after purchase</h3><p>WHOIS privacy can now be changed after purchase.</p>]]></content:encoded>
+          </item>
+        </channel>
+      </rss>`,
+      "https://docs.lovable.dev/changelog/rss.xml",
+    );
+
+    expect(entries[0]).toMatchObject({
+      title: "Toggle WHOIS privacy after purchase",
+      url: "https://docs.lovable.dev/changelog#jun-5-2026",
+    });
+  });
+
+  it("normalizes malformed Sourcegraph changelog feed links", async () => {
+    const entries = await parseFeedEntries(
+      `<?xml version="1.0" encoding="UTF-8"?>
+      <rss version="2.0">
+        <channel>
+          <title>Sourcegraph Changelog</title>
+          <item>
+            <title>2026-06-01 updates</title>
+            <link>https://sourcegraph.com../changelog/releases/7.3.2527</link>
+            <description>Cody and Sourcegraph updates.</description>
+            <pubDate>Mon, 01 Jun 2026 21:42:07 GMT</pubDate>
+          </item>
+        </channel>
+      </rss>`,
+      "https://sourcegraph.com/changelog/featured.rss",
+    );
+
+    expect(entries[0]?.url).toBe("https://sourcegraph.com/changelog/releases/7.3.2527");
+  });
+
   it("keeps Factory RSS content in the excerpt so version titles can be normalized", async () => {
     const entries = await parseFeedEntries(
       `<?xml version="1.0" encoding="UTF-8"?>
@@ -110,15 +153,20 @@ describe("isAutoPublishVendorSlug", () => {
   it("auto-publishes high-confidence official entries for active newly added vendors", () => {
     expect([
       "aider",
+      "amazon-q-developer",
       "amp",
       "base-ui",
+      "bolt",
       "coderabbit",
       "continue",
       "figma",
+      "gemini-code-assist",
       "github-copilot",
       "goose",
       "heroui",
+      "jetbrains-junie",
       "kiro",
+      "lovable",
       "mistral-ai",
       "model-context-protocol",
       "openhands",
@@ -126,6 +174,8 @@ describe("isAutoPublishVendorSlug", () => {
       "qodo",
       "replit-agent",
       "roo-code",
+      "sourcegraph-cody",
+      "tabnine",
       "tanstack",
       "v0",
     ].every((slug) => isAutoPublishVendorSlug(slug))).toBe(true);

@@ -87,6 +87,64 @@ describe("discoverFeedUrl", () => {
 });
 
 describe("parseHtmlEntries", () => {
+  it("parses Tabnine Markdown release notes with version headings and following dates", () => {
+    const entries = parseHtmlEntries({
+      parserKey: "tabnine:docs_page",
+      sourceUrl: "https://docs.tabnine.com/main/administering-tabnine/release-notes.md",
+      html: `
+# Release Notes
+
+### v6.2.4 <a href="#v6.2.4" id="v6.2.4"></a>
+
+<mark style="color:$primary;">Jun 2, 2026</mark>
+
+#### Bug Fixes
+
+* **Agent:** Fixed node server headers that prevented Chat and IDE Agent from starting.
+
+### v6.2.3
+
+May 28, 2026
+
+#### Features & Improvements
+
+* **Agent:** Fixed image uploading for OpenAI-compatible self-managed models.
+`,
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      title: "Tabnine v6.2.4",
+      url: "https://docs.tabnine.com/main/administering-tabnine/release-notes#v6.2.4",
+      publishedAt: Date.parse("2026-06-02T00:00:00.000Z"),
+      parseConfidence: "high",
+    });
+  });
+
+  it("parses Amazon Q Developer document-history rows", () => {
+    const entries = parseHtmlEntries({
+      parserKey: "amazon-q-developer:docs_page",
+      sourceUrl: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.html",
+      html: `
+<table>
+  <tr><th>Change</th><th>Description</th><th>Date</th></tr>
+  <tr>
+    <td>Updated managed policies: AmazonQFullAccess and AmazonQDeveloperAccess</td>
+    <td>Added permissions to enable Amazon Q artifacts preview.</td>
+    <td>May 21, 2026</td>
+  </tr>
+</table>
+`,
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      title: "Updated managed policies: AmazonQFullAccess and AmazonQDeveloperAccess",
+      publishedAt: Date.parse("2026-05-21T00:00:00.000Z"),
+      parseConfidence: "high",
+    });
+  });
+
   it("parses PostHog Gatsby page-data changelog nodes", () => {
     const pageData = JSON.stringify({
       result: {

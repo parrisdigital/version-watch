@@ -239,6 +239,38 @@ function shouldIncludeRichFeedContentInExcerpt(fallbackUrl: string) {
   }
 }
 
+function normalizeFeedItemUrl(link: string | undefined, fallbackUrl: string) {
+  if (!link) {
+    return fallbackUrl;
+  }
+
+  const normalizedLink = link.replace(/^https:\/\/sourcegraph\.com\.\.\//i, "https://sourcegraph.com/");
+  return new URL(normalizedLink, fallbackUrl).toString();
+}
+
+function shouldUseRichFeedHeadingAsTitle(fallbackUrl: string, title: string) {
+  try {
+    const url = new URL(fallbackUrl);
+    const normalizedTitle = cleanText(title);
+    const isDateBucket =
+      /^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}, \d{4}$/i.test(
+        normalizedTitle,
+      ) ||
+      /^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\s*-\s*\d{1,2}$/i.test(
+        normalizedTitle,
+      );
+
+    return isDateBucket && ["docs.lovable.dev", "support.bolt.new"].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+function extractRichFeedHeading(content: string) {
+  const headingMatch = content.match(/<h[1-4][^>]*>(.*?)<\/h[1-4]>/i);
+  return cleanText(headingMatch?.[1] ?? "");
+}
+
 export async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
   const parser = new Parser({
     customFields: {
@@ -256,22 +288,25 @@ export async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
         const title = cleanText(item.title);
         const shortExcerpt = cleanText(item.contentSnippet ?? item.summary ?? "");
         const contentEncoded = cleanText((item as any).contentEncoded ?? item["content:encoded"] ?? "");
+        const rawRichContent = (item as any).contentEncoded ?? item["content:encoded"] ?? item.content ?? "";
         const richContent = cleanText(contentEncoded || item.content || "");
         const excerpt = includeRichContent
           ? cleanText([richContent, shortExcerpt, title].filter(Boolean).join(" "))
           : cleanText(shortExcerpt || richContent || title);
-        const link = item.link ? new URL(item.link, fallbackUrl).toString() : fallbackUrl;
+        const displayTitle =
+          shouldUseRichFeedHeadingAsTitle(fallbackUrl, title) ? extractRichFeedHeading(rawRichContent) || title : title;
+        const link = normalizeFeedItemUrl(item.link, fallbackUrl);
         const githubUrl =
           link.includes("github.com") ? link : cleanText(item.content ?? "").includes("github.com") ? link : undefined;
 
-        if (!title || Number.isNaN(publishedAt)) {
+        if (!displayTitle || Number.isNaN(publishedAt)) {
           return null;
         }
 
         return {
-          title,
+          title: displayTitle,
           url: link,
-          excerpt: excerpt || title,
+          excerpt: excerpt || displayTitle,
           publishedAt,
           githubUrl,
           parseConfidence: "high" as const,

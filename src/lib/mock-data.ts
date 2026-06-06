@@ -316,6 +316,66 @@ export const vendors: VendorRecord[] = [
     sources: [{ name: "GitHub Releases", url: "https://github.com/RooCodeInc/Roo-Code/releases.atom", type: "rss" }],
   },
   {
+    slug: "lovable",
+    name: "Lovable",
+    description: "AI app builder, domain, collaboration, agent, and deployment workflow updates.",
+    sources: [{ name: "Lovable Changelog", url: "https://docs.lovable.dev/changelog/rss.xml", type: "rss" }],
+  },
+  {
+    slug: "bolt",
+    name: "Bolt",
+    description: "Bolt.new browser-based AI app builder, agent, hosting, database, and collaboration updates.",
+    sources: [{ name: "Bolt Release Notes", url: "https://support.bolt.new/release-notes/rss.xml", type: "rss" }],
+  },
+  {
+    slug: "tabnine",
+    name: "Tabnine",
+    description: "AI coding assistant, agent, CLI, model, MCP, and enterprise coding workflow updates.",
+    sources: [
+      {
+        name: "Tabnine Release Notes",
+        url: "https://docs.tabnine.com/main/administering-tabnine/release-notes.md",
+        type: "docs_page",
+      },
+    ],
+  },
+  {
+    slug: "sourcegraph-cody",
+    name: "Sourcegraph Cody",
+    description: "Cody AI coding assistant and Sourcegraph code intelligence release updates.",
+    sources: [{ name: "Sourcegraph Changelog", url: "https://sourcegraph.com/changelog/featured.rss", type: "rss" }],
+  },
+  {
+    slug: "gemini-code-assist",
+    name: "Gemini Code Assist",
+    description: "Google Gemini Code Assist release notes for IDE agent, code completion, and developer workflow updates.",
+    sources: [
+      {
+        name: "Gemini Code Assist Release Notes",
+        url: "https://developers.google.com/feeds/gemini-code-assist-free-release-notes.xml",
+        type: "rss",
+      },
+    ],
+  },
+  {
+    slug: "amazon-q-developer",
+    name: "Amazon Q Developer",
+    description: "Amazon Q Developer IDE, CLI, GitHub, permissions, and AWS development workflow updates.",
+    sources: [
+      {
+        name: "Amazon Q Developer Document History",
+        url: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.html",
+        type: "docs_page",
+      },
+    ],
+  },
+  {
+    slug: "jetbrains-junie",
+    name: "JetBrains Junie",
+    description: "JetBrains Junie coding agent, CLI, IDE integration, and AI assistant release updates.",
+    sources: [{ name: "Junie Blog", url: "https://blog.jetbrains.com/junie/feed/", type: "rss" }],
+  },
+  {
     slug: "supabase",
     name: "Supabase",
     description: "Database, auth, and backend platform changes.",

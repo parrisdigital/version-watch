@@ -6,6 +6,17 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+## [0.1.10] - 2026-06-06
+
+### Added
+
+- Add Lovable, Bolt, Tabnine, Sourcegraph Cody, Gemini Code Assist, Amazon Q Developer, and JetBrains Junie to the vendor directory with first-party source surfaces and self-hosted logo assets.
+- Add parser coverage for Tabnine Markdown release notes and Amazon Q Developer document-history rows.
+
+### Fixed
+
+- Normalize Sourcegraph changelog feed links and promote Lovable/Bolt RSS date buckets to meaningful update titles from their first content headings.
+
 ## [0.1.9] - 2026-06-06
 
 ### Added
@@ -140,6 +151,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.10]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.10
 [0.1.9]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.9
 [0.1.8]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.8
 [0.1.7]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.7
