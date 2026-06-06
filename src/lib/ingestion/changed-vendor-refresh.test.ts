@@ -24,6 +24,7 @@ describe("changed vendor refresh helpers", () => {
       filterVendorAffectingFiles([
         ".github/workflows/convex-production.yml",
         "README.md",
+        "src/lib/ingestion/source-ingestion.test.ts",
         "src/lib/mock-data.ts",
         "src/lib/ingestion/source-ingestion.ts",
       ]),

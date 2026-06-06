@@ -52,6 +52,7 @@ export function filterVendorAffectingFiles(paths) {
   return paths
     .map((path) => path.trim())
     .filter(Boolean)
+    .filter((path) => !path.endsWith(".test.ts") && !path.endsWith(".test.tsx") && !path.startsWith("tests/"))
     .filter((path) => vendorAffectingFiles.has(path) || vendorAffectingPrefixes.some((prefix) => path.startsWith(prefix)))
     .sort();
 }

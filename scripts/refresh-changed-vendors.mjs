@@ -24,6 +24,14 @@ function runGit(args, options = {}) {
   return result.stdout.trim();
 }
 
+function tryRunGit(args) {
+  try {
+    return runGit(args);
+  } catch {
+    return undefined;
+  }
+}
+
 function isUsableSha(value) {
   return Boolean(value && !/^0+$/.test(value));
 }
@@ -36,20 +44,34 @@ function resolveBaseSha(headSha) {
   const beforeSha = process.env.GITHUB_BEFORE || process.env.GITHUB_EVENT_BEFORE;
 
   if (isUsableSha(beforeSha)) {
-    try {
-      runGit(["cat-file", "-e", `${beforeSha}^{commit}`]);
+    if (tryRunGit(["cat-file", "-e", `${beforeSha}^{commit}`]) !== undefined) {
       return beforeSha;
-    } catch {
-      console.log(`Base SHA ${beforeSha} is not available locally; falling back to ${headSha}^.`);
     }
+
+    console.log(`Base SHA ${beforeSha} is not available locally; attempting a targeted fetch.`);
+    tryRunGit(["fetch", "--no-tags", "--depth=1", "origin", beforeSha]);
+
+    if (tryRunGit(["cat-file", "-e", `${beforeSha}^{commit}`]) !== undefined) {
+      return beforeSha;
+    }
+
+    console.log(`Base SHA ${beforeSha} is still unavailable after fetch; falling back to ${headSha}^.`);
   }
 
-  return runGit(["rev-parse", `${headSha}^`]);
+  return tryRunGit(["rev-parse", `${headSha}^`]);
 }
 
 async function main() {
   const headSha = resolveHeadSha();
   const baseSha = resolveBaseSha(headSha);
+
+  if (!baseSha) {
+    console.log("Changed vendor refresh");
+    console.log(`Head SHA: ${headSha}`);
+    console.log("[warn] Could not resolve a base commit; skipping changed-vendor refresh.");
+    return;
+  }
+
   const changedFiles = runGit(["diff", "--name-only", baseSha, headSha]).split("\n");
   const relevantFiles = filterVendorAffectingFiles(changedFiles);
 
