@@ -266,9 +266,33 @@ function shouldUseRichFeedHeadingAsTitle(fallbackUrl: string, title: string) {
   }
 }
 
+const RICH_FEED_HEADING_NOISE = new Set([
+  "bug fixes",
+  "enhancements",
+  "features",
+  "fixes",
+  "improvements",
+  "new features",
+  "updates",
+]);
+
+function isRichFeedHeadingCandidate(value: string) {
+  const text = cleanText(value);
+  const lower = text.toLowerCase();
+
+  return (
+    text.length >= 4 &&
+    !RICH_FEED_HEADING_NOISE.has(lower) &&
+    !/^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}(?:, \d{4})?$/i.test(text) &&
+    !/^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\s*-\s*\d{1,2}$/i.test(text)
+  );
+}
+
 function extractRichFeedHeading(content: string) {
-  const headingMatch = content.match(/<h[1-4][^>]*>(.*?)<\/h[1-4]>/i);
-  return cleanText(headingMatch?.[1] ?? "");
+  const headings = Array.from(content.matchAll(/<h[1-4][^>]*>(.*?)<\/h[1-4]>/gi)).map((match) =>
+    cleanText(match[1]),
+  );
+  return headings.find(isRichFeedHeadingCandidate) ?? headings[0] ?? "";
 }
 
 export async function parseFeedEntries(feedXml: string, fallbackUrl: string) {

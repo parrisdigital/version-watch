@@ -101,6 +101,8 @@ const PUBLIC_FUTURE_SKEW_MS = 60 * 60 * 1000;
 const BASE_BACKOFF_MS = 15 * 60 * 1000;
 const MAX_BACKOFF_MS = 6 * 60 * 60 * 1000;
 const CIRCUIT_BREAKER_BACKOFF_MS = 24 * 60 * 60 * 1000;
+const DATE_RANGE_TITLE_PATTERN =
+  /^(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]* \d{1,2}\s*-\s*(?:(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+)?\d{1,2}$/i;
 
 function isFinitePositive(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
@@ -345,6 +347,10 @@ export function isOfficialSourceUrl(candidateUrl: string, sourceUrl: string, ven
 export function hasMeaningfulTitle(title: string, sourceUrl?: string) {
   const normalized = title.replace(/[\u200B-\u200D\uFEFF]/g, "").replace(/\s+/g, " ").trim();
   const normalizedLower = normalizeTitleKey(normalized);
+
+  if (DATE_RANGE_TITLE_PATTERN.test(normalized)) {
+    return false;
+  }
 
   if (normalized.length > 180) {
     return false;

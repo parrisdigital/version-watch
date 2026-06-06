@@ -82,6 +82,33 @@ describe("parseFeedEntries", () => {
     });
   });
 
+  it("skips generic rich feed section headings for Bolt release notes", async () => {
+    const entries = await parseFeedEntries(
+      `<?xml version="1.0" encoding="UTF-8"?>
+      <rss xmlns:content="http://purl.org/rss/1.0/modules/content/" version="2.0">
+        <channel>
+          <title>Bolt release notes</title>
+          <item>
+            <title>May 23 - 29</title>
+            <link>https://support.bolt.new/release-notes#may-23-29</link>
+            <pubDate>Tue, 02 Jun 2026 07:00:50 GMT</pubDate>
+            <content:encoded><![CDATA[
+              <h2>Updates</h2>
+              <h3>Database settings consolidated</h3>
+              <p>Your project's database settings now live in one place.</p>
+            ]]></content:encoded>
+          </item>
+        </channel>
+      </rss>`,
+      "https://support.bolt.new/release-notes/rss.xml",
+    );
+
+    expect(entries[0]).toMatchObject({
+      title: "Database settings consolidated",
+      url: "https://support.bolt.new/release-notes#may-23-29",
+    });
+  });
+
   it("normalizes malformed Sourcegraph changelog feed links", async () => {
     const entries = await parseFeedEntries(
       `<?xml version="1.0" encoding="UTF-8"?>
@@ -211,6 +238,11 @@ describe("hasMeaningfulTitle", () => {
 
   it("rejects hidden-character section headings", () => {
     expect(hasMeaningfulTitle("\u200BWhat's Changing", "https://exa.ai/docs/changelog")).toBe(false);
+  });
+
+  it("rejects feed date-range buckets so specific headings can replace them", () => {
+    expect(hasMeaningfulTitle("May 23 - 29", "https://support.bolt.new/release-notes/rss.xml")).toBe(false);
+    expect(hasMeaningfulTitle("Apr 25 - May 1", "https://support.bolt.new/release-notes/rss.xml")).toBe(false);
   });
 });
 
