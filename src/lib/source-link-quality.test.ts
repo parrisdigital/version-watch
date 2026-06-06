@@ -48,6 +48,25 @@ describe("source link audit", () => {
     expect(report.warning_count).toBe(0);
   });
 
+  it("accepts legacy DP Code GitHub release details for Synara history", () => {
+    const report = auditSourceLinks({
+      vendors: vendors.filter((vendor) => vendor.slug === "dp-code"),
+      updates: [
+        {
+          id: "dp-code-legacy-release",
+          vendor_slug: "dp-code",
+          title: "Synara v0.0.51",
+          source_url: "https://github.com/Emanuele-web04/dpcode/releases/tag/v0.0.51",
+          source_detail_url: "https://github.com/Emanuele-web04/dpcode/releases/tag/v0.0.51",
+          source_surface_url: "https://github.com/Emanuele-web04/dpcode/releases.atom",
+        },
+      ],
+    });
+
+    expect(report.error_count).toBe(0);
+    expect(report.warning_count).toBe(0);
+  });
+
   it("flags known blog URLs published from changelog sources", () => {
     const report = auditSourceLinks({
       vendors: vendors.filter((vendor) => vendor.slug === "supabase"),

@@ -6,7 +6,10 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
-No unreleased changes yet.
+### Fixed
+
+- Treat legacy DP Code/Synara GitHub release links as accepted historical source details in source-link audits.
+- Report intentionally unsupported zero-update vendors as vendor coverage notes instead of warnings.
 
 ## [0.1.3] - 2026-06-06
 

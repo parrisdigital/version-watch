@@ -69,6 +69,7 @@ const [status, vendorsBody, freshnessBody, updates] = await Promise.all([
 
 const failures = [];
 const warnings = [];
+const notes = [];
 const vendors = vendorsBody.vendors ?? [];
 const freshnessRecords = freshnessBody.vendors ?? [];
 const freshnessBySlug = new Map(freshnessRecords.map((vendor) => [vendor.vendor_slug, vendor]));
@@ -97,7 +98,7 @@ for (const vendor of vendors) {
 
   if (nonMonitoredStates.has(lifecycleState)) {
     if (updateCount === 0) {
-      warnings.push(`${formatVendor(freshness)} is ${lifecycleState} and has no public updates.`);
+      notes.push(`${formatVendor(freshness)} is ${lifecycleState} and has no public updates.`);
     }
     continue;
   }
@@ -133,6 +134,13 @@ if (warnings.length) {
   console.log("\nVendor coverage warnings:");
   for (const warning of warnings) {
     console.log(`- ${warning}`);
+  }
+}
+
+if (notes.length) {
+  console.log("\nVendor coverage notes:");
+  for (const note of notes) {
+    console.log(`- ${note}`);
   }
 }
 

@@ -11,6 +11,10 @@ const ALLOWED_DETAIL_PATTERNS = {
     /^https:\/\/support\.claude\.com\/en\/articles\//i,
   ],
   "better-auth": [/^https:\/\/github\.com\/better-auth\/better-auth\/releases/i],
+  "dp-code": [
+    /^https:\/\/github\.com\/Emanuele-web04\/dpcode\/releases/i,
+    /^https:\/\/github\.com\/Emanuele-web04\/synara\/releases/i,
+  ],
   supabase: [/^https:\/\/github\.com\/orgs\/supabase\/discussions\//i],
   warp: [/^https:\/\/docs\.warp\.dev\/changelog/i],
 };
