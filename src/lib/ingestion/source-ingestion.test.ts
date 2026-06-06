@@ -438,6 +438,60 @@ describe("parseHtmlEntries", () => {
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-05-30T00:00:00.000Z"));
   });
 
+  it("parses shadcnblocks Astro serialized changelog entries", () => {
+    const props = JSON.stringify({
+      entries: [
+        1,
+        [
+          [
+            0,
+            {
+              id: [0, "shadcn-admin-kit-v2.2.0"],
+              data: [
+                0,
+                {
+                  date: [0, "2026-06-01T00:00:00.000Z"],
+                  title: [0, "Shadcn Admin Kit v2.2.0"],
+                  type: [0, "Released"],
+                },
+              ],
+              body: [0, "Shadcn Admin Kit **v2.2.0** adds project management and todo sections."],
+              rendered: [
+                0,
+                {
+                  html: [
+                    0,
+                    "&lt;p&gt;Shadcn Admin Kit &lt;strong&gt;v2.2.0&lt;/strong&gt; adds project management and todo sections.&lt;/p&gt;",
+                  ],
+                },
+              ],
+            },
+          ],
+        ],
+      ],
+    });
+    const html = `
+      <main>
+        <astro-island component-export="Changelog" props='${props}'></astro-island>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "shadcnblocks:changelog_page",
+      sourceUrl: "https://www.shadcnblocks.com/changelog",
+      html,
+    });
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      title: "Shadcn Admin Kit v2.2.0",
+      url: "https://www.shadcnblocks.com/changelog/shadcn-admin-kit-v2.2.0",
+      excerpt: "Shadcn Admin Kit v2.2.0 adds project management and todo sections.",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-06-01T00:00:00.000Z"));
+  });
+
   it("parses Warp version headings", () => {
     const html = `
       <main>

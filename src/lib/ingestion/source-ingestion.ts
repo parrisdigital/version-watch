@@ -732,6 +732,11 @@ function parseSynaraEntries(sourceUrl: string, html: string) {
 
 function parseShadcnblocksEntries(sourceUrl: string, html: string) {
   const $ = load(html);
+  const astroEntries = parseShadcnblocksAstroEntries($, sourceUrl);
+  if (astroEntries.length > 0) {
+    return astroEntries.slice(0, 12);
+  }
+
   const root = $("main").length > 0 ? $("main").first() : $("body");
   const entries: ParsedSourceEntry[] = [];
 
@@ -767,6 +772,78 @@ function parseShadcnblocksEntries(sourceUrl: string, html: string) {
       url: toAbsoluteUrl(href, sourceUrl),
       excerpt: paragraphExcerpt || fallbackExcerpt || title,
       publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries).sort((left, right) => right.publishedAt - left.publishedAt);
+}
+
+function decodeAstroSerializedValue(value: unknown): any {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, nestedValue]) => [
+        key,
+        decodeAstroSerializedValue(nestedValue),
+      ]),
+    );
+  }
+
+  if (!Array.isArray(value) || value.length < 2 || typeof value[0] !== "number") {
+    return value;
+  }
+
+  const [type, payload] = value as [number, unknown];
+
+  if (type === 1 && Array.isArray(payload)) {
+    return payload.map(decodeAstroSerializedValue);
+  }
+
+  if (type === 0) {
+    return decodeAstroSerializedValue(payload);
+  }
+
+  return payload;
+}
+
+function parseShadcnblocksAstroEntries($: ReturnType<typeof load>, sourceUrl: string) {
+  const props = $('astro-island[component-export="Changelog"]').first().attr("props");
+  if (!props) {
+    return [];
+  }
+
+  let decodedProps: any;
+
+  try {
+    decodedProps = decodeAstroSerializedValue(JSON.parse(props));
+  } catch {
+    return [];
+  }
+
+  const entries: ParsedSourceEntry[] = [];
+  const rawEntries = Array.isArray(decodedProps?.entries) ? decodedProps.entries : [];
+
+  for (const entry of rawEntries) {
+    const id = cleanText(entry?.id);
+    const title = cleanText(entry?.data?.title);
+    const dateText = cleanText(entry?.data?.date);
+    const bodyText = cleanText(entry?.body);
+    const renderedText = cleanText(load(entry?.rendered?.html ?? "").text());
+    const parsedDate = dateText ? Date.parse(dateText) : NaN;
+
+    if (!id || !isMeaningfulTitle(title) || Number.isNaN(parsedDate)) {
+      continue;
+    }
+
+    entries.push({
+      title,
+      url: toAbsoluteUrl(`/changelog/${id}`, sourceUrl),
+      excerpt: truncateSentence(renderedText || bodyText || title),
+      publishedAt: Date.UTC(
+        new Date(parsedDate).getUTCFullYear(),
+        new Date(parsedDate).getUTCMonth(),
+        new Date(parsedDate).getUTCDate(),
+      ),
       parseConfidence: "high",
     });
   }
