@@ -1,0 +1,25 @@
+.github/workflows/convex-production.yml
+  s_856cb04848cf51::t_737fc29c500023 137-138
+scripts/lib/changed-vendor-refresh.mjs
+  s_856cb04848cf51::t_737fc29c500023 55
+src/lib/ingestion/changed-vendor-refresh.test.ts
+  s_856cb04848cf51::t_737fc29c500023 27
+scripts/refresh-changed-vendors.mjs
+  s_856cb04848cf51::t_1612a8f64f5a1a 27-34,47-54,57-58,61,67-74
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "0126cc9f558054bba28f894025d14432b98fbb67",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
