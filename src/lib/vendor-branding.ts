@@ -71,7 +71,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   aider: { logoUrl: "/logos/aider.png", renderMode: "image", fill: true },
   "roo-code": { logoUrl: "/logos/roo-code.svg", renderMode: "image", fill: true },
   lovable: { logoUrl: "/logos/lovable.png", renderMode: "image", fill: true },
-  bolt: { logoUrl: "/logos/bolt.svg", renderMode: "image", fill: true },
+  bolt: { logoUrl: "/logos/bolt.svg", renderMode: "image", fill: true, invertOnDark: true },
   tabnine: { logoUrl: "/logos/tabnine.svg", renderMode: "image", fill: true },
   "sourcegraph-cody": { logoUrl: "/logos/sourcegraph-cody.svg", renderMode: "image", fill: true },
   "gemini-code-assist": { logoUrl: "/logos/gemini-code-assist.svg", renderMode: "image", fill: true },
