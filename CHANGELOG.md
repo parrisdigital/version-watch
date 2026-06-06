@@ -20,6 +20,11 @@ No unreleased changes yet.
 - Rename the former DP Code directory entry to Synara while preserving the `dp-code` slug for existing public URLs.
 - Update the Synara source to the official Synara changelog and replace the stale DP Code favicon with a self-hosted Synara logo.
 
+### Fixed
+
+- Parse shadcnblocks' Astro-rendered changelog data so production publishes its updates during forced or scheduled refreshes.
+- Bound the public cluster API to a recent event window so `/api/v1/clusters` stays within production response limits.
+
 ## [0.1.2] - 2026-06-06
 
 ### Changed
