@@ -624,7 +624,10 @@ export const vendors: VendorRecord[] = [
     slug: "convex",
     name: "Convex",
     description: "Backend platform, workflows, and release updates from Convex.",
-    sources: [{ name: "Convex Ship Changelog", url: "https://ship.convex.dev/", type: "changelog_page" }],
+    sources: [
+      { name: "Convex Ship Changelog", url: "https://ship.convex.dev/", type: "changelog_page" },
+      { name: "Convex News", url: "https://news.convex.dev/", type: "changelog_page" },
+    ],
   },
   {
     slug: "workos",
