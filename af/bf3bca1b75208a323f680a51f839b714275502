@@ -1,0 +1,38 @@
+src/lib/mock-data.ts
+  s_856cb04848cf51::t_611d646d1f1003 92-98
+  s_856cb04848cf51::t_29b7380bbb4608 16,19-91,99-116
+  s_856cb04848cf51::t_abcff6b08f6e8e 1237
+convex/schema.ts
+  s_856cb04848cf51::t_0a1c60e16790d4 49
+src/lib/source-surface-url.test.ts
+  s_856cb04848cf51::t_31c216d8b91fec 1-49
+convex/seed.ts
+  s_856cb04848cf51::t_ce022bc6e2e212 6,62,80
+src/lib/agent-feed.ts
+  s_856cb04848cf51::t_ff407bc48f2481 11,64,654
+  s_856cb04848cf51::t_72bab2245ac9a1 932,1473,1475
+src/lib/agent-openapi.ts
+  s_856cb04848cf51::t_a83450e253328a 485,504-511
+convex/vendors.ts
+  s_856cb04848cf51::t_7f512b9a1846ec 17
+src/app/vendors/[slug]/page.tsx
+  s_856cb04848cf51::t_cca7cea48fd38c 9,100
+convex/events.ts
+  s_856cb04848cf51::t_28458ac804f286 61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "afbf3bca1b75208a323f680a51f839b714275502",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
