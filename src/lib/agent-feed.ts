@@ -8,7 +8,7 @@ import {
   type ImpactConfidence,
   type ReleaseClass,
 } from "@/lib/classification/signal";
-import type { ImportanceBand, MockEvent, SourceType, VendorRecord } from "@/lib/mock-data";
+import { getSourceSurfaceUrl, type ImportanceBand, type MockEvent, type SourceType, type VendorRecord } from "@/lib/mock-data";
 
 export const DEFAULT_PUBLIC_BASE_URL = "https://versionwatch.dev";
 export const PUBLIC_API_SCHEMA_VERSION = "2026-04-26";
@@ -61,6 +61,7 @@ export type PublicVendor = {
   sources: Array<{
     name: string;
     url: string;
+    surface_url: string;
     type: string;
   }>;
 };
@@ -650,6 +651,7 @@ export function serializePublicVendor(vendor: VendorRecord): PublicVendor {
     sources: vendor.sources.map((source) => ({
       name: source.name,
       url: source.url,
+      surface_url: getSourceSurfaceUrl(source),
       type: source.type,
     })),
   };
@@ -927,7 +929,7 @@ Developers can use Version Watch as a public changelog data layer for their own 
 
 - Store update id to avoid duplicate rows or notifications.
 - Store source_detail_url as the official vendor entry.
-- Store source_surface_url to show the tracked changelog, docs, RSS, or GitHub release surface.
+- Store source_surface_url to show the readable tracked changelog, docs, or GitHub release surface.
 - Store version_watch_url when you want to link back to the normalized Version Watch record.
 - Check /api/v1/status before release gates or high-confidence summaries.
 
@@ -1468,9 +1470,9 @@ Treat next_cursor as opaque. Pass it back as cursor to fetch the next page. Stor
 Each update includes:
 
 - source_detail_url: exact official entry or detail URL.
-- source_surface_url: official changelog, docs, RSS, or GitHub source surface Version Watch monitors.
+- source_surface_url: readable official changelog, docs, or GitHub source surface Version Watch tracks.
 - source_surface_name: registered tracked source name.
-- source_surface_type: source type.
+- source_surface_type: source type Version Watch monitors.
 - source_url: backward-compatible alias for source_detail_url.
 - version_watch_url: normalized Version Watch event page.
 

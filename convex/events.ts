@@ -58,7 +58,7 @@ async function formatEvent(ctx: any, event: any) {
     sourceUrl: event.sourceUrl,
     sourceType: source.sourceType,
     sourceName: source.name,
-    sourceSurfaceUrl: source.url,
+    sourceSurfaceUrl: source.surfaceUrl ?? source.url,
     sourceSurfaceName: source.name,
     sourceSurfaceType: source.sourceType,
     sourceTitle: rawCandidate.rawTitle,

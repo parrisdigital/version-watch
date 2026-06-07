@@ -13,7 +13,107 @@ export type VendorSource = {
   name: string;
   url: string;
   type: SourceType;
+  surfaceUrl?: string;
 };
+
+function cleanUrl(url: URL) {
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
+
+export function getSourceSurfaceUrl(source: Pick<VendorSource, "url" | "surfaceUrl">) {
+  if (source.surfaceUrl) {
+    return source.surfaceUrl;
+  }
+
+  try {
+    const url = new URL(source.url);
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname;
+
+    if (host === "github.com" && /\/releases\.atom$/i.test(path)) {
+      url.pathname = path.replace(/\/releases\.atom$/i, "/releases");
+      return cleanUrl(url);
+    }
+
+    if (host === "github.blog" && /\/feed\/?$/i.test(path)) {
+      url.pathname = path.replace(/\/feed\/?$/i, "/");
+      return cleanUrl(url);
+    }
+
+    if (host === "developers.google.com" && path === "/feeds/gemini-code-assist-free-release-notes.xml") {
+      return "https://developers.google.com/gemini-code-assist/resources/release-notes";
+    }
+
+    if (host === "code.visualstudio.com" && path === "/feed.xml") {
+      return "https://code.visualstudio.com/updates";
+    }
+
+    if (host === "developer.apple.com" && path === "/news/releases/rss/releases.rss") {
+      return "https://developer.apple.com/news/releases/";
+    }
+
+    if (host === "www.figma.com" && path === "/release-notes/feed/atom.xml") {
+      return "https://www.figma.com/release-notes/";
+    }
+
+    if (host === "sourcegraph.com" && path === "/changelog/featured.rss") {
+      return "https://sourcegraph.com/changelog";
+    }
+
+    if (host === "raw.githubusercontent.com") {
+      const [, owner, repo, branch, ...fileParts] = path.split("/");
+      if (owner && repo && branch && fileParts.length) {
+        return `https://github.com/${owner}/${repo}/blob/${branch}/${fileParts.join("/")}`;
+      }
+    }
+
+    if (host === "docs.aws.amazon.com" && /\.md$/i.test(path)) {
+      url.pathname = path.replace(/\.md$/i, ".html");
+      return cleanUrl(url);
+    }
+
+    if (/\/rss\/index\.xml$/i.test(path)) {
+      url.pathname = path.replace(/\/rss\/index\.xml$/i, "/");
+      return cleanUrl(url);
+    }
+
+    if (/\/feed\/atom\.xml$/i.test(path)) {
+      url.pathname = path.replace(/\/feed\/atom\.xml$/i, "/");
+      return cleanUrl(url);
+    }
+
+    if (/\/(?:rss|feed)\.xml$/i.test(path)) {
+      url.pathname = path.replace(/\/(?:rss|feed)\.xml$/i, "");
+      return cleanUrl(url);
+    }
+
+    if (/\/news\.rss$/i.test(path)) {
+      url.pathname = path.replace(/\.rss$/i, "");
+      return cleanUrl(url);
+    }
+
+    if (/\/feed\.rss$/i.test(path)) {
+      url.pathname = path.replace(/\/feed\.rss$/i, "");
+      return cleanUrl(url);
+    }
+
+    if (/\/index\.xml$/i.test(path)) {
+      url.pathname = path.replace(/\/index\.xml$/i, "");
+      return cleanUrl(url);
+    }
+
+    if (/\.md$/i.test(path)) {
+      url.pathname = path.replace(/\.md$/i, "");
+      return cleanUrl(url);
+    }
+  } catch {
+    return source.url;
+  }
+
+  return source.url;
+}
 
 export type VendorRecord = {
   slug: string;
@@ -1134,7 +1234,7 @@ export const events: MockEvent[] = eventSeeds.map((event) => {
     ...event,
     vendorName: vendorNameBySlug.get(event.vendorSlug) ?? event.vendorSlug,
     sourceName: event.sourceName ?? vendorSourceNameByUrl.get(event.sourceUrl) ?? source?.name,
-    sourceSurfaceUrl: event.sourceSurfaceUrl ?? source?.url ?? event.sourceUrl,
+    sourceSurfaceUrl: event.sourceSurfaceUrl ?? (source ? getSourceSurfaceUrl(source) : event.sourceUrl),
     sourceSurfaceName: event.sourceSurfaceName ?? source?.name ?? event.sourceName,
     sourceSurfaceType: event.sourceSurfaceType ?? source?.type ?? event.sourceType,
   };

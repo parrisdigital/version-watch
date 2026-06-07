@@ -6,6 +6,7 @@ import { EventCard } from "@/components/event-card";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { VendorMark } from "@/components/vendor-mark";
+import { getSourceSurfaceUrl } from "@/lib/mock-data";
 import { getEventsForVendor, getVendorBySlug } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
@@ -96,7 +97,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
                 {vendor.sources.map((source) => (
                   <li key={source.url}>
                     <a
-                      href={source.url}
+                      href={getSourceSurfaceUrl(source)}
                       target="_blank"
                       rel="noreferrer"
                       className="group flex items-center gap-3 rounded-md border border-[var(--color-line-quiet)] bg-[var(--color-surface-raised)] p-3 transition-colors hover:border-[var(--color-line-strong)]"

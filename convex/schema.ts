@@ -46,6 +46,7 @@ export default defineSchema({
       v.literal("rss"),
     ),
     url: v.string(),
+    surfaceUrl: v.optional(v.string()),
     isPrimary: v.boolean(),
     pollIntervalMinutes: v.number(),
     parserKey: v.string(),

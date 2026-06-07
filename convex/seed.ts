@@ -3,6 +3,7 @@ import { v } from "convex/values";
 
 import {
   events as mockEvents,
+  getSourceSurfaceUrl,
   reviewCandidates as mockReviewCandidates,
   sourceHealth as mockSourceHealth,
   vendors as vendorRegistry,
@@ -58,7 +59,7 @@ export function buildSourceRegistryPayload(args: {
   existingSource?: any;
   vendorId: any;
   vendorSlug: string;
-  source: { name: string; type: string; url: string };
+  source: { name: string; type: string; url: string; surfaceUrl?: string };
   isPrimary: boolean;
   now: number;
 }) {
@@ -76,6 +77,7 @@ export function buildSourceRegistryPayload(args: {
     name: args.source.name,
     sourceType: args.source.type,
     url: args.source.url,
+    surfaceUrl: getSourceSurfaceUrl(args.source),
     isPrimary: args.isPrimary,
     freshnessTier,
     pollIntervalMinutes,

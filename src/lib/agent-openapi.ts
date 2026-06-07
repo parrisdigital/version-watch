@@ -482,6 +482,7 @@ export function buildOpenApiDocument(baseUrl: string) {
                 properties: {
                   name: { type: "string" },
                   url: { type: "string", format: "uri" },
+                  surface_url: { type: "string", format: "uri" },
                   type: { type: "string" },
                 },
               },
@@ -500,7 +501,14 @@ export function buildOpenApiDocument(baseUrl: string) {
                   slug: "vercel",
                   name: "Vercel",
                   description: "Hosting, runtime, AI SDK, and deployment changes.",
-                  sources: [{ name: "Vercel Changelog", url: "https://vercel.com/changelog", type: "changelog_page" }],
+                  sources: [
+                    {
+                      name: "Vercel Changelog",
+                      url: "https://vercel.com/changelog",
+                      surface_url: "https://vercel.com/changelog",
+                      type: "changelog_page",
+                    },
+                  ],
                 },
               ],
             },

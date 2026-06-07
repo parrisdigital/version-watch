@@ -14,6 +14,7 @@ async function getVendorSources(ctx: any, vendorId: any) {
     .map((source: any) => ({
       name: source.name,
       url: source.url,
+      surfaceUrl: source.surfaceUrl ?? source.url,
       type: source.sourceType,
     }));
 }
