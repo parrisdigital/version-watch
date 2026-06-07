@@ -98,14 +98,31 @@ describe("changed vendor refresh helpers", () => {
 
   it("maps registry line ranges to the current vendor slug", () => {
     const source = `
+      export const vendors = [
       { slug: "windsurf", name: "Windsurf" },
       { slug: "github", name: "GitHub" },
+      ];
+      const vendorNameBySlug = new Map(vendors.map((vendor) => [vendor.slug, vendor.name]));
     `;
 
     expect(getVendorLineRanges(source)).toEqual([
-      { slug: "windsurf", startLine: 2, endLine: 2 },
-      { slug: "github", startLine: 3, endLine: 4 },
+      { slug: "windsurf", startLine: 3, endLine: 3 },
+      { slug: "github", startLine: 4, endLine: 6 },
     ]);
+  });
+
+  it("ignores event seed slugs when mapping vendor line ranges", () => {
+    const source = `
+      export const vendors = [
+        { slug: "docker", name: "Docker" },
+      ];
+      const vendorNameBySlug = new Map(vendors.map((vendor) => [vendor.slug, vendor.name]));
+      const eventSeeds = [
+        { slug: "docker-desktop-revises-networking-defaults", vendorSlug: "docker" },
+      ];
+    `;
+
+    expect(getVendorLineRanges(source)).toEqual([{ slug: "docker", startLine: 3, endLine: 5 }]);
   });
 
   it("does not match slugs from unrelated workflow path text", () => {

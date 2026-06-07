@@ -16,11 +16,15 @@ const vendorAffectingFiles = new Set([
   "convex/vendors.ts",
 ]);
 
-export function extractVendorSlugs(source) {
+function getVendorRegistrySource(source) {
   const registryStart = source.indexOf("export const vendors");
   const registryEnd = source.indexOf("const vendorNameBySlug", registryStart);
-  const registrySource =
-    registryStart >= 0 && registryEnd > registryStart ? source.slice(registryStart, registryEnd) : source;
+
+  return registryStart >= 0 && registryEnd > registryStart ? source.slice(registryStart, registryEnd) : source;
+}
+
+export function extractVendorSlugs(source) {
+  const registrySource = getVendorRegistrySource(source);
   const slugs = new Set();
   const slugPattern = /\bslug:\s*["']([^"']+)["']/g;
 
@@ -34,10 +38,7 @@ export function extractVendorSlugs(source) {
 }
 
 export function extractVendorSourceUrls(source) {
-  const registryStart = source.indexOf("export const vendors");
-  const registryEnd = source.indexOf("const vendorNameBySlug", registryStart);
-  const registrySource =
-    registryStart >= 0 && registryEnd > registryStart ? source.slice(registryStart, registryEnd) : source;
+  const registrySource = getVendorRegistrySource(source);
   const markers = [];
   const slugPattern = /\bslug:\s*["']([^"']+)["']/g;
 
@@ -74,21 +75,27 @@ export function hasOnlyUnsupportedSources(vendorSlug, vendorSourceUrls, unsuppor
 }
 
 export function getVendorLineRanges(source) {
-  const lines = source.split(/\r?\n/);
+  const registryStart = source.indexOf("export const vendors");
+  const registrySource = getVendorRegistrySource(source);
+  const baseLineOffset =
+    registryStart >= 0 ? source.slice(0, registryStart).split(/\r?\n/).length - 1 : 0;
+  const lines = registrySource.split(/\r?\n/);
   const markers = [];
 
   lines.forEach((line, index) => {
     const match = line.match(/\bslug:\s*["']([^"']+)["']/);
 
     if (match?.[1]) {
-      markers.push({ slug: match[1], line: index + 1 });
+      markers.push({ slug: match[1], line: baseLineOffset + index + 1 });
     }
   });
 
   return markers.map((marker, index) => ({
     slug: marker.slug,
     startLine: marker.line,
-    endLine: markers[index + 1]?.line ? markers[index + 1].line - 1 : lines.length,
+    endLine: markers[index + 1]?.line
+      ? markers[index + 1].line - 1
+      : baseLineOffset + lines.length,
   }));
 }
 
