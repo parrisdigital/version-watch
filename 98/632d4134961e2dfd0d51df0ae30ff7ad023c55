@@ -1,0 +1,21 @@
+package.json
+  s_856cb04848cf51::t_e8091e0a928401 3
+package-lock.json
+  ai_agent 3,9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "98632d4134961e2dfd0d51df0ae30ff7ad023c55",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
