@@ -3,8 +3,6 @@ export const sourceLifecycleStates = ["active", "degraded", "paused", "unsupport
 export type SourceLifecycleState = (typeof sourceLifecycleStates)[number];
 
 const unsupportedSourceUrls = new Set([
-  // Railway currently returns a Cloudflare managed challenge to server-side fetches and has no official feed/API.
-  "https://railway.com/changelog",
   // OpenRouter links this public docs path from its navigation, but server fetches currently resolve it to a missing page.
   "https://openrouter.ai/docs/changelog",
 ]);

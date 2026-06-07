@@ -2038,6 +2038,48 @@ function parseFigmaRestApiChangelogEntries(sourceUrl: string, html: string) {
   return dedupeEntries(entries);
 }
 
+function parseConvexShipEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const link of $('a[href^="/changelog/"], a[href*="ship.convex.dev/changelog/"]').toArray()) {
+    const href = $(link).attr("href");
+    if (!href || /\/requests\//i.test(href)) {
+      continue;
+    }
+
+    const text = cleanText($(link).text());
+    const dateMatch = text.match(
+      /(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)\s+\d{1,2},\s+\d{4}/i,
+    );
+    const publishedAt = dateMatch ? parseDateFromText(dateMatch[0]!) : parseDateFromText(text);
+    if (!publishedAt) {
+      continue;
+    }
+
+    const heading = $(link).find("h1, h2, h3, h4").first();
+    let title = cleanText(heading.text()).replace(/^#\s*\d+\s*/, "").trim();
+    if (!title) {
+      title = text.replace(/\b(?:Release|Improvement)\b/i, "").replace(/\b[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\b/, "").trim();
+    }
+
+    if (!isMeaningfulTitle(title)) {
+      continue;
+    }
+
+    const excerpt = cleanText($(link).find("p").first().text()) || title;
+    entries.push({
+      title,
+      url: toAbsoluteUrl(href, sourceUrl),
+      excerpt: truncateSentence(excerpt),
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries).sort((a, b) => b.publishedAt - a.publishedAt);
+}
+
 function parseAnthropicProductEntries(sourceUrl: string, html: string) {
   const $ = load(html);
   const root = $("main").length > 0 ? $("main").first() : $("body");
@@ -2842,6 +2884,13 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
 
   if (parserKey === "firebase:docs_page") {
     const entries = parseFirebaseEntries(sourceUrl, html);
+    if (entries.length > 0) {
+      return entries.slice(0, 12);
+    }
+  }
+
+  if (parserKey === "convex:changelog_page") {
+    const entries = parseConvexShipEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);
     }

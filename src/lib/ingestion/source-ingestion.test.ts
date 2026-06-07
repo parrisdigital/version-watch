@@ -556,6 +556,45 @@ May 28, 2026
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-03-25T00:00:00.000Z"));
   });
 
+  it("parses Convex Ship changelog cards from the production HTML", () => {
+    const html = `
+      <main>
+        <a href="/changelog/item-356-fine-grained-query-invalidation">
+          <span>Improvement</span><span>Jun 6, 2026</span>
+          <h3><span>#<!-- -->356</span>Fine-grained query invalidation</h3>
+          <p>The Convex cloud now avoids invalidating all queries on code push.</p>
+        </a>
+        <a href="/changelog/convex-1-40-0">
+          <span>Release</span><span>Jun 2, 2026</span>
+          <h3>convex v1.40.0</h3>
+          <p>You can now create a local deployment in a specific Convex cloud project.</p>
+        </a>
+        <a href="/requests/js716zvxmz2v2c4z8vx0p1vqbh84x8j3">
+          <span>Estimated: Jun 2026</span>
+          <h3>Scoped authorization tokens to prevent agent risk</h3>
+        </a>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "convex:changelog_page",
+      sourceUrl: "https://ship.convex.dev/",
+      html,
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]).toMatchObject({
+      title: "Fine-grained query invalidation",
+      url: "https://ship.convex.dev/changelog/item-356-fine-grained-query-invalidation",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-06-06T00:00:00.000Z"));
+    expect(entries[1]).toMatchObject({
+      title: "convex v1.40.0",
+      url: "https://ship.convex.dev/changelog/convex-1-40-0",
+    });
+  });
+
   it("parses shadcnspace timeline entries with concatenated version and day text", () => {
     const html = `
       <main>
@@ -1261,7 +1300,7 @@ May 28, 2026
 
     const entries = parseHtmlEntries({
       parserKey: "railway:changelog_page",
-      sourceUrl: "https://railway.com/changelog",
+      sourceUrl: "https://railway.com/changelog.md",
       html: markdown,
     });
 

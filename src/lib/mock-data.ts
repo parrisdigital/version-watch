@@ -373,6 +373,11 @@ export const vendors: VendorRecord[] = [
         url: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.html",
         type: "docs_page",
       },
+      {
+        name: "Amazon Q Developer CLI Releases",
+        url: "https://github.com/aws/amazon-q-developer-cli/releases.atom",
+        type: "rss",
+      },
     ],
   },
   {
@@ -449,13 +454,13 @@ export const vendors: VendorRecord[] = [
     slug: "hermes-agent",
     name: "Hermes Agent",
     description: "Open-source agent runtime, memory, and toolchain releases.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/NousResearch/hermes-agent/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/NousResearch/hermes-agent/releases.atom", type: "rss" }],
   },
   {
     slug: "t3-code",
     name: "T3 Code",
     description: "AI coding agent and desktop workflow releases from T3.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/pingdotgg/t3code/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/pingdotgg/t3code/releases.atom", type: "rss" }],
   },
   {
     slug: "claude-code",
@@ -473,13 +478,13 @@ export const vendors: VendorRecord[] = [
     slug: "opencode",
     name: "OpenCode",
     description: "Open-source coding agent updates across core, desktop, and SDK.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/anomalyco/opencode/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/anomalyco/opencode/releases.atom", type: "rss" }],
   },
   {
     slug: "openusage",
     name: "OpenUsage",
     description: "AI subscription usage tracker releases and provider support changes.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/robinebers/openusage/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/robinebers/openusage/releases.atom", type: "rss" }],
   },
   {
     slug: "dp-code",
@@ -491,7 +496,7 @@ export const vendors: VendorRecord[] = [
     slug: "shadcn",
     name: "shadcn/ui",
     description: "Component registry, CLI, and UI system releases.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/shadcn-ui/ui/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/shadcn-ui/ui/releases.atom", type: "rss" }],
   },
   {
     slug: "shadcn-studio",
@@ -527,6 +532,11 @@ export const vendors: VendorRecord[] = [
         url: "https://developers.figma.com/docs/rest-api/changelog/",
         type: "docs_page",
       },
+      {
+        name: "Figma Product Release Notes",
+        url: "https://www.figma.com/release-notes/feed/atom.xml",
+        type: "rss",
+      },
     ],
   },
   {
@@ -545,49 +555,49 @@ export const vendors: VendorRecord[] = [
     slug: "hono",
     name: "Hono",
     description: "Web standards-first framework releases for edge and server runtimes.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/honojs/hono/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/honojs/hono/releases.atom", type: "rss" }],
   },
   {
     slug: "bun",
     name: "Bun",
     description: "JavaScript runtime, package manager, and tooling releases.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/oven-sh/bun/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/oven-sh/bun/releases.atom", type: "rss" }],
   },
   {
     slug: "vite",
     name: "Vite",
     description: "Frontend build tooling and create-vite release updates.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/vitejs/vite/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/vitejs/vite/releases.atom", type: "rss" }],
   },
   {
     slug: "openclaw",
     name: "OpenClaw",
     description: "Open-source AI agent runtime and desktop assistant releases.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/openclaw/openclaw/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/openclaw/openclaw/releases.atom", type: "rss" }],
   },
   {
     slug: "biome",
     name: "Biome",
     description: "Formatter, linter, and web toolchain release updates.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/biomejs/biome/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/biomejs/biome/releases.atom", type: "rss" }],
   },
   {
     slug: "pnpm",
     name: "pnpm",
     description: "Package manager and workspace tooling releases.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/pnpm/pnpm/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/pnpm/pnpm/releases.atom", type: "rss" }],
   },
   {
     slug: "fastify",
     name: "Fastify",
     description: "Node.js framework and server release updates.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/fastify/fastify/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/fastify/fastify/releases.atom", type: "rss" }],
   },
   {
     slug: "uv",
     name: "uv",
     description: "Python package, environment, and workflow tool releases.",
-    sources: [{ name: "GitHub Releases", url: "https://github.com/astral-sh/uv/releases", type: "changelog_page" }],
+    sources: [{ name: "GitHub Releases", url: "https://github.com/astral-sh/uv/releases.atom", type: "rss" }],
   },
   {
     slug: "model-context-protocol",
@@ -613,8 +623,8 @@ export const vendors: VendorRecord[] = [
   {
     slug: "convex",
     name: "Convex",
-    description: "Backend platform, workflows, and platform update news from Convex.",
-    sources: [{ name: "Convex News", url: "https://news.convex.dev/", type: "changelog_page" }],
+    description: "Backend platform, workflows, and release updates from Convex.",
+    sources: [{ name: "Convex Ship Changelog", url: "https://ship.convex.dev/", type: "changelog_page" }],
   },
   {
     slug: "workos",
@@ -647,7 +657,7 @@ export const vendors: VendorRecord[] = [
     slug: "railway",
     name: "Railway",
     description: "Hosting, managed database, and platform workflow updates.",
-    sources: [{ name: "Railway Changelog", url: "https://railway.com/changelog", type: "changelog_page" }],
+    sources: [{ name: "Railway Changelog", url: "https://railway.com/changelog.md", type: "changelog_page" }],
   },
   {
     slug: "prisma",

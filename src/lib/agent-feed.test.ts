@@ -542,14 +542,14 @@ describe("agent API status", () => {
           {
             status: "failure",
             sourceLifecycleState: "unsupported",
-            sourceUrl: "https://railway.com/changelog",
+            sourceUrl: "https://openrouter.ai/docs/changelog",
           },
         ],
         sources: [
           {
             lifecycleState: "unsupported",
             status: "unsupported",
-            sourceUrl: "https://railway.com/changelog",
+            sourceUrl: "https://openrouter.ai/docs/changelog",
             lastSuccessAt: null,
             pollIntervalMinutes: 240,
           },

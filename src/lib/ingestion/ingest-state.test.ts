@@ -502,7 +502,7 @@ describe("source lifecycle state", () => {
     expect(payload).not.toHaveProperty("consecutiveFailures");
   });
 
-  it("marks Railway as unsupported during registry sync", () => {
+  it("keeps Railway Markdown active during registry sync", () => {
     const payload = buildSourceRegistryPayload({
       existingSource: {
         isActive: true,
@@ -513,13 +513,13 @@ describe("source lifecycle state", () => {
       source: {
         name: "Railway Changelog",
         type: "changelog_page",
-        url: "https://railway.com/changelog",
+        url: "https://railway.com/changelog.md",
       },
       isPrimary: true,
       now: Date.UTC(2026, 3, 25, 16),
     });
 
-    expect(payload.lifecycleState).toBe("unsupported");
+    expect(payload.lifecycleState).toBe("active");
     expect(payload.isActive).toBe(true);
     expect(payload).not.toHaveProperty("consecutiveFailures");
   });

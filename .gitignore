@@ -6,6 +6,7 @@ test-results
 coverage
 dist
 tsconfig.tsbuildinfo
+.firecrawl/
 
 # Local secrets and deployment credentials.
 .env*

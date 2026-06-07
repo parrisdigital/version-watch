@@ -13,7 +13,6 @@ import {
 } from "./lib/changed-vendor-refresh.mjs";
 
 const unsupportedSourceUrls = new Set([
-  "https://railway.com/changelog",
   "https://openrouter.ai/docs/changelog",
 ]);
 
