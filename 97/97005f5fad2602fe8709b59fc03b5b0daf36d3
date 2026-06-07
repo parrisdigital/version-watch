@@ -1,0 +1,32 @@
+.gitignore
+  s_856cb04848cf51::t_fb833625c1b419 9
+src/lib/mock-data.ts
+  s_856cb04848cf51::t_ed2aeca93971d0 376-380,457,463,481,487,499,535-539,558,564,570,576,582,588,594,600,626-627,660
+src/lib/ingestion/ingest-state.test.ts
+  s_856cb04848cf51::t_073fb1d0047857 505,516,522
+src/lib/agent-feed.test.ts
+  s_856cb04848cf51::t_b7e021e9bf9fb2 545,552
+src/lib/ingestion/source-ingestion.test.ts
+  s_856cb04848cf51::t_073fb1d0047857 559-562,564-567,569-597,1303
+  s_856cb04848cf51::t_4d1d7fa92fe02d 563,568
+src/lib/ingestion/source-ingestion.ts
+  s_856cb04848cf51::t_4d1d7fa92fe02d 2052-2055
+  s_856cb04848cf51::t_8ed0dda452b12b 2892-2898
+  s_856cb04848cf51::t_e1d257b435ab8d 2041-2051,2056-2082
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "9797005f5fad2602fe8709b59fc03b5b0daf36d3",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
