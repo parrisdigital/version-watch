@@ -6,6 +6,35 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+## [0.1.12] - 2026-06-07
+
+### Changed
+
+- Switch Convex to the official Ship changelog as the primary product-release source while retaining Convex News for historical source coverage.
+- Move Railway to its machine-readable Markdown changelog endpoint and reactivate Railway in lifecycle, public status, and refresh checks.
+- Add Figma product release notes and Amazon Q Developer CLI releases as supplemental official feeds.
+- Convert GitHub release-page sources for Hermes Agent, T3 Code, OpenCode, OpenUsage, shadcn/ui, Hono, Bun, Vite, OpenClaw, Biome, pnpm, Fastify, and uv to GitHub Atom feeds.
+
+### Fixed
+
+- Add parser coverage for Convex Ship changelog cards from production HTML.
+- Ignore local Firecrawl research artifacts so source-audit scratch files cannot be committed accidentally.
+
+## [0.1.11] - 2026-06-07
+
+### Added
+
+- Add Grok Build as a dedicated AI Coding Agents vendor with its official changelog source.
+
+### Changed
+
+- Rename the existing Grok vendor entry to xAI and update its source label to clarify API/platform coverage.
+
+### Fixed
+
+- Preserve day-level dates for xAI release-note sections that omit a year in their headings.
+- Normalize event action buttons so source, report, citation, and JSON actions render consistently across desktop and mobile.
+
 ## [0.1.10] - 2026-06-06
 
 ### Added
@@ -151,6 +180,8 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.12]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.12
+[0.1.11]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.11
 [0.1.10]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.10
 [0.1.9]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.9
 [0.1.8]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.8
