@@ -1,0 +1,23 @@
+src/app/events/[slug]/page.tsx
+  s_856cb04848cf51::t_bce04a42af75af 243-254,332-345
+  s_856cb04848cf51::t_c5393c8058dfd6 242,255-307
+  s_856cb04848cf51::t_7f4a5f5d864995 4,7
+src/components/event-actions.tsx
+  s_856cb04848cf51::t_d54fe40cadada2 3,34,36,38-51,58-61,63-71,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "693618fce599426908be89ace556cc854a861572",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
