@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, formatDistanceToNowStrict } from "date-fns";
+import { ExternalLink, Flag } from "lucide-react";
 
 import { EventActions } from "@/components/event-actions";
+import { GithubMark } from "@/components/icons/github-mark";
 import { SeverityPill } from "@/components/severity-pill";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
@@ -237,59 +239,72 @@ export default async function EventPage({
           ) : null}
 
           <div className="vw-panel mt-10 p-6 md:p-7">
-            <p className="vw-kicker vw-kicker-muted">Official detail</p>
-            <p className="vw-title mt-3 text-pretty text-lg">{event.sourceTitle ?? event.title}</p>
-            <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
-              From{" "}
-              <span className="text-[var(--color-ink-soft)]">
-                {event.sourceSurfaceName ?? event.sourceName ?? "Official release surface"}
-              </span>
-              . The simplified record can be checked against the original wording.
-            </p>
-            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-              {hasTrackedSource && trackedSourceUrl ? (
-                <a
-                  href={trackedSourceUrl}
-                  className="vw-button vw-button-primary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open tracked source
-                </a>
-              ) : (
-                <a
-                  href={event.sourceUrl}
-                  className="vw-button vw-button-primary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open official detail
-                </a>
-              )}
-              {hasTrackedSource ? (
-                <a
-                  href={event.sourceUrl}
-                  className="vw-button vw-button-secondary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open official detail
-                </a>
-              ) : null}
-              {event.githubUrl ? (
-                <a
-                  href={event.githubUrl}
-                  className="vw-button vw-button-secondary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  View on GitHub
-                </a>
-              ) : null}
-              <Link href={feedbackHref} className="vw-button vw-button-utility">
-                Report this update
-              </Link>
-              <EventActions citation={citation} jsonUrl={jsonUrl} />
+            <div className="grid gap-5 md:grid-cols-[1fr_auto] md:items-start">
+              <div className="max-w-3xl">
+                <p className="vw-kicker vw-kicker-muted">Official detail</p>
+                <p className="vw-title mt-3 text-pretty text-lg">{event.sourceTitle ?? event.title}</p>
+                <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
+                  From{" "}
+                  <span className="text-[var(--color-ink-soft)]">
+                    {event.sourceSurfaceName ?? event.sourceName ?? "Official release surface"}
+                  </span>
+                  . Compare this normalized record against the official source.
+                </p>
+              </div>
+
+              <div className="hidden md:block">
+                <EventActions citation={citation} jsonUrl={jsonUrl} />
+              </div>
+
+              <div className="flex flex-col gap-2 border-t border-[var(--color-line)] pt-5 sm:flex-row sm:flex-wrap sm:items-center md:col-span-2">
+                {hasTrackedSource && trackedSourceUrl ? (
+                  <a
+                    href={trackedSourceUrl}
+                    className="vw-button vw-button-primary w-full sm:w-auto"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink className="size-4" aria-hidden="true" />
+                    Open tracked source
+                  </a>
+                ) : (
+                  <a
+                    href={event.sourceUrl}
+                    className="vw-button vw-button-primary w-full sm:w-auto"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink className="size-4" aria-hidden="true" />
+                    Open official detail
+                  </a>
+                )}
+                {hasTrackedSource ? (
+                  <a
+                    href={event.sourceUrl}
+                    className="vw-button vw-button-secondary w-full sm:w-auto"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink className="size-4" aria-hidden="true" />
+                    Open official detail
+                  </a>
+                ) : null}
+                {event.githubUrl ? (
+                  <a
+                    href={event.githubUrl}
+                    className="vw-button vw-button-secondary w-full sm:w-auto"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <GithubMark className="size-4" />
+                    View on GitHub
+                  </a>
+                ) : null}
+              </div>
+
+              <div className="md:hidden">
+                <EventActions citation={citation} jsonUrl={jsonUrl} />
+              </div>
             </div>
           </div>
 
@@ -313,6 +328,21 @@ export default async function EventPage({
           </div>
 
           <RelevanceSignalForm eventId={event.slug} />
+
+          <div className="vw-panel-flat mt-4 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="font-[var(--font-mono)] text-[0.6875rem] uppercase tracking-wider text-[var(--color-ink-muted)]">
+                See something wrong?
+              </p>
+              <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
+                Report incorrect summaries, source links, dates, or classification.
+              </p>
+            </div>
+            <Link href={feedbackHref} className="vw-button vw-button-secondary w-full sm:w-auto">
+              <Flag className="size-4" aria-hidden="true" />
+              Report update issue
+            </Link>
+          </div>
 
           {newer || older ? (
             <nav
