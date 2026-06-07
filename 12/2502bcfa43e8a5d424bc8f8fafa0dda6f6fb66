@@ -1,0 +1,47 @@
+src/lib/site-data.ts
+  s_856cb04848cf51::t_fdd10fda608c05 65
+src/lib/source-surface-url.test.ts
+  s_856cb04848cf51::t_fdd10fda608c05 28
+CHANGELOG.md
+  s_856cb04848cf51::t_fdd10fda608c05 9-13
+docs/vendor-registry.md
+  s_856cb04848cf51::t_fdd10fda608c05 26
+scripts/check-production-freshness.mjs
+  s_856cb04848cf51::t_fdd10fda608c05 17
+src/lib/agent-status.ts
+  s_856cb04848cf51::t_fdd10fda608c05 39
+convex/ingestState.ts
+  s_856cb04848cf51::t_fdd10fda608c05 228
+convex/sourceLifecycle.ts
+  s_856cb04848cf51::t_fdd10fda608c05 5
+src/lib/ingestion/changed-vendor-refresh.test.ts
+  s_856cb04848cf51::t_fdd10fda608c05 33,48,57-58,60,62
+src/lib/agent-feed.test.ts
+  s_856cb04848cf51::t_fdd10fda608c05 545,552
+docs/deployment-and-ops.md
+  s_856cb04848cf51::t_fdd10fda608c05 207-209
+scripts/refresh-changed-vendors.mjs
+  s_856cb04848cf51::t_fdd10fda608c05 15
+src/lib/mock-data.ts
+  s_856cb04848cf51::t_fdd10fda608c05 230
+src/lib/ingestion/ingest-state.test.ts
+  s_856cb04848cf51::t_fdd10fda608c05 214,227-228
+src/lib/agent-openapi.ts
+  s_856cb04848cf51::t_e0b7cc3214e9db 646
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "122502bcfa43e8a5d424bc8f8fafa0dda6f6fb66",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
