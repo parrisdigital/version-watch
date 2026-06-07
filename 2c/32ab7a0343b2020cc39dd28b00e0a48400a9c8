@@ -1,0 +1,23 @@
+package.json
+  s_856cb04848cf51::t_242f151f1e5eaf 3
+README.md
+  s_856cb04848cf51::t_b09c8d7369d770 22
+CHANGELOG.md
+  s_856cb04848cf51::t_e230121b8b6530 9-20,195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "2c32ab7a0343b2020cc39dd28b00e0a48400a9c8",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
