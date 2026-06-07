@@ -25,6 +25,7 @@ describe("getSourceSurfaceUrl", () => {
       "https://kiro.dev/changelog",
     );
     expect(getSourceSurfaceUrl(source("https://ampcode.com/news.rss"))).toBe("https://ampcode.com/news");
+    expect(getSourceSurfaceUrl(source("https://openrouter.ai/blog/feed.xml"))).toBe("https://openrouter.ai/blog");
   });
 
   it("uses explicit human pages for provider-specific feed endpoints", () => {

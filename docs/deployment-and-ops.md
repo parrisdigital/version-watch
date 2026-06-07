@@ -204,10 +204,9 @@ Use source lifecycle state to keep the public coverage set honest:
 - `paused`: source is intentionally not polled and not counted as active freshness debt
 - `unsupported`: source is known but lacks a reliable machine-readable surface
 
-Railway is currently unsupported because the public changelog is blocked for server-side fetches and no
-reliable official feed, API, allowlist, or GitHub-backed release surface is available. Historical Railway
-events can remain public, but Railway should not be described as actively monitored until the source state
-returns to `active`.
+No current first-party registry source is intentionally unsupported. If a vendor loses its reliable
+machine-readable surface, mark the source `unsupported`, document the reason here, and keep historical
+events public while avoiding active-monitoring claims until the source returns to `active`.
 
 ## Backups And Recovery
 

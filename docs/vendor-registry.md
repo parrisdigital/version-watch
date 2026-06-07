@@ -23,7 +23,7 @@ The public registry currently covers 90 vendors. Coverage is grouped into:
 - Payments & Email
 - Search & Web Data
 
-Recent AI-coding and platform additions include Lovable, Bolt, Tabnine, Sourcegraph Cody, Gemini Code Assist, Amazon Q Developer, JetBrains Junie, GitHub Copilot, CodeRabbit, Qodo, Continue, OpenHands, Goose, Aider, Roo Code, Kiro, Amp, Replit Agent, v0, OpenRouter, Mistral AI, Perplexity, Figma, Model Context Protocol, Base UI, HeroUI, and TanStack. These use official machine-readable release feeds where available; sources without a stable machine-readable surface stay explicitly unsupported instead of degrading production health.
+Recent AI-coding and platform additions include Lovable, Bolt, Tabnine, Sourcegraph Cody, Gemini Code Assist, Amazon Q Developer, JetBrains Junie, GitHub Copilot, CodeRabbit, Qodo, Continue, OpenHands, Goose, Aider, Roo Code, Kiro, Amp, Replit Agent, v0, OpenRouter, Mistral AI, Perplexity, Figma, Model Context Protocol, Base UI, HeroUI, and TanStack. These use official machine-readable release feeds where available, including OpenRouter's official blog RSS feed for product and API updates. Sources without a stable machine-readable surface stay explicitly unsupported instead of degrading production health.
 
 ## Registry Rules
 

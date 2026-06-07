@@ -643,7 +643,7 @@ export function buildOpenApiDocument(baseUrl: string) {
               coverage: {
                 active_vendors: 44,
                 paused_vendors: 0,
-                unsupported_vendors: 1,
+                unsupported_vendors: 0,
               },
             },
           ],

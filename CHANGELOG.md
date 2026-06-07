@@ -6,6 +6,11 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+### Fixed
+
+- Switch OpenRouter from the stale docs changelog URL to OpenRouter's official blog RSS feed so updates can be ingested and published again.
+- Remove stale unsupported-source fallback notes for vendors that now have active machine-readable sources.
+
 ## [0.1.13] - 2026-06-07
 
 ### Changed

@@ -227,7 +227,7 @@ export const vendors: VendorRecord[] = [
     slug: "openrouter",
     name: "OpenRouter",
     description: "Unified model routing, API, provider, SDK, and model availability updates.",
-    sources: [{ name: "OpenRouter Changelog", url: "https://openrouter.ai/docs/changelog", type: "docs_page" }],
+    sources: [{ name: "OpenRouter Blog", url: "https://openrouter.ai/blog/feed.xml", type: "rss" }],
   },
   {
     slug: "mistral-ai",

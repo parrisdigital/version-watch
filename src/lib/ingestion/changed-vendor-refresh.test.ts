@@ -30,7 +30,7 @@ describe("changed vendor refresh helpers", () => {
       export const vendors = [
         {
           slug: "openrouter",
-          sources: [{ name: "OpenRouter Changelog", url: "https://openrouter.ai/docs/changelog", type: "docs_page" }],
+          sources: [{ name: "OpenRouter Blog", url: "https://openrouter.ai/blog/feed.xml", type: "rss" }],
         },
         {
           slug: "tanstack",
@@ -45,7 +45,7 @@ describe("changed vendor refresh helpers", () => {
 
     const sourceUrls = extractVendorSourceUrls(source);
 
-    expect(sourceUrls.get("openrouter")).toEqual(["https://openrouter.ai/docs/changelog"]);
+    expect(sourceUrls.get("openrouter")).toEqual(["https://openrouter.ai/blog/feed.xml"]);
     expect(sourceUrls.get("tanstack")).toEqual([
       "https://github.com/TanStack/query/releases.atom",
       "https://github.com/TanStack/router/releases.atom",
@@ -54,12 +54,12 @@ describe("changed vendor refresh helpers", () => {
 
   it("detects vendors whose current sources are intentionally unsupported", () => {
     const sourceUrls = new Map([
-      ["openrouter", ["https://openrouter.ai/docs/changelog"]],
-      ["mixed", ["https://openrouter.ai/docs/changelog", "https://example.com/feed.xml"]],
+      ["blocked", ["https://example.com/blocked-feed.xml"]],
+      ["mixed", ["https://example.com/blocked-feed.xml", "https://example.com/feed.xml"]],
     ]);
-    const unsupportedSourceUrls = new Set(["https://openrouter.ai/docs/changelog"]);
+    const unsupportedSourceUrls = new Set(["https://example.com/blocked-feed.xml"]);
 
-    expect(hasOnlyUnsupportedSources("openrouter", sourceUrls, unsupportedSourceUrls)).toBe(true);
+    expect(hasOnlyUnsupportedSources("blocked", sourceUrls, unsupportedSourceUrls)).toBe(true);
     expect(hasOnlyUnsupportedSources("mixed", sourceUrls, unsupportedSourceUrls)).toBe(false);
     expect(hasOnlyUnsupportedSources("missing", sourceUrls, unsupportedSourceUrls)).toBe(false);
   });

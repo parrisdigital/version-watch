@@ -14,10 +14,7 @@ const noisyTitlePatterns = [
   /\bcheckout\+\s*\d+\s*more\b/i,
   /\bpayment intents\s+payments\b/i,
 ];
-const knownBlockedSourceUrls = new Set([
-  // OpenRouter currently redirects the public changelog docs path to a missing markdown page for server fetches.
-  "https://openrouter.ai/docs/changelog",
-]);
+const knownBlockedSourceUrls = new Set();
 const nonMonitoredLifecycleStates = new Set(["paused", "unsupported"]);
 
 function readNumber(name, fallback) {

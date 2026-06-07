@@ -12,9 +12,7 @@ import {
   hasOnlyUnsupportedSources,
 } from "./lib/changed-vendor-refresh.mjs";
 
-const unsupportedSourceUrls = new Set([
-  "https://openrouter.ai/docs/changelog",
-]);
+const unsupportedSourceUrls = new Set();
 
 function runGit(args, options = {}) {
   const result = spawnSync("git", args, {

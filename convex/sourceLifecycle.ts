@@ -2,10 +2,7 @@ export const sourceLifecycleStates = ["active", "degraded", "paused", "unsupport
 
 export type SourceLifecycleState = (typeof sourceLifecycleStates)[number];
 
-const unsupportedSourceUrls = new Set([
-  // OpenRouter links this public docs path from its navigation, but server fetches currently resolve it to a missing page.
-  "https://openrouter.ai/docs/changelog",
-]);
+const unsupportedSourceUrls = new Set<string>();
 
 export function getRegistryLifecycleState(sourceUrl: string): SourceLifecycleState {
   return unsupportedSourceUrls.has(sourceUrl) ? "unsupported" : "active";

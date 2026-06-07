@@ -225,6 +225,7 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "mistral-ai",
   "model-context-protocol",
   "openai",
+  "openrouter",
   "openclaw",
   "openhands",
   "opencode",

@@ -62,7 +62,7 @@ async function readFromConvex<T>(read: () => Promise<T>, fallback: () => T): Pro
   }
 }
 
-const fallbackUnsupportedVendorSlugs = new Set(["railway", "openrouter"]);
+const fallbackUnsupportedVendorSlugs = new Set<string>();
 
 function isFallbackUnsupportedVendor(slug: string) {
   return fallbackUnsupportedVendorSlugs.has(slug);

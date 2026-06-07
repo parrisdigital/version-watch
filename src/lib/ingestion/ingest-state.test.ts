@@ -211,6 +211,7 @@ describe("isAutoPublishVendorSlug", () => {
       "lovable",
       "mistral-ai",
       "model-context-protocol",
+      "openrouter",
       "openhands",
       "perplexity",
       "qodo",
@@ -223,8 +224,8 @@ describe("isAutoPublishVendorSlug", () => {
     ].every((slug) => isAutoPublishVendorSlug(slug))).toBe(true);
   });
 
-  it("keeps unsupported OpenRouter out of auto-publish until it has a machine-fetchable source", () => {
-    expect(isAutoPublishVendorSlug("openrouter")).toBe(false);
+  it("auto-publishes OpenRouter now that it has an official machine-readable feed", () => {
+    expect(isAutoPublishVendorSlug("openrouter")).toBe(true);
   });
 });
 
