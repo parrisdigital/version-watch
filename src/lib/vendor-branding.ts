@@ -69,7 +69,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   openhands: { logoUrl: "/logos/openhands.svg", renderMode: "image", fill: true },
   goose: { logoUrl: "/logos/goose.svg", renderMode: "image", fill: true },
   aider: { logoUrl: "/logos/aider.png", renderMode: "image", fill: true },
-  "roo-code": { logoUrl: "/logos/roo-code.svg", renderMode: "image", fill: true },
+  "roo-code": { logoUrl: "/logos/roo-code.svg", renderMode: "image", fill: true, invertOnDark: true },
   lovable: { logoUrl: "/logos/lovable.png", renderMode: "image", fill: true },
   bolt: { logoUrl: "/logos/bolt.svg", renderMode: "image", fill: true, invertOnDark: true },
   tabnine: { logoUrl: "/logos/tabnine.svg", renderMode: "image", fill: true },
