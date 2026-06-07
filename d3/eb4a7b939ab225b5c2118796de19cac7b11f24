@@ -1,0 +1,25 @@
+src/lib/ingestion/source-ingestion.test.ts
+  s_856cb04848cf51::t_ac31bfcdbbaaa3 151,165,1558
+src/lib/ingestion/ingest-state.test.ts
+  s_856cb04848cf51::t_471fa50c358f6b 39,41-43,46-47,162
+convex/ingest.ts
+  s_856cb04848cf51::t_35e1095d4cbeb8 99
+src/lib/mock-data.ts
+  s_856cb04848cf51::t_4b5c7dabdde164 241-242,373
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "d3eb4a7b939ab225b5c2118796de19cac7b11f24",
+  "prompts": {},
+  "sessions": {
+    "s_856cb04848cf51": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019dde78-7d06-7223-af0e-cbb49807f0db",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
