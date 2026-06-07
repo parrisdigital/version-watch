@@ -22,6 +22,7 @@ const vendorBranding: Record<string, VendorBrandConfig> = {
   anthropic: { logoUrl: "https://cdn.simpleicons.org/anthropic" },
   gemini: { logoUrl: "https://cdn.simpleicons.org/googlegemini" },
   xai: { logoUrl: "https://docs.x.ai/favicon.ico", renderMode: "image", fill: true },
+  "grok-build": { logoUrl: "https://x.ai/favicon.ico", renderMode: "image", fill: true },
   "meta-ai": { logoUrl: "https://cdn.simpleicons.org/meta" },
   groq: { logoUrl: "https://console.groq.com/favicon.ico", renderMode: "image", fill: true },
   openrouter: { logoUrl: "/logos/openrouter.png", renderMode: "image", fill: true },

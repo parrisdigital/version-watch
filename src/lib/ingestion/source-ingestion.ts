@@ -104,11 +104,14 @@ const NOISE_TITLES = new Set([
   "learn more",
 ]);
 
+const SHORT_MEANINGFUL_TITLES = new Set(["grok build"]);
+
 const VENDOR_STACKS: Record<string, string[]> = {
   openai: ["llms", "agents", "developer-workflow"],
   anthropic: ["llms", "agents"],
   gemini: ["llms", "search", "agents"],
   xai: ["llms", "agents", "api"],
+  "grok-build": ["developer-workflow", "agents", "llms", "terminal"],
   "meta-ai": ["llms", "agents", "sdk"],
   groq: ["llms", "agents", "api"],
   openrouter: ["llms", "api", "models"],
@@ -244,13 +247,28 @@ function parseMonthYearContext(text: string) {
     /^(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec),?\s+(\d{4})$/,
   );
 
-  if (!match) {
+  if (match) {
+    return {
+      month: MONTH_INDEX[match[1]!] ?? undefined,
+      year: Number(match[2]),
+    } satisfies MonthYearContext;
+  }
+
+  const monthOnlyMatch = value.match(
+    /^(january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sept|sep|october|oct|november|nov|december|dec)$/,
+  );
+  if (!monthOnlyMatch) {
     return null;
   }
 
+  const month = MONTH_INDEX[monthOnlyMatch[1]!] ?? 0;
+  const now = new Date();
+  const currentMonth = now.getUTCMonth();
+  const year = month <= currentMonth ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+
   return {
-    month: MONTH_INDEX[match[1]!] ?? undefined,
-    year: Number(match[2]),
+    month,
+    year,
   } satisfies MonthYearContext;
 }
 
@@ -372,12 +390,13 @@ function collectMarkdownExcerpt(lines: string[], startIndex: number) {
 
 function isMeaningfulTitle(text: string) {
   const value = cleanText(text);
+  const normalized = value.toLowerCase();
 
-  if (!value || value.length < 12) {
+  if (!value || (value.length < 12 && !SHORT_MEANINGFUL_TITLES.has(normalized))) {
     return false;
   }
 
-  if (NOISE_TITLES.has(value.toLowerCase())) {
+  if (NOISE_TITLES.has(normalized)) {
     return false;
   }
 
@@ -414,12 +433,54 @@ function collectExcerpt($: ReturnType<typeof load>, headingElement: any) {
       break;
     }
 
-    const text = cleanText($(sibling).text());
+    const text = getExcerptNodeText($, sibling);
     if (!text || isDateLike(text)) {
       continue;
     }
 
     if (/^(category|published|contributors|contributor)$/i.test(text)) {
+      continue;
+    }
+
+    if (text.length >= 24) {
+      excerptParts.push(text);
+    }
+
+    if (excerptParts.join(" ").length >= 260) {
+      break;
+    }
+  }
+
+  return truncateSentence(excerptParts.join(" "));
+}
+
+function getExcerptNodeText($: ReturnType<typeof load>, element: any) {
+  const listItems = $(element)
+    .find("li")
+    .toArray()
+    .map((item) => cleanText($(item).text()))
+    .filter((text) => text && !isDateLike(text));
+
+  if (listItems.length > 1) {
+    return listItems.join("; ");
+  }
+
+  return cleanText($(element).text());
+}
+
+function collectWrappedHeadingExcerpt($: ReturnType<typeof load>, headingElement: any) {
+  const heading = $(headingElement);
+  const wrapper = heading.parent().is("span") ? heading.parent() : heading;
+  const excerptParts: string[] = [];
+
+  for (const sibling of wrapper.nextAll().toArray()) {
+    const tagName = sibling.tagName?.toLowerCase?.() ?? "";
+    if (/^h[1-6]$/.test(tagName) || $(sibling).find("h1, h2, h3, h4, h5, h6").length > 0) {
+      break;
+    }
+
+    const text = getExcerptNodeText($, sibling);
+    if (!text || isDateLike(text)) {
       continue;
     }
 
@@ -606,7 +667,11 @@ function parseDateLedHeadingEntries(sourceUrl: string, html: string) {
       continue;
     }
 
-    const excerpt = collectExcerpt($, element) || collectContainerExcerpt($, element, title) || title;
+    const excerpt =
+      collectExcerpt($, element) ||
+      collectWrappedHeadingExcerpt($, element) ||
+      collectContainerExcerpt($, element, title) ||
+      title;
     entries.push({
       title,
       url: getEntryElementUrl($, element, sourceUrl),
@@ -2913,7 +2978,12 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
     }
   }
 
-  if (parserKey === "xai:docs_page" || parserKey === "groq:docs_page" || parserKey === "augment-code:changelog_page") {
+  if (
+    parserKey === "xai:docs_page" ||
+    parserKey === "grok-build:changelog_page" ||
+    parserKey === "groq:docs_page" ||
+    parserKey === "augment-code:changelog_page"
+  ) {
     const entries = parseDateLedHeadingEntries(sourceUrl, html);
     if (entries.length > 0) {
       return entries.slice(0, 12);

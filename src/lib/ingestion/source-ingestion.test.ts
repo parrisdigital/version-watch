@@ -299,6 +299,58 @@ May 28, 2026
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-15T00:00:00.000Z"));
   });
 
+  it("parses xAI yearless month sections with day-specific release notes", () => {
+    const html = `
+      <main>
+        <h1>Release Notes</h1>
+        <h2>May</h2>
+        <div class="entry">
+          <div>May 29</div>
+          <div>
+            <span><h3 id="smart-turn-for-streaming-stt">Smart Turn for Streaming STT</h3></span>
+            <p>The streaming Speech to Text API now supports Smart Turn end-of-turn detection.</p>
+            <span><h3 id="context-compaction">Context Compaction</h3></span>
+            <p>The Context Compaction API is now available.</p>
+          </div>
+        </div>
+        <div>May 27</div>
+        <h3 id="image-search-in-web-search">Image Search in Web Search</h3>
+        <p>Web Search now supports explicitly searching for images.</p>
+        <div>May 19</div>
+        <h3 id="grok-build-01">Grok Build 0.1</h3>
+        <p>xAI's fast coding model trained specifically for agentic coding, currently in early access.</p>
+        <div>May 14</div>
+        <h3 id="grok-build">Grok Build</h3>
+        <p>Grok Build is now available in beta.</p>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "xai:docs_page",
+      sourceUrl: "https://docs.x.ai/developers/release-notes",
+      html,
+    });
+    const mayYear = new Date().getUTCMonth() >= 4 ? new Date().getUTCFullYear() : new Date().getUTCFullYear() - 1;
+
+    expect(entries.map((entry) => entry.title)).toEqual([
+      "Smart Turn for Streaming STT",
+      "Context Compaction",
+      "Image Search in Web Search",
+      "Grok Build 0.1",
+      "Grok Build",
+    ]);
+    expect(entries.map((entry) => new Date(entry.publishedAt).toISOString().slice(0, 10))).toEqual([
+      `${mayYear}-05-29`,
+      `${mayYear}-05-29`,
+      `${mayYear}-05-27`,
+      `${mayYear}-05-19`,
+      `${mayYear}-05-14`,
+    ]);
+    expect(entries[1]?.excerpt).toBe("The Context Compaction API is now available.");
+    expect(entries[3]?.url).toBe("https://docs.x.ai/developers/release-notes#grok-build-01");
+    expect(entries[4]?.url).toBe("https://docs.x.ai/developers/release-notes#grok-build");
+  });
+
   it("parses xAI Markdown release notes from the official docs file", () => {
     const markdown = `
       ===/overview===
@@ -331,6 +383,36 @@ May 28, 2026
       parseConfidence: "medium",
     });
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-01T00:00:00.000Z"));
+  });
+
+  it("parses Grok Build versioned changelog entries", () => {
+    const html = `
+      <main>
+        <div>June 3, 2026</div>
+        <h2 id="grok-build-0220">Grok Build 0.2.20</h2>
+        <p>Improved apply patch handling and terminal reliability.</p>
+        <div>May 29, 2026</div>
+        <h2 id="grok-build-0219">Grok Build 0.2.19</h2>
+        <p>Added better agent context handling for coding sessions.</p>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "grok-build:changelog_page",
+      sourceUrl: "https://x.ai/build/changelog",
+      html,
+    });
+
+    expect(entries.map((entry) => entry.title)).toEqual(["Grok Build 0.2.20", "Grok Build 0.2.19"]);
+    expect(entries.map((entry) => new Date(entry.publishedAt).toISOString().slice(0, 10))).toEqual([
+      "2026-06-03",
+      "2026-05-29",
+    ]);
+    expect(entries[0]).toMatchObject({
+      url: "https://x.ai/build/changelog#grok-build-0220",
+      excerpt: "Improved apply patch handling and terminal reliability.",
+      parseConfidence: "high",
+    });
   });
 
   it("parses Groq date-led changelog entries and cleans run-together verbs", () => {

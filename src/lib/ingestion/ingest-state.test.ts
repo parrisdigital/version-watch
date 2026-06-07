@@ -469,7 +469,7 @@ describe("source lifecycle state", () => {
       vendorId: "vendor_xai",
       vendorSlug: "xai",
       source: {
-        name: "Grok API Release Notes",
+        name: "xAI Developer Release Notes",
         type: "docs_page",
         url: "https://docs.x.ai/developers/release-notes",
       },

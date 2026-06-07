@@ -210,6 +210,7 @@ const AUTO_PUBLISH_VENDOR_SLUGS = new Set([
   "firecrawl",
   "gemini",
   "gemini-code-assist",
+  "grok-build",
   "google-antigravity",
   "github-copilot",
   "goose",
@@ -293,7 +294,7 @@ const NOISE_TITLE_PATTERNS = [
   /^overview$/i,
 ];
 
-const SHORT_MEANINGFUL_TITLES = new Set(["canvases"]);
+const SHORT_MEANINGFUL_TITLES = new Set(["canvases", "grok build"]);
 const SHORT_MEANINGFUL_SUFFIXES = new Set(["api", "cli", "sdk", "mcp"]);
 const GITHUB_RELEASE_TAG_TITLE_PATTERN =
   /^(?:[a-z0-9][a-z0-9+._/-]*[@ ]+)?v?\d+\.\d+(?:\.\d+)?(?:[-+.][a-z0-9]+)*(?:\.[a-z0-9]+)*$/i;

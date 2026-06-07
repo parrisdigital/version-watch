@@ -40,6 +40,7 @@ const highVendorSlugs = new Set([
   "amp",
   "bolt",
   "gemini",
+  "grok-build",
   "augment-code",
   "base-ui",
   "brave",

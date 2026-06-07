@@ -42,6 +42,7 @@ const SLUG_TO_CATEGORY: Record<string, (typeof VENDOR_CATEGORIES)[number]> = {
   "gemini-code-assist": "AI Coding Agents",
   "github-copilot": "AI Coding Agents",
   goose: "AI Coding Agents",
+  "grok-build": "AI Coding Agents",
   "hermes-agent": "AI Coding Agents",
   "jetbrains-junie": "AI Coding Agents",
   "kilo-code": "AI Coding Agents",

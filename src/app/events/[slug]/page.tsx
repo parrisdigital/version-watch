@@ -246,7 +246,7 @@ export default async function EventPage({
               </span>
               . The simplified record can be checked against the original wording.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
+            <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               {hasTrackedSource && trackedSourceUrl ? (
                 <a
                   href={trackedSourceUrl}

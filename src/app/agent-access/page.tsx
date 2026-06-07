@@ -425,6 +425,7 @@ const FEATURED_VENDOR_SLUGS = [
   "anthropic",
   "gemini",
   "xai",
+  "grok-build",
   "meta-ai",
   "groq",
   "vercel",

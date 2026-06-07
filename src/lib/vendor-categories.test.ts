@@ -36,6 +36,7 @@ describe("vendor categories", () => {
     expect(getCategoryForSlug("gemini-code-assist")).toBe("AI Coding Agents");
     expect(getCategoryForSlug("github-copilot")).toBe("AI Coding Agents");
     expect(getCategoryForSlug("goose")).toBe("AI Coding Agents");
+    expect(getCategoryForSlug("grok-build")).toBe("AI Coding Agents");
     expect(getCategoryForSlug("jetbrains-junie")).toBe("AI Coding Agents");
     expect(getCategoryForSlug("kilo-code")).toBe("AI Coding Agents");
     expect(getCategoryForSlug("lovable")).toBe("AI Coding Agents");
