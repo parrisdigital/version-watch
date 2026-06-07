@@ -19,7 +19,7 @@ Use it to see what changed, why it matters, who should care, which stack area is
 - Website: [versionwatch.dev](https://versionwatch.dev)
 - API docs: [versionwatch.dev/agent-access](https://versionwatch.dev/agent-access)
 - OpenAPI: [versionwatch.dev/api/v1/openapi.json](https://versionwatch.dev/api/v1/openapi.json)
-- Latest release: [v0.1.12](https://github.com/parrisdigital/version-watch/releases/tag/v0.1.12)
+- Latest release: [v0.1.13](https://github.com/parrisdigital/version-watch/releases/tag/v0.1.13)
 
 ## Features
 

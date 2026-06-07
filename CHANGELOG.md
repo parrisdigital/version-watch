@@ -6,6 +6,18 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+## [0.1.13] - 2026-06-07
+
+### Changed
+
+- Keep machine-readable RSS, Atom, XML, Markdown, and raw GitHub source URLs for ingestion while exposing readable tracked source surfaces for event pages, vendor pages, and the public vendor API.
+- Add `surface_url` to public vendor source metadata so clients can distinguish crawler endpoints from user-facing source pages.
+
+### Fixed
+
+- Fix mobile source links that opened raw RSS/XML/Atom feeds instead of readable changelog or release pages.
+- Scope changed-vendor refresh detection to the vendor registry block so event seed slugs cannot trigger invalid post-deploy refreshes.
+
 ## [0.1.12] - 2026-06-07
 
 ### Changed
@@ -180,6 +192,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.1.13]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.13
 [0.1.12]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.12
 [0.1.11]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.11
 [0.1.10]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.10
