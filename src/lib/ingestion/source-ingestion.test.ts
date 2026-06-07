@@ -148,7 +148,7 @@ May 28, 2026
   it("parses Amazon Q Developer Markdown document-history tables", () => {
     const entries = parseHtmlEntries({
       parserKey: "amazon-q-developer:docs_page",
-      sourceUrl: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.html",
+      sourceUrl: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.md",
       html: `
 # Document history for Amazon Q Developer User Guide
 
@@ -162,7 +162,7 @@ May 28, 2026
     expect(entries).toHaveLength(2);
     expect(entries[0]).toMatchObject({
       title: "Updated managed policies: AmazonQFullAccess and AmazonQDeveloperAccess",
-      url: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.html#doc-history",
+      url: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.md#doc-history",
       publishedAt: Date.parse("2026-05-21T00:00:00.000Z"),
       parseConfidence: "high",
     });
@@ -1555,7 +1555,7 @@ describe("normalizeParsedEntry", () => {
       vendorSlug: "factory-droid",
       vendorName: "Factory Droid",
       sourceName: "Factory Release Notes",
-      sourceType: "changelog_page",
+      sourceType: "rss",
       entry: {
         title: "CLI Updates",
         url: "https://docs.factory.ai/changelog/release-notes#june-5",

@@ -238,8 +238,8 @@ export const vendors: VendorRecord[] = [
     sources: [
       {
         name: "Factory Release Notes",
-        url: "https://docs.factory.ai/changelog/release-notes",
-        type: "changelog_page",
+        url: "https://docs.factory.ai/changelog/release-notes/rss.xml",
+        type: "rss",
       },
     ],
   },
@@ -370,7 +370,7 @@ export const vendors: VendorRecord[] = [
     sources: [
       {
         name: "Amazon Q Developer Document History",
-        url: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.html",
+        url: "https://docs.aws.amazon.com/amazonq/latest/qdeveloper-ug/doc-history.md",
         type: "docs_page",
       },
       {

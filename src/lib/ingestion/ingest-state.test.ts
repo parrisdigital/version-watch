@@ -36,15 +36,15 @@ describe("buildFetchHeaders", () => {
     expect(headers.Accept).not.toContain("text/markdown");
   });
 
-  it("requests Factory release notes as HTML so RSS discovery can see alternate links", () => {
+  it("requests Factory release notes as a direct RSS feed", () => {
     const headers = buildFetchHeaders("VersionWatchBot/1.0", {
-      url: "https://docs.factory.ai/changelog/release-notes",
-      parserKey: "factory-droid:changelog_page",
-      sourceType: "changelog_page",
+      url: "https://docs.factory.ai/changelog/release-notes/rss.xml",
+      parserKey: "factory-droid:rss",
+      sourceType: "rss",
     });
 
-    expect(headers.Accept).toContain("text/html");
-    expect(headers.Accept).not.toContain("text/markdown");
+    expect(headers.Accept).toContain("application/rss+xml");
+    expect(headers.Accept).not.toContain("text/html");
   });
 
   it("keeps direct feeds on RSS/XML-first accept headers", () => {
@@ -159,7 +159,7 @@ describe("parseFeedEntries", () => {
           </item>
         </channel>
       </rss>`,
-      "https://docs.factory.ai/changelog/release-notes",
+      "https://docs.factory.ai/changelog/release-notes/rss.xml",
     );
 
     expect(entries[0]).toMatchObject({
