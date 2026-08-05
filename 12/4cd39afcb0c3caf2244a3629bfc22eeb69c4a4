@@ -1,0 +1,24 @@
+package.json
+  s_12a1aa838c8e5c::t_3b320b6751ac3a 3
+CHANGELOG.md
+  s_12a1aa838c8e5c::t_6456a599602dc4 25,33
+  s_12a1aa838c8e5c::t_3b320b6751ac3a 9-24,35,37,225
+package-lock.json
+  s_12a1aa838c8e5c::t_5d7964e7615d8a 3,9
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "124cd39afcb0c3caf2244a3629bfc22eeb69c4a4",
+  "prompts": {},
+  "sessions": {
+    "s_12a1aa838c8e5c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a2-5ca5-72f1-a822-8e46daf5c6f6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
