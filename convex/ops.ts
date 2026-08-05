@@ -251,6 +251,32 @@ export const sourceHealth = query({
   },
 });
 
+export const freshnessSummary = query({
+  args: {},
+  returns: v.object({
+    checkedAt: v.string(),
+    latestRunAt: v.union(v.string(), v.null()),
+    sourceCount: v.number(),
+  }),
+  handler: async (ctx) => {
+    const now = Date.now();
+    const [sources, refreshRuns] = await Promise.all([
+      ctx.db.query("sources").take(500),
+      ctx.db.query("refreshRuns").withIndex("by_started_at").order("desc").take(25),
+    ]);
+    const latestCompleted = refreshRuns.find(isCompletedRefreshRun);
+    const latestRunAt = latestCompleted
+      ? new Date(latestCompleted.finishedAt ?? latestCompleted.startedAt).toISOString()
+      : null;
+
+    return {
+      checkedAt: new Date(now).toISOString(),
+      latestRunAt,
+      sourceCount: sources.filter(isMonitoredSource).length,
+    };
+  },
+});
+
 export const productionFreshness = query({
   args: {
     sinceHours: v.optional(v.number()),

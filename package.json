@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "health:production": "node scripts/check-production-freshness.mjs",
+    "http:production": "node scripts/check-production-http.mjs",
     "refresh:changed-vendors": "node scripts/refresh-changed-vendors.mjs",
     "signal:production": "node scripts/check-signal-quality.mjs",
     "sources:production": "node scripts/check-source-links.mjs",

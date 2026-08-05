@@ -80,6 +80,8 @@ jobs:
 
     env:
       CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+      ADMIN_SECRET: ${{ secrets.ADMIN_SECRET }}
+      CONVEX_URL: https://joyous-mole-525.convex.cloud
 
     steps:
       - name: Check out repository
@@ -106,6 +108,23 @@ jobs:
 
       - name: Deploy Convex production
         run: npx convex deploy --typecheck try
+
+      - name: Rebuild bounded public event statistics
+        run: |
+          node --input-type=module <<'NODE'
+          import { ConvexHttpClient } from "convex/browser";
+          import { api } from "./convex/_generated/api.js";
+
+          if (!process.env.ADMIN_SECRET) {
+            throw new Error("ADMIN_SECRET is required to rebuild public event statistics.");
+          }
+
+          const client = new ConvexHttpClient(process.env.CONVEX_URL);
+          const result = await client.action(api.publicStats.rebuild, {
+            adminSecret: process.env.ADMIN_SECRET,
+          });
+          console.log(JSON.stringify(result, null, 2));
+          NODE
 
   production-health:
     if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') }}
@@ -177,6 +196,9 @@ jobs:
 
       - name: Wait for production deploy window
         run: sleep 180
+
+      - name: Check production HTTP availability
+        run: npm run http:production
 
       - name: Run production freshness check
         run: npm run health:production

@@ -1,7 +1,17 @@
-import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 
-const importanceBandValidator = v.union(v.literal("critical"), v.literal("high"), v.literal("medium"), v.literal("low"));
+import { mutation, query } from "./_generated/server";
+
+const MAX_ACTIVE_WATCHLISTS = 50;
+const MAX_RECENT_DELIVERIES_PER_WATCHLIST = 250;
+const DELIVERY_LOOKBACK_MS = 30 * 24 * 60 * 60 * 1000;
+
+const importanceBandValidator = v.union(
+  v.literal("critical"),
+  v.literal("high"),
+  v.literal("medium"),
+  v.literal("low"),
+);
 const releaseClassValidator = v.union(
   v.literal("breaking"),
   v.literal("security"),
@@ -15,7 +25,11 @@ const releaseClassValidator = v.union(
   v.literal("docs_update"),
   v.literal("routine_release"),
 );
-const webhookTypeValidator = v.union(v.literal("discord"), v.literal("slack"), v.literal("generic"));
+const webhookTypeValidator = v.union(
+  v.literal("discord"),
+  v.literal("slack"),
+  v.literal("generic"),
+);
 
 function requireAdminSecret(suppliedSecret: string | undefined) {
   const expectedSecret = process.env.ADMIN_SECRET;
@@ -66,7 +80,7 @@ export const list = query({
   handler: async (ctx, args) => {
     requireAdminSecret(args.adminSecret);
 
-    const rows = await ctx.db.query("watchlists").collect();
+    const rows = await ctx.db.query("watchlists").take(200);
 
     return rows
       .map((row) => ({
@@ -83,7 +97,9 @@ export const list = query({
         webhook_url_redacted: redactWebhookUrl(row.webhookUrl),
         created_at: new Date(row.createdAt).toISOString(),
         updated_at: new Date(row.updatedAt).toISOString(),
-        last_dispatch_at: row.lastDispatchAt ? new Date(row.lastDispatchAt).toISOString() : null,
+        last_dispatch_at: row.lastDispatchAt
+          ? new Date(row.lastDispatchAt).toISOString()
+          : null,
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
   },
@@ -113,7 +129,8 @@ export const upsert = mutation({
     if (!name) throw new Error("Watchlist name is required.");
 
     const existing = args.id ? await ctx.db.get(args.id) : null;
-    const webhookUrl = normalizeWebhookUrl(args.webhookUrl) ?? existing?.webhookUrl ?? null;
+    const webhookUrl =
+      normalizeWebhookUrl(args.webhookUrl) ?? existing?.webhookUrl ?? null;
     if (!webhookUrl) throw new Error("A valid HTTPS webhook URL is required.");
 
     const patch = {
@@ -158,9 +175,36 @@ export const dispatchState = query({
 
     const watchlists = args.watchlistId
       ? [await ctx.db.get(args.watchlistId)].filter(Boolean)
-      : await ctx.db.query("watchlists").withIndex("by_active", (q) => q.eq("isActive", true)).collect();
-    const deliveries = await ctx.db.query("watchlistDeliveries").collect();
-    const watchlistIds = new Set(watchlists.map((watchlist: any) => String(watchlist._id)));
+      : await ctx.db
+          .query("watchlists")
+          .withIndex("by_active", (q) => q.eq("isActive", true))
+          .take(MAX_ACTIVE_WATCHLISTS + 1);
+    if (watchlists.length > MAX_ACTIVE_WATCHLISTS) {
+      throw new Error(
+        `Active watchlists exceed the supported ${MAX_ACTIVE_WATCHLISTS}-row dispatch boundary.`,
+      );
+    }
+    const now = Date.now();
+    const deliveries = (
+      await Promise.all(
+        watchlists.map((watchlist: any) => {
+          const attemptedAfter =
+            watchlist.lastDispatchAt ?? now - DELIVERY_LOOKBACK_MS;
+          return ctx.db
+            .query("watchlistDeliveries")
+            .withIndex("by_watchlist_and_attempted", (q) =>
+              q
+                .eq("watchlistId", watchlist._id)
+                .gte("attemptedAt", attemptedAfter),
+            )
+            .order("desc")
+            .take(MAX_RECENT_DELIVERIES_PER_WATCHLIST);
+        }),
+      )
+    ).flat();
+    const watchlistIds = new Set(
+      watchlists.map((watchlist: any) => String(watchlist._id)),
+    );
 
     return {
       watchlists: watchlists.map((watchlist: any) => ({
@@ -175,9 +219,16 @@ export const dispatchState = query({
         release_classes: watchlist.releaseClasses,
         webhook_type: watchlist.webhookType,
         webhook_url: watchlist.webhookUrl,
+        last_dispatch_at: watchlist.lastDispatchAt
+          ? new Date(watchlist.lastDispatchAt).toISOString()
+          : null,
       })),
       deliveries: deliveries
-        .filter((delivery) => watchlistIds.has(String(delivery.watchlistId)) && delivery.status === "sent")
+        .filter(
+          (delivery) =>
+            watchlistIds.has(String(delivery.watchlistId)) &&
+            delivery.status === "sent",
+        )
         .map((delivery) => ({
           watchlist_id: delivery.watchlistId,
           event_slug: delivery.eventSlug,
@@ -192,7 +243,11 @@ export const recordDelivery = mutation({
     adminSecret: v.string(),
     watchlistId: v.id("watchlists"),
     eventSlug: v.string(),
-    status: v.union(v.literal("sent"), v.literal("failure"), v.literal("skipped")),
+    status: v.union(
+      v.literal("sent"),
+      v.literal("failure"),
+      v.literal("skipped"),
+    ),
     responseStatus: v.optional(v.number()),
     errorMessage: v.optional(v.string()),
   },
@@ -209,7 +264,10 @@ export const recordDelivery = mutation({
       responseStatus: args.responseStatus,
       errorMessage: clampText(args.errorMessage, 500) || undefined,
     });
-    await ctx.db.patch(args.watchlistId, { lastDispatchAt: now, updatedAt: now });
+    await ctx.db.patch(args.watchlistId, {
+      lastDispatchAt: now,
+      updatedAt: now,
+    });
 
     return { ok: true };
   },

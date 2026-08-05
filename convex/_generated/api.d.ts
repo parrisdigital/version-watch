@@ -17,6 +17,7 @@ import type * as ingestState from "../ingestState.js";
 import type * as ingestionErrors from "../ingestionErrors.js";
 import type * as lib_publish from "../lib/publish.js";
 import type * as ops from "../ops.js";
+import type * as publicStats from "../publicStats.js";
 import type * as relevance from "../relevance.js";
 import type * as review from "../review.js";
 import type * as seed from "../seed.js";
@@ -41,6 +42,7 @@ declare const fullApi: ApiFromModules<{
   ingestionErrors: typeof ingestionErrors;
   "lib/publish": typeof lib_publish;
   ops: typeof ops;
+  publicStats: typeof publicStats;
   relevance: typeof relevance;
   review: typeof review;
   seed: typeof seed;

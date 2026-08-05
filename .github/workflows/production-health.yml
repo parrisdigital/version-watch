@@ -13,6 +13,23 @@ permissions:
   contents: read
 
 jobs:
+  production-http:
+    name: Production HTTP availability
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Check production HTTP surfaces
+        run: npm run http:production
+
   production-health:
     name: Production freshness check
     runs-on: ubuntu-latest

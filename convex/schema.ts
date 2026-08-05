@@ -136,6 +136,7 @@ export default defineSchema({
     publishedAt: v.number(),
     discoveredAt: v.number(),
     sourceUrl: v.string(),
+    sourceTitle: v.optional(v.string()),
     githubUrl: v.optional(v.string()),
     visibility: v.union(v.literal("public"), v.literal("hidden")),
     createdAt: v.number(),
@@ -148,6 +149,28 @@ export default defineSchema({
     .index("by_importance_and_published", ["importanceBand", "publishedAt"])
     .index("by_importance_visibility_and_published", ["importanceBand", "visibility", "publishedAt"])
     .index("by_visibility_and_published", ["visibility", "publishedAt"]),
+
+  publicEventStats: defineTable({
+    scope: v.union(v.literal("global"), v.literal("vendor")),
+    scopeKey: v.string(),
+    eventCount: v.number(),
+    highSignalCount: v.number(),
+    audiences: v.optional(v.array(v.string())),
+    tags: v.optional(v.array(v.string())),
+    sourceTypes: v.optional(
+      v.array(
+        v.union(
+          v.literal("github_release"),
+          v.literal("changelog_page"),
+          v.literal("docs_page"),
+          v.literal("blog"),
+          v.literal("rss"),
+        ),
+      ),
+    ),
+    rebuiltAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_scope_and_key", ["scope", "scopeKey"]),
 
   eventLinks: defineTable({
     changeEventId: v.id("changeEvents"),

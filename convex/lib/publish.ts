@@ -1,3 +1,5 @@
+import { adjustPublicEventStats } from "../publicStats";
+
 function cleanText(value: string) {
   return value
     .replace(/\s+/g, " ")
@@ -77,20 +79,42 @@ export async function publishRawCandidate(ctx: any, rawCandidate: any) {
     publishedAt: rawCandidate.rawPublishedAt,
     discoveredAt: rawCandidate.discoveredAt,
     sourceUrl: rawCandidate.sourceUrl,
+    sourceTitle: rawCandidate.rawTitle,
     githubUrl: rawCandidate.githubUrl,
     visibility: "public" as const,
     updatedAt: Date.now(),
   };
+  const wasPublic = existingEvent?.visibility === "public";
+  const wasHighSignal = wasPublic && (existingEvent.importanceBand === "critical" || existingEvent.importanceBand === "high");
+  const isHighSignal = rawCandidate.importanceBand === "critical" || rawCandidate.importanceBand === "high";
+
+  async function updateStats() {
+    await adjustPublicEventStats(ctx, {
+      vendorSlug: vendor.slug,
+      eventDelta: wasPublic ? 0 : 1,
+      highSignalDelta: Number(isHighSignal) - Number(wasHighSignal),
+      audiences: rawCandidate.proposedWhoShouldCare,
+      tags: [
+        ...rawCandidate.proposedCategories,
+        ...(rawCandidate.proposedTopicTags ?? []),
+        ...rawCandidate.proposedAffectedStack,
+      ],
+      sourceType: source.sourceType,
+    });
+  }
 
   if (existingEvent) {
     await ctx.db.patch(existingEvent._id, eventPayload);
+    await updateStats();
     return existingEvent._id;
   }
 
-  return await ctx.db.insert("changeEvents", {
+  const eventId = await ctx.db.insert("changeEvents", {
     ...eventPayload,
     createdAt: Date.now(),
   });
+  await updateStats();
+  return eventId;
 }
 
 export async function hideStaleDuplicateEvents(ctx: any, rawCandidate: any, activeEventId: any) {
@@ -101,6 +125,7 @@ export async function hideStaleDuplicateEvents(ctx: any, rawCandidate: any, acti
     )
     .collect();
   let hidden = 0;
+  const vendor = await ctx.db.get(rawCandidate.vendorId);
 
   for (const event of duplicateEvents) {
     if (
@@ -117,6 +142,13 @@ export async function hideStaleDuplicateEvents(ctx: any, rawCandidate: any, acti
       visibility: "hidden" as const,
       updatedAt: Date.now(),
     });
+    if (vendor) {
+      await adjustPublicEventStats(ctx, {
+        vendorSlug: vendor.slug,
+        eventDelta: -1,
+        highSignalDelta: event.importanceBand === "critical" || event.importanceBand === "high" ? -1 : 0,
+      });
+    }
     hidden += 1;
   }
 
@@ -137,6 +169,15 @@ export async function hidePublishedRawCandidate(ctx: any, rawCandidateId: any) {
     visibility: "hidden" as const,
     updatedAt: Date.now(),
   });
+  const vendor = await ctx.db.get(existingEvent.vendorId);
+  if (vendor) {
+    await adjustPublicEventStats(ctx, {
+      vendorSlug: vendor.slug,
+      eventDelta: -1,
+      highSignalDelta:
+        existingEvent.importanceBand === "critical" || existingEvent.importanceBand === "high" ? -1 : 0,
+    });
+  }
 
   return existingEvent._id;
 }

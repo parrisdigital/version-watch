@@ -607,6 +607,8 @@ async function runIngestion(
     sourceUrl?: string;
   },
 ) {
+  await ctx.runAction(internal.publicStats.ensureInitialized, {});
+
   const refreshStart = await ctx.runMutation(internal.ingestState.startRefreshRun, {
     runType: options.runType,
     force: options.force,
@@ -764,11 +766,13 @@ export const runDeepDiff: ReturnType<typeof internalAction> = internalAction({
     skipReason: v.optional(v.string()),
   }),
   handler: async (ctx) => {
-    return await runIngestion(ctx, {
+    const result = await runIngestion(ctx, {
       force: true,
       runType: "deep_diff",
       reason: "Daily deep-diff refresh.",
     });
+    await ctx.runAction(internal.publicStats.rebuildInternal, {});
+    return result;
   },
 });
 
