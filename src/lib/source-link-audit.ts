@@ -10,6 +10,8 @@ const ALLOWED_DETAIL_PATTERNS: Record<string, RegExp[]> = {
     /^https:\/\/(?:www\.)?anthropic\.com\/news\//i,
     /^https:\/\/(?:www\.)?anthropic\.com\/glasswing/i,
     /^https:\/\/platform\.claude\.com\/docs\//i,
+    /^https:\/\/platform\.claude\.com\/(?:workbench|settings\/keys)(?:[/?#]|$)/i,
+    /^https:\/\/code\.claude\.com\/docs\//i,
     /^https:\/\/support\.claude\.com\/en\/articles\//i,
   ],
   "better-auth": [/^https:\/\/github\.com\/better-auth\/better-auth\/releases/i],
@@ -17,6 +19,10 @@ const ALLOWED_DETAIL_PATTERNS: Record<string, RegExp[]> = {
     /^https:\/\/github\.com\/Emanuele-web04\/dpcode\/releases/i,
     /^https:\/\/github\.com\/Emanuele-web04\/synara\/releases/i,
   ],
+  "google-antigravity": [
+    /^https:\/\/(?:www\.)?antigravity\.google\/(?:releases|download)(?:[/?#]|$)/i,
+  ],
+  openai: [/^https:\/\/learn\.chatgpt\.com\/docs\/changelog(?:[/?#]|$)/i],
   supabase: [/^https:\/\/github\.com\/orgs\/supabase\/discussions\//i],
   warp: [/^https:\/\/docs\.warp\.dev\/changelog/i],
 };

@@ -1243,7 +1243,7 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
   }
 
   if (parserKey === "grok-build:changelog_page") {
-    return parseGrokBuildMarkdownEntries(lines);
+    return parseGrokBuildMarkdownEntries(sourceUrl, lines);
   }
 
   if (parserKey === "firecrawl:changelog_page") {
@@ -1672,7 +1672,15 @@ function parseOpenAIMarkdownEntries(sourceUrl: string, lines: string[]) {
   return dedupeEntries(entries);
 }
 
-function parseGrokBuildMarkdownEntries(lines: string[]) {
+function parseGrokBuildMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const sourceHost = new URL(sourceUrl).hostname;
+  if (
+    sourceHost === "r.jina.ai" &&
+    !lines.some((line) => /^URL Source:\s*https:\/\/x\.ai\/build\/changelog\/?\s*$/i.test(line.trim()))
+  ) {
+    return [];
+  }
+
   const entries: ParsedSourceEntry[] = [];
   let activeDate: number | null = null;
 

@@ -1,4 +1,5 @@
-import { internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { internalAction, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
 import {
@@ -18,6 +19,36 @@ import {
   getNextDueAt,
   getPollIntervalMinutesForFreshnessTier,
 } from "./sourceFreshness";
+
+const MAX_SOURCES_PER_VENDOR = 50;
+const CLEAR_CONTENT_BATCH_SIZE = 500;
+const MAX_CLEAR_BATCHES_PER_TABLE = 1_000;
+const clearContentTableValidator = v.union(
+  v.literal("eventLinks"),
+  v.literal("changeEvents"),
+  v.literal("reviewActions"),
+  v.literal("rawCandidates"),
+  v.literal("ingestionRuns"),
+  v.literal("refreshRuns"),
+);
+const clearContentCountsValidator = v.object({
+  eventLinks: v.number(),
+  changeEvents: v.number(),
+  rawCandidates: v.number(),
+  reviewActions: v.number(),
+  ingestionRuns: v.number(),
+  refreshRuns: v.number(),
+});
+const CLEAR_CONTENT_TABLES = [
+  "eventLinks",
+  "changeEvents",
+  "reviewActions",
+  "rawCandidates",
+  "ingestionRuns",
+  "refreshRuns",
+] as const;
+
+type ClearContentTable = (typeof CLEAR_CONTENT_TABLES)[number];
 
 function getImportanceScore(band: "critical" | "high" | "medium" | "low") {
   if (band === "critical") return 90;
@@ -173,7 +204,13 @@ async function syncVendorRegistryRecords(ctx: any) {
     const existingSources = await ctx.db
       .query("sources")
       .withIndex("by_vendor", (q: any) => q.eq("vendorId", vendorId))
-      .collect();
+      .take(MAX_SOURCES_PER_VENDOR + 1);
+
+    if (existingSources.length > MAX_SOURCES_PER_VENDOR) {
+      throw new Error(
+        `Vendor ${vendor.slug} exceeded the ${MAX_SOURCES_PER_VENDOR}-source registry boundary.`,
+      );
+    }
 
     for (const source of existingSources) {
       if (!allowedSourceUrls.has(source.url) && source.isActive) {
@@ -210,61 +247,71 @@ export const syncRegistry = internalMutation({
   },
 });
 
-export const clearContent = internalMutation({
-  args: {},
+export const clearContentBatch = internalMutation({
+  args: {
+    table: clearContentTableValidator,
+    limit: v.optional(v.number()),
+  },
   returns: v.object({
-    eventLinks: v.number(),
-    changeEvents: v.number(),
-    rawCandidates: v.number(),
-    reviewActions: v.number(),
-    ingestionRuns: v.number(),
-    refreshRuns: v.number(),
+    deleted: v.number(),
+    hasMore: v.boolean(),
   }),
+  handler: async (ctx, args) => {
+    const limit = Math.min(
+      CLEAR_CONTENT_BATCH_SIZE,
+      Math.max(1, Math.trunc(args.limit ?? CLEAR_CONTENT_BATCH_SIZE)),
+    );
+    const rows = await ctx.db.query(args.table).take(limit);
+
+    await Promise.all(rows.map((row) => ctx.db.delete(row._id)));
+
+    return {
+      deleted: rows.length,
+      hasMore: rows.length === limit,
+    };
+  },
+});
+
+export const clearContent = internalAction({
+  args: {},
+  returns: clearContentCountsValidator,
   handler: async (ctx) => {
-    let eventLinks = 0;
-    let changeEvents = 0;
-    let rawCandidates = 0;
-    let reviewActions = 0;
-    let ingestionRuns = 0;
-    let refreshRuns = 0;
+    const counts: Record<ClearContentTable, number> = {
+      eventLinks: 0,
+      changeEvents: 0,
+      reviewActions: 0,
+      rawCandidates: 0,
+      ingestionRuns: 0,
+      refreshRuns: 0,
+    };
 
-    for (const row of await ctx.db.query("eventLinks").collect()) {
-      await ctx.db.delete(row._id);
-      eventLinks += 1;
-    }
+    for (const table of CLEAR_CONTENT_TABLES) {
+      let hasMore = true;
 
-    for (const row of await ctx.db.query("changeEvents").collect()) {
-      await ctx.db.delete(row._id);
-      changeEvents += 1;
-    }
+      for (let batch = 0; hasMore; batch += 1) {
+        if (batch >= MAX_CLEAR_BATCHES_PER_TABLE) {
+          throw new Error(
+            `Clearing ${table} exceeded ${MAX_CLEAR_BATCHES_PER_TABLE} batches.`,
+          );
+        }
 
-    for (const row of await ctx.db.query("reviewActions").collect()) {
-      await ctx.db.delete(row._id);
-      reviewActions += 1;
-    }
-
-    for (const row of await ctx.db.query("rawCandidates").collect()) {
-      await ctx.db.delete(row._id);
-      rawCandidates += 1;
-    }
-
-    for (const row of await ctx.db.query("ingestionRuns").collect()) {
-      await ctx.db.delete(row._id);
-      ingestionRuns += 1;
-    }
-
-    for (const row of await ctx.db.query("refreshRuns").collect()) {
-      await ctx.db.delete(row._id);
-      refreshRuns += 1;
+        const result: { deleted: number; hasMore: boolean } =
+          await ctx.runMutation(internal.seed.clearContentBatch, {
+            table,
+            limit: CLEAR_CONTENT_BATCH_SIZE,
+          });
+        counts[table] += result.deleted;
+        hasMore = result.hasMore;
+      }
     }
 
     return {
-      eventLinks,
-      changeEvents,
-      rawCandidates,
-      reviewActions,
-      ingestionRuns,
-      refreshRuns,
+      eventLinks: counts.eventLinks,
+      changeEvents: counts.changeEvents,
+      rawCandidates: counts.rawCandidates,
+      reviewActions: counts.reviewActions,
+      ingestionRuns: counts.ingestionRuns,
+      refreshRuns: counts.refreshRuns,
     };
   },
 });

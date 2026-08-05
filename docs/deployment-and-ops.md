@@ -163,15 +163,21 @@ parsing.
 GitHub Actions runs `.github/workflows/production-health.yml`:
 
 - every four hours at minute 23
-- after pushes to `main`, with a short wait for the production deploy window
 - manually through `workflow_dispatch`
-- on PRs that change the monitor, health script, package metadata, or production freshness query
+- records route latency, payload size, and exact public event count for every run
+- uploads the capacity snapshot as a 90-day GitHub Actions artifact
+
+The production HTTP monitor fails when a route exceeds its response-time or payload budget, or when the
+public event count passes the 10,000-event capacity-review boundary. It begins warning at 70% of each
+budget so sitemap or route growth is visible before the hard gate. The GitHub step summary provides the
+current snapshot; retained `production-http-metrics-*` artifacts provide the run-by-run history.
 
 GitHub Actions also includes `.github/workflows/convex-production.yml`:
 
 - manually deploys the shared `development` Convex environment through `workflow_dispatch`
 - deploys the `production` Convex environment on pushes to `main` that touch `convex/**`, package metadata, or the workflow itself
 - runs `npm test` before deploy
+- enforces the rollback compatibility safety window before deploy
 - deploys with `npx convex deploy --typecheck try`
 - fails clearly when the selected GitHub environment does not define `CONVEX_DEPLOY_KEY`
 - runs production freshness after production Convex deploy and the production web deploy window
@@ -179,6 +185,22 @@ GitHub Actions also includes `.github/workflows/convex-production.yml`:
 A failed run is the alert. It shows up in the GitHub Actions UI and in normal GitHub notification surfaces for
 the repository. The first response is to check whether production ingestion failed, whether a source is stale,
 or whether parser noise made it into the top feed.
+
+### Rollback compatibility removal
+
+The bounded `events:listPublic` and `events:byVendorSlug` functions remain temporarily available for rollback
+to a pre-pagination frontend. `npm run rollback:gate` prevents either function from being removed before
+August 12, 2026 in America/Toronto and prevents partial removal at any time.
+
+After the date gate opens, remove both functions together only when all of the following are true:
+
+1. Convex deploy, production HTTP, freshness, source-link, and vendor-coverage jobs remained green for a full week.
+2. No active Vercel production deployment references either compatibility query.
+3. A repository search confirms no application call site references either function.
+4. The current paginated frontend has been production-verified immediately before removal.
+
+After removal, deploy Convex production, rerun the HTTP and data-quality workflows, and retain the previous
+known-good deployment until the verification completes.
 
 ### Weekly
 

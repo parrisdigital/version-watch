@@ -67,6 +67,50 @@ describe("source link audit", () => {
     expect(report.warning_count).toBe(0);
   });
 
+  it.each([
+    {
+      vendorSlug: "google-antigravity",
+      title: "Google Antigravity 2.5.0",
+      detailUrl: "https://www.antigravity.google/releases?tab=hub&version=2.5.0",
+    },
+    {
+      vendorSlug: "google-antigravity",
+      title: "Google Antigravity CLI 1.1.10",
+      detailUrl: "https://www.antigravity.google/download#antigravity-cli",
+    },
+    {
+      vendorSlug: "anthropic",
+      title: "Claude Console workbench sunset",
+      detailUrl: "https://platform.claude.com/workbench",
+    },
+    {
+      vendorSlug: "anthropic",
+      title: "Trusted devices for Remote Control",
+      detailUrl: "https://code.claude.com/docs/en/remote-control#trusted-devices",
+    },
+    {
+      vendorSlug: "openai",
+      title: "Codex CLI 0.143.0",
+      detailUrl: "https://learn.chatgpt.com/docs/changelog",
+    },
+  ])("accepts official detail links emitted by $vendorSlug release notes", ({ vendorSlug, title, detailUrl }) => {
+    const report = auditSourceLinks({
+      vendors: vendors.filter((vendor) => vendor.slug === vendorSlug),
+      updates: [
+        {
+          id: `${vendorSlug}-official-linked-detail`,
+          vendor_slug: vendorSlug,
+          title,
+          source_url: detailUrl,
+          source_detail_url: detailUrl,
+        },
+      ],
+    });
+
+    expect(report.error_count).toBe(0);
+    expect(report.warning_count).toBe(0);
+  });
+
   it("flags known blog URLs published from changelog sources", () => {
     const report = auditSourceLinks({
       vendors: vendors.filter((vendor) => vendor.slug === "supabase"),

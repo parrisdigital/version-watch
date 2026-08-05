@@ -18,6 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
+    env:
+      CAPACITY_WARNING_RATIO: "0.7"
+      MAX_PUBLIC_EVENT_COUNT: "10000"
+      PRODUCTION_HTTP_METRICS_PATH: artifacts/production-http-metrics.json
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -29,6 +34,15 @@ jobs:
 
       - name: Check production HTTP surfaces
         run: npm run http:production
+
+      - name: Upload production HTTP capacity snapshot
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: production-http-metrics-${{ github.run_id }}
+          path: artifacts/production-http-metrics.json
+          if-no-files-found: ignore
+          retention-days: 90
 
   production-health:
     name: Production freshness check

@@ -442,6 +442,25 @@ May 28, 2026
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-08-03T00:00:00.000Z"));
   });
 
+  it("rejects Grok Build mirror content without official xAI provenance", () => {
+    const markdown = `
+      Title: Unrelated changelog
+      URL Source: https://example.com/changelog
+      Markdown Content:
+      August 3, 2026
+      ## Grok Build 99.0.0
+      * This content did not come from the registered xAI source.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "grok-build:changelog_page",
+      sourceUrl: "https://r.jina.ai/https://x.ai/build/changelog",
+      html: markdown,
+    });
+
+    expect(entries).toEqual([]);
+  });
+
   it("parses Groq date-led changelog entries and cleans run-together verbs", () => {
     const html = `
       <main>

@@ -10,6 +10,16 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 - Switch OpenRouter from the stale docs changelog URL to OpenRouter's official blog RSS feed so updates can be ingested and published again.
 - Remove stale unsupported-source fallback notes for vendors that now have active machine-readable sources.
+- Replace unbounded public and administrative Convex reads with paginated or explicitly bounded operations.
+- Repair current Exa, Antigravity, Grok Build, LangSmith, Netlify, OpenAI, and PlanetScale ingestion formats.
+- Accept exact official linked-detail surfaces emitted by Antigravity, Anthropic, and OpenAI release notes.
+
+### Changed
+
+- Separate production HTTP availability from ingestion data-quality checks after Convex deployments.
+- Record route latency, payload size, and public event-count capacity snapshots as retained workflow artifacts.
+- Gate rollback-query removal until the production stability window and client-reference checks pass.
+- Reject proxied Grok Build content unless it declares the registered official xAI changelog as its source.
 
 ## [0.1.13] - 2026-06-07
 
