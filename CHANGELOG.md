@@ -6,6 +6,23 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 
 ## Unreleased
 
+## [0.2.0] - 2026-08-05
+
+### Added
+
+- Add bounded public event statistics and paginated read models for homepage, search, vendor, API, feed, taxonomy, and sitemap surfaces.
+- Add production HTTP latency, payload, and event-count capacity snapshots with retained GitHub Actions artifacts.
+- Add an enforceable rollback-compatibility gate for the temporary pre-pagination query surface.
+
+### Changed
+
+- Refine event-page source, report, citation, and JSON actions across desktop and mobile layouts.
+- Separate production HTTP availability from ingestion data-quality checks after Convex deployments.
+- Record route latency, payload size, and public event-count capacity snapshots as retained workflow artifacts.
+- Gate rollback-query removal until the production stability window and client-reference checks pass.
+- Reject proxied Grok Build content unless it declares the registered official xAI changelog as its source.
+- Upgrade Next.js, Convex, Tailwind PostCSS, and vulnerable transitive dependencies to their patched releases.
+
 ### Fixed
 
 - Switch OpenRouter from the stale docs changelog URL to OpenRouter's official blog RSS feed so updates can be ingested and published again.
@@ -13,13 +30,11 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Replace unbounded public and administrative Convex reads with paginated or explicitly bounded operations.
 - Repair current Exa, Antigravity, Grok Build, LangSmith, Netlify, OpenAI, and PlanetScale ingestion formats.
 - Accept exact official linked-detail surfaces emitted by Antigravity, Anthropic, and OpenAI release notes.
+- Prevent the global vendor-coverage sample from reporting false zero-update failures for vendors with older published history.
 
-### Changed
+### Security
 
-- Separate production HTTP availability from ingestion data-quality checks after Convex deployments.
-- Record route latency, payload size, and public event-count capacity snapshots as retained workflow artifacts.
-- Gate rollback-query removal until the production stability window and client-reference checks pass.
-- Reject proxied Grok Build content unless it declares the registered official xAI changelog as its source.
+- Clear all npm audit findings, including the previously reported high-severity advisory groups.
 
 ## [0.1.13] - 2026-06-07
 
@@ -207,6 +222,7 @@ Version Watch uses GitHub Releases and semantic version tags for human-readable 
 - Enabled GitHub secret scanning, push protection, Dependabot alerts, and Dependabot security updates.
 - Patched the PostCSS advisory with an npm override to `postcss@8.5.12`.
 
+[0.2.0]: https://github.com/parrisdigital/version-watch/releases/tag/v0.2.0
 [0.1.13]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.13
 [0.1.12]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.12
 [0.1.11]: https://github.com/parrisdigital/version-watch/releases/tag/v0.1.11
