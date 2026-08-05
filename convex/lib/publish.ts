@@ -123,7 +123,7 @@ export async function hideStaleDuplicateEvents(ctx: any, rawCandidate: any, acti
     .withIndex("by_vendor_and_published", (q: any) =>
       q.eq("vendorId", rawCandidate.vendorId).eq("publishedAt", rawCandidate.rawPublishedAt),
     )
-    .collect();
+    .take(100);
   let hidden = 0;
   const vendor = await ctx.db.get(rawCandidate.vendorId);
 

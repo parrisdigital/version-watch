@@ -176,7 +176,12 @@ export const vendors: VendorRecord[] = [
     name: "OpenAI",
     description: "Model, API, and Codex updates for application teams.",
     sources: [
-      { name: "API Changelog", url: "https://developers.openai.com/api/docs/changelog", type: "docs_page" },
+      {
+        name: "API Changelog",
+        url: "https://developers.openai.com/api/docs/changelog",
+        surfaceUrl: "https://developers.openai.com/api/docs/changelog",
+        type: "docs_page",
+      },
       { name: "Codex Changelog", url: "https://developers.openai.com/codex/changelog", type: "changelog_page" },
     ],
   },
@@ -205,7 +210,14 @@ export const vendors: VendorRecord[] = [
     slug: "grok-build",
     name: "Grok Build",
     description: "Grok Build CLI, TUI, agent workflow, and coding model release notes.",
-    sources: [{ name: "Grok Build Changelog", url: "https://x.ai/build/changelog", type: "changelog_page" }],
+    sources: [
+      {
+        name: "Grok Build Changelog",
+        url: "https://x.ai/build/changelog",
+        surfaceUrl: "https://x.ai/build/changelog",
+        type: "changelog_page",
+      },
+    ],
   },
   {
     slug: "meta-ai",
@@ -329,7 +341,14 @@ export const vendors: VendorRecord[] = [
     slug: "google-antigravity",
     name: "Google Antigravity",
     description: "Agentic IDE releases, changelog updates, and AI coding workflow changes.",
-    sources: [{ name: "Antigravity Changelog", url: "https://antigravity.google/changelog", type: "changelog_page" }],
+    sources: [
+      {
+        name: "Antigravity Changelog",
+        url: "https://www.antigravity.google/changelog",
+        surfaceUrl: "https://www.antigravity.google/changelog",
+        type: "changelog_page",
+      },
+    ],
   },
   {
     slug: "factory-droid",
@@ -524,7 +543,14 @@ export const vendors: VendorRecord[] = [
     slug: "exa",
     name: "Exa",
     description: "AI search and research API updates.",
-    sources: [{ name: "Exa Changelog", url: "https://exa.ai/docs/changelog", type: "docs_page" }],
+    sources: [
+      {
+        name: "Exa Changelog",
+        url: "https://exa.ai/docs/changelog",
+        surfaceUrl: "https://exa.ai/docs/changelog",
+        type: "docs_page",
+      },
+    ],
   },
   {
     slug: "clerk",
@@ -748,7 +774,14 @@ export const vendors: VendorRecord[] = [
     slug: "netlify",
     name: "Netlify",
     description: "Hosting, agent runners, edge, and developer workflow updates.",
-    sources: [{ name: "Netlify Changelog", url: "https://www.netlify.com/changelog", type: "changelog_page" }],
+    sources: [
+      {
+        name: "Netlify Changelog RSS",
+        url: "https://www.netlify.com/changelog/feed.xml",
+        surfaceUrl: "https://www.netlify.com/changelog/",
+        type: "rss",
+      },
+    ],
   },
   {
     slug: "render",
@@ -802,7 +835,14 @@ export const vendors: VendorRecord[] = [
     slug: "langchain",
     name: "LangChain",
     description: "LangChain and LangSmith platform changelog updates.",
-    sources: [{ name: "LangChain Changelog", url: "https://changelog.langchain.com/", type: "changelog_page" }],
+    sources: [
+      {
+        name: "LangSmith Changelog",
+        url: "https://docs.langchain.com/langsmith/changelog",
+        surfaceUrl: "https://docs.langchain.com/langsmith/changelog",
+        type: "changelog_page",
+      },
+    ],
   },
 ];
 

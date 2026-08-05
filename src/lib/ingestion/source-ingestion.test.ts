@@ -939,6 +939,37 @@ May 28, 2026
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-16T00:00:00.000Z"));
   });
 
+  it("parses Antigravity changelog rows from the rendered page", () => {
+    const html = `
+      <main>
+        <div data-section-row>
+          <div class="version" data-date-pin>
+            <p><a class="version-link" href="/releases?tab=hub&amp;version=2.5.0">2.5.0</a><br>July 31, 2026</p>
+          </div>
+          <div class="description">
+            <h3>Agent workflow improvements</h3>
+            <div class="changes"><p>Added a faster planning workflow for complex tasks.</p></div>
+            <div class="expandable-items"><ul><li>Improved startup reliability.</li></ul></div>
+          </div>
+        </div>
+      </main>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "google-antigravity:changelog_page",
+      sourceUrl: "https://www.antigravity.google/changelog",
+      html,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Google Antigravity 2.5.0",
+      url: "https://www.antigravity.google/releases?tab=hub&version=2.5.0",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.excerpt).toContain("Added a faster planning workflow");
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-07-31T00:00:00.000Z"));
+  });
+
   it("parses Dia article changelog entries", () => {
     const html = `
       <main>
@@ -1077,6 +1108,35 @@ May 28, 2026
     ]);
   });
 
+  it("parses the current OpenAI markdown changelog format", () => {
+    const markdown = `
+      # Changelog
+      ## July, 2026
+      ### Jul 30
+      Update · Model: gpt-5.6-sol · API: v1/responses
+      Starting July 30, GPT-5.6 Luna costs less for high-volume workloads.
+      ### Jul 29
+      Feature
+      Released the official OpenAI Terraform provider for managing API Platform resources.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "openai:docs_page",
+      sourceUrl: "https://developers.openai.com/api/docs/changelog",
+      html: markdown,
+    });
+
+    expect(entries.map((entry) => entry.title)).toEqual([
+      "Starting July 30, GPT-5.6 Luna costs less for high-volume workloads.",
+      "Released the official OpenAI Terraform provider for managing API Platform resources.",
+    ]);
+    expect(entries[0]).toMatchObject({
+      url: "https://developers.openai.com/api/docs/changelog#2026-07-30",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-07-30T00:00:00.000Z"));
+  });
+
   it("parses Anthropic Help Center release-note sections", () => {
     const html = `
       <main>
@@ -1206,6 +1266,61 @@ May 28, 2026
       parseConfidence: "high",
     });
     expect(entries[0]?.publishedAt).toBe(Date.parse("2026-04-01T00:00:00.000Z"));
+  });
+
+  it("parses Exa monthly MDX changelog updates", () => {
+    const markdown = `
+      # Changelog
+      <Update
+        label="July 2026"
+        description={<div><a href="#publication-research">Publication research</a></div>}
+        rss={{
+          title: "July 2026",
+          description: "Expanded publication research and released Exa Agent in MCP."
+        }}
+      >
+        ## Publication research
+        We significantly expanded research over academic publications.
+      </Update>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "exa:docs_page",
+      sourceUrl: "https://exa.ai/docs/changelog",
+      html: markdown,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Exa July 2026 update",
+      url: "https://exa.ai/docs/changelog#publication-research",
+      excerpt: "Expanded publication research and released Exa Agent in MCP.",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-07-31T00:00:00.000Z"));
+  });
+
+  it("parses LangSmith MDX update blocks after the legacy changelog redirect", () => {
+    const markdown = `
+      # LangSmith Cloud changelog
+      <Update label="July 27-31, 2026" rss={{ title: "2026-07-27 - LangSmith Cloud update" }}>
+        ## Observability
+        Evaluator lists now show an evaluator's current name.
+      </Update>
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "langchain:changelog_page",
+      sourceUrl: "https://docs.langchain.com/langsmith/changelog",
+      html: markdown,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "2026-07-27 - LangSmith Cloud update",
+      url: "https://docs.langchain.com/langsmith/changelog#2026-07-27-langsmith-cloud-update",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.excerpt).toContain("Evaluator lists now show");
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-07-27T00:00:00.000Z"));
   });
 
   it("parses Docker Desktop markdown release entries", () => {

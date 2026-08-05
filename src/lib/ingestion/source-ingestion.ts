@@ -1022,7 +1022,42 @@ function decodeJavaScriptStringLiteral(value: string) {
 }
 
 function parseAntigravityEntries(sourceUrl: string, html: string) {
+  const $ = load(html);
   const entries: ParsedSourceEntry[] = [];
+
+  for (const row of $("[data-section-row]").toArray()) {
+    const versionRoot = $(row).find(".version").first();
+    const versionLink = versionRoot.find("a.version-link[href]").first();
+    const version = cleanText(versionLink.text()).match(/\b\d+\.\d+\.\d+\b/)?.[0];
+    const publishedAt = parseDateFromText(cleanText(versionRoot.text()).replace(version ?? "", " "));
+
+    if (!version || !publishedAt) {
+      continue;
+    }
+
+    const description = cleanText($(row).find(".description h3").first().text());
+    const changes = cleanText($(row).find(".changes").first().text());
+    const itemText = $(row)
+      .find(".expandable-items li")
+      .toArray()
+      .map((item) => cleanText($(item).text()))
+      .filter(Boolean)
+      .join(" ");
+    const excerpt = truncateSentence([changes, itemText, description].filter(Boolean).join(" "));
+
+    entries.push({
+      title: `Google Antigravity ${version}`,
+      url: toAbsoluteUrl(versionLink.attr("href"), sourceUrl),
+      excerpt: excerpt || `${description || "Google Antigravity"} release notes.`,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  if (entries.length > 0) {
+    return dedupeEntries(entries);
+  }
+
   const sectionPattern =
     /\{version:"((?:\\.|[^"\\])*)",description:"((?:\\.|[^"\\])*)",accordion:\{changes:"((?:\\.|[^"\\])*)"/g;
 
@@ -1196,7 +1231,15 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
   }
 
   if (parserKey === "exa:docs_page") {
-    return parseExaMarkdownEntries(sourceUrl, lines);
+    return parseExaMarkdownEntries(sourceUrl, markdown);
+  }
+
+  if (parserKey === "langchain:changelog_page") {
+    return parseLangChainMarkdownEntries(sourceUrl, markdown);
+  }
+
+  if (parserKey === "openai:docs_page") {
+    return parseOpenAIMarkdownEntries(sourceUrl, lines);
   }
 
   if (parserKey === "firecrawl:changelog_page") {
@@ -1484,28 +1527,145 @@ function parseDockerMarkdownEntries(sourceUrl: string, lines: string[]) {
   return dedupeEntries(entries);
 }
 
-function parseExaMarkdownEntries(sourceUrl: string, lines: string[]) {
-  const title = stripMarkdown(lines.find((line) => line.trim().startsWith("# "))?.trim().replace(/^#\s+/, "") ?? "");
-  if (!isMeaningfulTitle(title)) {
-    return [] satisfies ParsedSourceEntry[];
+function getMdxUpdateBlocks(markdown: string) {
+  return Array.from(markdown.matchAll(/<Update\b([\s\S]*?)<\/Update>/g), (match) => match[1] ?? "");
+}
+
+function getMdxUpdateBody(block: string) {
+  const lines = block.split(/\r?\n/);
+  const firstLine = lines[0]?.trim() ?? "";
+  const openingEnd = firstLine.endsWith(">")
+    ? 0
+    : lines.findIndex((line) => line.trim() === ">");
+  return lines.slice(Math.max(0, openingEnd + 1));
+}
+
+function parseMdxUpdateDate(label: string, rssTitle: string) {
+  const explicitDate = parseDateFromText(rssTitle) ?? parseDateFromText(label);
+  if (explicitDate) {
+    return explicitDate;
   }
 
-  const pageText = lines.map(stripMarkdown).join(" ");
-  const publishedAt = parseExaPublishedAt(pageText);
-
-  if (!publishedAt) {
-    return [] satisfies ParsedSourceEntry[];
+  const context = parseMonthYearContext(label);
+  if (!context || context.month === undefined) {
+    return null;
   }
 
-  return [
-    {
+  return Date.UTC(context.year, context.month + 1, 0);
+}
+
+function parseExaMarkdownEntries(sourceUrl: string, markdown: string) {
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const block of getMdxUpdateBlocks(markdown)) {
+    const label = block.match(/\blabel="([^"]+)"/)?.[1] ?? "";
+    const rssTitle = block.match(/\btitle:\s*"([^"]+)"/)?.[1] ?? label;
+    const rssDescription = block.match(/\bdescription:\s*"([^"]+)"/)?.[1] ?? "";
+    const publishedAt = parseMdxUpdateDate(label, rssTitle);
+
+    if (!publishedAt || !rssTitle) {
+      continue;
+    }
+
+    const body = getMdxUpdateBody(block);
+    const firstHeading = body.find((line) => /^##\s+/.test(line.trim()));
+    const headingTitle = stripMarkdown(firstHeading?.replace(/^\s*##\s+/, "") ?? "");
+    const title = /^\w+\s+20\d{2}$/.test(rssTitle)
+      ? `Exa ${rssTitle} update`
+      : rssTitle;
+
+    entries.push({
       title,
-      url: sourceUrl.replace(/\.md$/i, ""),
-      excerpt: collectMarkdownExcerpt(lines, lines.findIndex((line) => /^##\s+/i.test(line.trim())) + 1) || title,
+      url: `${sourceUrl.replace(/\.md$/i, "").split("#")[0]}#${slugifyHeading(headingTitle || rssTitle)}`,
+      excerpt: truncateSentence(rssDescription) || collectMarkdownExcerpt(body, 0) || title,
       publishedAt,
       parseConfidence: "high",
-    },
-  ] satisfies ParsedSourceEntry[];
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseLangChainMarkdownEntries(sourceUrl: string, markdown: string) {
+  const entries: ParsedSourceEntry[] = [];
+
+  for (const block of getMdxUpdateBlocks(markdown)) {
+    const label = block.match(/\blabel="([^"]+)"/)?.[1] ?? "";
+    const rssTitle = block.match(/\btitle:\s*"([^"]+)"/)?.[1] ?? "";
+    const publishedAt = parseMdxUpdateDate(label, rssTitle);
+    if (!publishedAt || !isMeaningfulTitle(rssTitle)) {
+      continue;
+    }
+
+    const body = getMdxUpdateBody(block);
+    entries.push({
+      title: rssTitle,
+      url: `${sourceUrl.split("#")[0]}#${slugifyHeading(rssTitle)}`,
+      excerpt: collectMarkdownExcerpt(body, 0) || rssTitle,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function isMarkdownEntryMetadata(value: string) {
+  return /^(?:feature|update|fix|fixed|improvement|deprecation|announcement|general availability|preview)(?:\s*[·|].*)?$/i.test(
+    value,
+  );
+}
+
+function parseOpenAIMarkdownEntries(sourceUrl: string, lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  let context: MonthYearContext | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    const monthHeading = line.match(/^##\s+(.+)$/);
+    if (monthHeading) {
+      context = parseMonthYearContext(monthHeading[1]!);
+      continue;
+    }
+
+    const dateHeading = line.match(/^###\s+(.+)$/);
+    if (!dateHeading || !context) {
+      continue;
+    }
+
+    const publishedAt = parseDateText(stripMarkdown(dateHeading[1]!), context);
+    if (!publishedAt) {
+      continue;
+    }
+
+    const sectionLines: string[] = [];
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      const candidate = lines[cursor]?.trim() ?? "";
+      if (/^#{2,3}\s+/.test(candidate)) {
+        break;
+      }
+
+      const text = stripMarkdown(candidate.replace(/^[-*]\s+/, ""));
+      if (text && !isMarkdownEntryMetadata(text)) {
+        sectionLines.push(text);
+      }
+    }
+
+    const title = sectionLines.find(isMeaningfulTitle);
+    if (!title) {
+      continue;
+    }
+
+    entries.push({
+      title: truncateSentence(title, 160) || title,
+      url: `${sourceUrl.split("#")[0]}#${new Date(publishedAt).toISOString().slice(0, 10)}`,
+      excerpt: truncateSentence(sectionLines.join(" ")) || title,
+      publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
 }
 
 function parseFirecrawlMarkdownEntries(sourceUrl: string, lines: string[]) {

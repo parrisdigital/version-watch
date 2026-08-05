@@ -70,6 +70,11 @@ const refreshRunStatusValidator = v.union(
   v.literal("failure"),
 );
 
+const SOURCE_REGISTRY_LIMIT = 2000;
+const RUNNING_REFRESH_RUN_LIMIT = 100;
+const MATCHING_CANDIDATE_LIMIT = 200;
+const SOURCES_PER_VENDOR_LIMIT = 50;
+
 function buildDedupeKey(sourceId: string, item: { sourceUrl: string; publishedAt: number; title: string }) {
   return `${sourceId}::${item.sourceUrl}::${item.publishedAt}::${item.title.toLowerCase()}`;
 }
@@ -449,7 +454,7 @@ export const listDueSources = internalQuery({
   returns: v.array(v.any()),
   handler: async (ctx, args) => {
     const now = Date.now();
-    const sources = await ctx.db.query("sources").collect();
+    const sources = await ctx.db.query("sources").take(SOURCE_REGISTRY_LIMIT);
 
     const hydrated = await Promise.all(
       sources.map(async (source: any) => {
@@ -554,7 +559,7 @@ export const expireStaleRefreshRuns = internalMutation({
     const runningRuns = await ctx.db
       .query("refreshRuns")
       .withIndex("by_status_and_started_at", (q) => q.eq("status", "running"))
-      .collect();
+      .take(RUNNING_REFRESH_RUN_LIMIT);
     let expired = 0;
 
     for (const run of runningRuns) {
@@ -727,7 +732,7 @@ export const persistSourceEntries = internalMutation({
             .withIndex("by_source_url_published", (q) =>
               q.eq("sourceId", args.sourceId).eq("sourceUrl", item.sourceUrl).eq("rawPublishedAt", item.publishedAt),
             )
-            .collect(),
+            .take(MATCHING_CANDIDATE_LIMIT),
           rawTitle,
         );
       const sameTitleCandidate =
@@ -739,9 +744,9 @@ export const persistSourceEntries = internalMutation({
       const sourceCandidates = sameTitleCandidate
         ? []
         : await ctx.db
-            .query("rawCandidates")
-            .withIndex("by_source_and_title", (q) => q.eq("sourceId", args.sourceId))
-            .collect();
+          .query("rawCandidates")
+          .withIndex("by_source_and_title", (q) => q.eq("sourceId", args.sourceId))
+          .take(MATCHING_CANDIDATE_LIMIT);
       const sameNormalizedTitleCandidate =
         sameTitleCandidate ?? findSameSourceCandidateByTitle(sourceCandidates, rawTitle);
       const sameCanonicalSourceCandidate =
@@ -1018,7 +1023,7 @@ export const enqueueVendorRefreshRequest = internalMutation({
     const sources = await ctx.db
       .query("sources")
       .withIndex("by_vendor", (q) => q.eq("vendorId", vendor._id))
-      .collect();
+      .take(SOURCES_PER_VENDOR_LIMIT);
     const dueSources = sources.filter((source) => {
       return source.isActive && shouldPollLifecycleState(source) && shouldPollSource(source, now, false);
     });

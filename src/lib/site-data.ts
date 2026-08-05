@@ -108,7 +108,8 @@ export async function getHomepageEvents() {
   return withComputedScores(items);
 }
 
-export async function getAllPublicEvents() {
+export async function getOperationalPublicEvents(maxEvents = 5000) {
+  const boundedMaxEvents = Math.max(1, Math.min(Math.trunc(maxEvents), 5000));
   const fallbackDisabled =
     process.env.VERSION_WATCH_DISABLE_DATA_FALLBACK === "1";
 
@@ -124,8 +125,11 @@ export async function getAllPublicEvents() {
     let cursorPosition: UpdateFilters["cursorPosition"];
     let hasMore = true;
 
-    while (hasMore) {
-      const page = await getPublicUpdatesPage({ limit: 100, cursorPosition });
+    while (hasMore && events.length < boundedMaxEvents) {
+      const page = await getPublicUpdatesPage({
+        limit: Math.min(100, boundedMaxEvents - events.length),
+        cursorPosition,
+      });
       events.push(...page.events);
       hasMore = Boolean(page.next_cursor);
       cursorPosition = page.next_cursor
@@ -556,7 +560,7 @@ export async function getSourceHealth(): Promise<SourceHealthView[]> {
 export async function getSourceLinkQualityReport(): Promise<SourceLinkQualityReport> {
   const [vendors, events, freshnessReport] = await Promise.all([
     getVendors(),
-    getAllPublicEvents(),
+    getOperationalPublicEvents(),
     getProductionFreshnessReport({ sinceHours: 8, eventLimit: 24 }),
   ]);
 

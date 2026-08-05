@@ -4,6 +4,8 @@ import { v } from "convex/values";
 import { publishRawCandidate } from "./lib/publish";
 import { deriveSignalMetadataForEvents } from "../src/lib/classification/signal";
 
+const REVIEW_QUEUE_LIMIT = 200;
+
 function requireAdminSecret(suppliedSecret: string | undefined) {
   const expectedSecret = process.env.ADMIN_SECRET;
 
@@ -35,7 +37,8 @@ export const listPending = query({
     const rows = await ctx.db
       .query("rawCandidates")
       .withIndex("by_status_and_published", (q) => q.eq("status", "pending_review"))
-      .collect();
+      .order("desc")
+      .take(REVIEW_QUEUE_LIMIT);
 
     const items = await Promise.all(
       rows.map(async (candidate) => {

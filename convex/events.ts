@@ -189,6 +189,8 @@ function isAfterPublicUpdateCursor(event: any, args: any) {
   return event.slug.localeCompare(args.cursorId) > 0;
 }
 
+// Rollback-only compatibility endpoint for the pre-pagination frontend.
+// Remove after one full stable production week, no earlier than 2026-08-12.
 export const listPublic = query({
   args: {},
   returns: v.array(v.any()),
@@ -375,6 +377,8 @@ export const homepageFeed = query({
   },
 });
 
+// Rollback-only compatibility endpoint for the pre-pagination frontend.
+// Remove with listPublic after the bounded read models clear the rollback window.
 export const byVendorSlug = query({
   args: { slug: v.string() },
   returns: v.array(v.any()),

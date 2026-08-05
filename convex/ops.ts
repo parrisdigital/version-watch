@@ -13,6 +13,8 @@ const STALE_SOURCE_GRACE_MINUTES = 60;
 const RECENT_INGESTION_RUN_LIMIT = 2000;
 const OPEN_REFRESH_REQUEST_LIMIT = 2000;
 const OPEN_REFRESH_REQUEST_STATUSES = ["queued", "running"] as const;
+const SOURCE_REGISTRY_LIMIT = 2000;
+const ACTIVE_VENDOR_LIMIT = 500;
 
 function getStatusForSource(source: any) {
   const lifecycleState = getEffectiveLifecycleState(source);
@@ -237,7 +239,7 @@ export const sourceHealth = query({
   args: {},
   returns: v.array(v.any()),
   handler: async (ctx) => {
-    const sources = await ctx.db.query("sources").collect();
+    const sources = await ctx.db.query("sources").take(SOURCE_REGISTRY_LIMIT);
 
     const items = await Promise.all(
       sources
@@ -287,7 +289,7 @@ export const productionFreshness = query({
     const now = Date.now();
     const since = now - (args.sinceHours ?? 8) * 60 * 60 * 1000;
     const eventLimit = Math.max(1, Math.min(args.eventLimit ?? 24, 100));
-    const sources = await ctx.db.query("sources").collect();
+    const sources = await ctx.db.query("sources").take(SOURCE_REGISTRY_LIMIT);
     const activeSources = sources.filter((source) => source.isActive);
     const monitoredSources = activeSources.filter(isMonitoredSource);
     const pausedSources = activeSources.filter((source) => getEffectiveLifecycleState(source) === "paused");
@@ -398,8 +400,11 @@ export const vendorFreshness = query({
             .withIndex("by_slug", (q) => q.eq("slug", args.slug!))
             .unique(),
         ].filter(Boolean)
-      : await ctx.db.query("vendors").withIndex("by_active_and_sort_order", (q) => q.eq("isActive", true)).collect();
-    const allSources = await ctx.db.query("sources").collect();
+      : await ctx.db
+          .query("vendors")
+          .withIndex("by_active_and_sort_order", (q) => q.eq("isActive", true))
+          .take(ACTIVE_VENDOR_LIMIT);
+    const allSources = await ctx.db.query("sources").take(SOURCE_REGISTRY_LIMIT);
     const refreshRequests = await getOpenRefreshRequests(ctx, args.slug);
 
     const records = vendors.map((vendor: any) => {

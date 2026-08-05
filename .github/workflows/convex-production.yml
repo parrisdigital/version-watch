@@ -126,9 +126,31 @@ jobs:
           console.log(JSON.stringify(result, null, 2));
           NODE
 
-  production-health:
+  production-availability:
     if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') }}
-    name: Production freshness after Convex deploy
+    name: Production HTTP after Convex deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    needs: deploy-production
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Wait for production deploy window
+        run: sleep 180
+
+      - name: Check production HTTP availability
+        run: npm run http:production
+
+  production-data-quality:
+    if: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production') }}
+    name: Production data quality after Convex deploy
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: deploy-production
@@ -194,11 +216,8 @@ jobs:
           GITHUB_BEFORE: ${{ github.event.before }}
           GITHUB_HEAD_SHA: ${{ github.sha }}
 
-      - name: Wait for production deploy window
+      - name: Wait for source refreshes
         run: sleep 180
-
-      - name: Check production HTTP availability
-        run: npm run http:production
 
       - name: Run production freshness check
         run: npm run health:production
