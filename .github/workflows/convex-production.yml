@@ -21,6 +21,7 @@ on:
       - "src/lib/classification/**"
       - "scripts/refresh-changed-vendors.mjs"
       - "scripts/lib/changed-vendor-refresh.mjs"
+      - "scripts/check-vendor-coverage.mjs"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/convex-production.yml"

@@ -75,6 +75,26 @@ const freshnessRecords = freshnessBody.vendors ?? [];
 const freshnessBySlug = new Map(freshnessRecords.map((vendor) => [vendor.vendor_slug, vendor]));
 const updateCounts = getVendorCounts(updates);
 
+// The global scan is intentionally bounded. Confirm apparent zero-count vendors
+// directly so older but valid catalogs do not become false coverage failures.
+const vendorsMissingFromGlobalSample = vendors.filter((vendor) => {
+  const lifecycleState = freshnessBySlug.get(vendor.slug)?.lifecycle_state ?? "missing";
+  return !nonMonitoredStates.has(lifecycleState) && !updateCounts.has(vendor.slug);
+});
+const directCoverageResults = await Promise.all(
+  vendorsMissingFromGlobalSample.map(async (vendor) => {
+    const params = new URLSearchParams({ vendor: vendor.slug, limit: "1" });
+    const body = await fetchJson(`/api/v1/updates?${params.toString()}`);
+    return { slug: vendor.slug, count: body.count ?? body.updates?.length ?? 0 };
+  }),
+);
+
+for (const result of directCoverageResults) {
+  if (result.count > 0) {
+    updateCounts.set(result.slug, result.count);
+  }
+}
+
 if (status.status === "stale") {
   failures.push(`Public API status is stale. latest_refresh_at=${status.latest_refresh_at ?? "null"}`);
 } else if (status.status === "degraded") {
@@ -129,6 +149,7 @@ console.log(`Base URL: ${baseUrl}`);
 console.log(`API status: ${status.status}`);
 console.log(`Vendors checked: ${vendors.length}`);
 console.log(`Updates checked: ${updates.length}`);
+console.log(`Direct vendor fallbacks: ${directCoverageResults.length}`);
 
 if (warnings.length) {
   console.log("\nVendor coverage warnings:");
