@@ -1242,6 +1242,10 @@ function parseMarkdownEntries(sourceUrl: string, markdown: string, parserKey: st
     return parseOpenAIMarkdownEntries(sourceUrl, lines);
   }
 
+  if (parserKey === "grok-build:changelog_page") {
+    return parseGrokBuildMarkdownEntries(lines);
+  }
+
   if (parserKey === "firecrawl:changelog_page") {
     return parseFirecrawlMarkdownEntries(sourceUrl, lines);
   }
@@ -1661,6 +1665,35 @@ function parseOpenAIMarkdownEntries(sourceUrl: string, lines: string[]) {
       url: `${sourceUrl.split("#")[0]}#${new Date(publishedAt).toISOString().slice(0, 10)}`,
       excerpt: truncateSentence(sectionLines.join(" ")) || title,
       publishedAt,
+      parseConfidence: "high",
+    });
+  }
+
+  return dedupeEntries(entries);
+}
+
+function parseGrokBuildMarkdownEntries(lines: string[]) {
+  const entries: ParsedSourceEntry[] = [];
+  let activeDate: number | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]?.trim() ?? "";
+    if (/^(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2},\s+20\d{2}\b/i.test(line)) {
+      activeDate = parseDateFromText(line);
+      continue;
+    }
+
+    const heading = line.match(/^##\s+Grok Build\s+(\d+\.\d+\.\d+)$/i);
+    if (!heading || !activeDate) {
+      continue;
+    }
+
+    const version = heading[1]!;
+    entries.push({
+      title: `Grok Build ${version}`,
+      url: `https://x.ai/build/changelog#${encodeURIComponent(version)}`,
+      excerpt: collectMarkdownExcerpt(lines, index + 1) || `Grok Build ${version} release notes.`,
+      publishedAt: activeDate,
       parseConfidence: "high",
     });
   }

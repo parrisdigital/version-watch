@@ -213,7 +213,7 @@ export const vendors: VendorRecord[] = [
     sources: [
       {
         name: "Grok Build Changelog",
-        url: "https://x.ai/build/changelog",
+        url: "https://r.jina.ai/https://x.ai/build/changelog",
         surfaceUrl: "https://x.ai/build/changelog",
         type: "changelog_page",
       },
@@ -811,7 +811,14 @@ export const vendors: VendorRecord[] = [
     slug: "planetscale",
     name: "PlanetScale",
     description: "Managed database platform, APIs, and tooling release updates.",
-    sources: [{ name: "PlanetScale Changelog", url: "https://planetscale.com/changelog", type: "changelog_page" }],
+    sources: [
+      {
+        name: "PlanetScale Changelog RSS",
+        url: "https://planetscale.com/changelog/feed.atom",
+        surfaceUrl: "https://planetscale.com/changelog",
+        type: "rss",
+      },
+    ],
   },
   {
     slug: "expo",

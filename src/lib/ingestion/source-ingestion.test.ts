@@ -415,6 +415,33 @@ May 28, 2026
     });
   });
 
+  it("parses Grok Build markdown from the datacenter-safe changelog mirror", () => {
+    const markdown = `
+      Title: Grok Build Changelog
+      URL Source: https://x.ai/build/changelog
+      Markdown Content:
+      August 3, 2026 Aug 3, 2026
+      v 0.2.120
+      ## Grok Build 0.2.120
+      * Model picker updates the status bar immediately.
+      * Background task completions consume less memory over ACP.
+    `;
+
+    const entries = parseHtmlEntries({
+      parserKey: "grok-build:changelog_page",
+      sourceUrl: "https://r.jina.ai/https://x.ai/build/changelog",
+      html: markdown,
+    });
+
+    expect(entries[0]).toMatchObject({
+      title: "Grok Build 0.2.120",
+      url: "https://x.ai/build/changelog#0.2.120",
+      parseConfidence: "high",
+    });
+    expect(entries[0]?.excerpt).toContain("Model picker updates");
+    expect(entries[0]?.publishedAt).toBe(Date.parse("2026-08-03T00:00:00.000Z"));
+  });
+
   it("parses Groq date-led changelog entries and cleans run-together verbs", () => {
     const html = `
       <main>
