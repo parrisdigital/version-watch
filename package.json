@@ -27,7 +27,7 @@
     "cheerio": "^1.1.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "convex": "^1.40.0",
+    "convex": "^1.42.0",
     "date-fns": "^4.4.0",
     "gsap": "^3.12.7",
     "lucide-react": "^1.17.0",
