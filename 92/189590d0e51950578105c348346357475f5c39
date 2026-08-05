@@ -1,0 +1,50 @@
+src/lib/source-link-quality.test.ts
+  s_12a1aa838c8e5c::t_d09b7d16323946 70-113
+.github/workflows/convex-production.yml
+  s_12a1aa838c8e5c::t_0a3582ddcd8ff2 25,72-74,114-115
+  s_12a1aa838c8e5c::t_d6e0aaf0d00c6e 144-148,164-171
+  s_12a1aa838c8e5c::t_d591cd97300766 116
+  s_12a1aa838c8e5c::t_69c801735584d3 172
+convex/seed.ts
+  s_12a1aa838c8e5c::t_58214a663bb995 1-2,23-52,207-213,250-254,256-257,259-264,266,268-273,275-286,288-305,309-314
+src/lib/ingestion/source-ingestion.ts
+  s_12a1aa838c8e5c::t_753d9a82c32b8d 1246,1675,1677-1683
+  s_12a1aa838c8e5c::t_18b8dce16d0aa9 1676
+scripts/check-production-http.mjs
+  s_12a1aa838c8e5c::t_d6e0aaf0d00c6e 3-5,8-9,11-22,51-52,56-57,60-68,71-81,105-111,132-187
+  s_12a1aa838c8e5c::t_a7e4060e2a57fc 188
+src/lib/ingestion/source-ingestion.test.ts
+  s_12a1aa838c8e5c::t_753d9a82c32b8d 445-463
+CHANGELOG.md
+  s_12a1aa838c8e5c::t_0a3582ddcd8ff2 13-22
+package.json
+  s_12a1aa838c8e5c::t_0a3582ddcd8ff2 16
+docs/deployment-and-ops.md
+  s_12a1aa838c8e5c::t_0a3582ddcd8ff2 167-173,180,189-203
+  s_12a1aa838c8e5c::t_bc8ee454aeecaa 204
+scripts/lib/source-link-audit.mjs
+  s_12a1aa838c8e5c::t_d09b7d16323946 11-12,20-23
+src/lib/source-link-audit.ts
+  s_12a1aa838c8e5c::t_d09b7d16323946 13-14,22-25
+.github/workflows/production-health.yml
+  s_12a1aa838c8e5c::t_d6e0aaf0d00c6e 21-25,38-45
+  s_12a1aa838c8e5c::t_322422787b6eb5 46
+scripts/check-rollback-gate.mjs
+  s_12a1aa838c8e5c::t_0a3582ddcd8ff2 1-42
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "92189590d0e51950578105c348346357475f5c39",
+  "prompts": {},
+  "sessions": {
+    "s_12a1aa838c8e5c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a2-5ca5-72f1-a822-8e46daf5c6f6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
