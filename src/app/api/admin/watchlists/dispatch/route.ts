@@ -2,10 +2,15 @@ import { fetchMutation, fetchQuery } from "convex/nextjs";
 import { NextResponse } from "next/server";
 
 import { api } from "../../../../../../convex/_generated/api";
-import { getPublicBaseUrl, serializePublicUpdate } from "@/lib/agent-feed";
+import {
+  decodeUpdateCursor,
+  getPublicBaseUrl,
+  serializePublicUpdate,
+  type UpdateFilters,
+} from "@/lib/agent-feed";
 import { clusterChangeEvents } from "@/lib/change-clusters";
 import { comparePublicClusters, serializePublicCluster } from "@/lib/public-clusters";
-import { getAllPublicEvents } from "@/lib/site-data";
+import { getPublicUpdatesPage, type SiteEvent } from "@/lib/site-data";
 import {
   buildCanonicalNotificationPayload,
   getWatchlistDeliveryMode,
@@ -85,13 +90,29 @@ export async function POST(request: Request) {
   const adminSecret = process.env.ADMIN_SECRET!;
 
   try {
-    const [state, events] = await Promise.all([
-      fetchQuery(convexApi.watchlists.dispatchState, {
-        adminSecret,
-        watchlistId,
-      }),
-      getAllPublicEvents(),
-    ]);
+    const state = await fetchQuery(convexApi.watchlists.dispatchState, {
+      adminSecret,
+      watchlistId,
+    });
+    const defaultSince = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const dispatchTimes = state.watchlists
+      .map((watchlist: any) => Date.parse(watchlist.last_dispatch_at ?? ""))
+      .filter(Number.isFinite);
+    const sinceTimestamp = dispatchTimes.length ? Math.min(...dispatchTimes) : defaultSince;
+    const events: SiteEvent[] = [];
+    let cursorPosition: UpdateFilters["cursorPosition"];
+
+    while (events.length < 1000) {
+      const page = await getPublicUpdatesPage({
+        sinceTimestamp,
+        limit: 100,
+        cursorPosition,
+      });
+      events.push(...page.events);
+      if (!page.next_cursor) break;
+      cursorPosition = decodeUpdateCursor(page.next_cursor) ?? undefined;
+      if (!cursorPosition) break;
+    }
     const baseUrl = getPublicBaseUrl(request.url);
     const delivered = new Set<string>(
       state.deliveries.map((delivery: any) => `${String(delivery.watchlist_id)}:${delivery.event_slug}`),

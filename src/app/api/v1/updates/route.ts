@@ -34,6 +34,7 @@ export async function GET(request: Request) {
       status_url: new URL("/api/v1/status", baseUrl).toString(),
       count: updates.length,
       total_count: page.total_count,
+      total_count_is_exact: page.total_count_is_exact,
       next_cursor: page.next_cursor,
       filters: {
         since: parsed.filters.since ?? null,

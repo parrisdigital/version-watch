@@ -8,7 +8,13 @@ import {
   type ImpactConfidence,
   type ReleaseClass,
 } from "@/lib/classification/signal";
-import { getSourceSurfaceUrl, type ImportanceBand, type MockEvent, type SourceType, type VendorRecord } from "@/lib/mock-data";
+import {
+  getSourceSurfaceUrl,
+  type ImportanceBand,
+  type MockEvent,
+  type SourceType,
+  type VendorRecord,
+} from "@/lib/mock-data";
 
 export const DEFAULT_PUBLIC_BASE_URL = "https://versionwatch.dev";
 export const PUBLIC_API_SCHEMA_VERSION = "2026-04-26";
@@ -24,7 +30,12 @@ export const PUBLIC_AGENT_HEADERS = {
 };
 export const AGENT_TEXT_CACHE_CONTROL = "public, max-age=300, s-maxage=600";
 
-export const PUBLIC_SEVERITIES = ["critical", "high", "medium", "low"] as const satisfies readonly ImportanceBand[];
+export const PUBLIC_SEVERITIES = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+] as const satisfies readonly ImportanceBand[];
 const severityBands = new Set<ImportanceBand>(PUBLIC_SEVERITIES);
 const releaseClassValues = new Set<ReleaseClass>(RELEASE_CLASSES);
 
@@ -66,7 +77,11 @@ export type PublicVendor = {
   }>;
 };
 
-export type PublicApiErrorCode = "invalid_filter" | "invalid_cursor" | "not_found" | "server_error";
+export type PublicApiErrorCode =
+  | "invalid_filter"
+  | "invalid_cursor"
+  | "not_found"
+  | "server_error";
 
 export type PublicApiError = {
   error: {
@@ -84,6 +99,8 @@ export type UpdateFilters = {
   since?: string;
   sinceTimestamp?: number;
   vendor?: string;
+  query?: string;
+  sourceType?: SourceType;
   severity?: ImportanceBand;
   releaseClass?: ReleaseClass;
   audience?: string;
@@ -128,7 +145,10 @@ type ParseResult =
   | { ok: true; filters: UpdateFilters }
   | { ok: false; error: PublicApiError };
 
-export function publicApiError(code: PublicApiErrorCode, message: string): PublicApiError {
+export function publicApiError(
+  code: PublicApiErrorCode,
+  message: string,
+): PublicApiError {
   return {
     error: {
       code,
@@ -146,13 +166,17 @@ function unique(values: string[]) {
 }
 
 function sortedUnique(values: string[]) {
-  return unique(values.map((value) => normalize(value))).sort((a, b) => a.localeCompare(b));
+  return unique(values.map((value) => normalize(value))).sort((a, b) =>
+    a.localeCompare(b),
+  );
 }
 
 function normalizeBaseUrl(value: string | undefined | null) {
   const trimmed = (value ?? "").trim();
   if (!trimmed) return null;
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
 
   try {
     const url = new URL(withProtocol);
@@ -176,7 +200,8 @@ function etagForContent(content: string) {
 }
 
 export function buildAgentDiscoveryLinks(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
   const resources = [
     {
       path: "/.well-known/api-catalog",
@@ -196,14 +221,44 @@ export function buildAgentDiscoveryLinks(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
       type: "text/html",
       title: "Version Watch API documentation",
     },
-    { path: "/api/v1/status", rel: "status", type: "application/json", title: "Version Watch API status" },
-    { path: "/llms-full.txt", rel: "describedby", type: "text/markdown", title: "Version Watch full LLM context" },
+    {
+      path: "/api/v1/status",
+      rel: "status",
+      type: "application/json",
+      title: "Version Watch API status",
+    },
+    {
+      path: "/llms-full.txt",
+      rel: "describedby",
+      type: "text/markdown",
+      title: "Version Watch full LLM context",
+    },
     { path: "/llms.txt", type: "text/plain", title: "Version Watch llms.txt" },
-    { path: "/llms-full.txt", type: "text/markdown", title: "Version Watch full LLM context" },
-    { path: "/agents.md", type: "text/markdown", title: "Version Watch agent guide" },
-    { path: "/skills/version-watch/SKILL.md", type: "text/markdown", title: "Version Watch skill" },
-    { path: "/api/v1/openapi.json", type: "application/json", title: "Version Watch OpenAPI" },
-    { path: "/.well-known/agent-skills", type: "application/json", title: "Version Watch agent skills" },
+    {
+      path: "/llms-full.txt",
+      type: "text/markdown",
+      title: "Version Watch full LLM context",
+    },
+    {
+      path: "/agents.md",
+      type: "text/markdown",
+      title: "Version Watch agent guide",
+    },
+    {
+      path: "/skills/version-watch/SKILL.md",
+      type: "text/markdown",
+      title: "Version Watch skill",
+    },
+    {
+      path: "/api/v1/openapi.json",
+      type: "application/json",
+      title: "Version Watch OpenAPI",
+    },
+    {
+      path: "/.well-known/agent-skills",
+      type: "application/json",
+      title: "Version Watch agent skills",
+    },
   ];
 
   return resources
@@ -247,12 +302,16 @@ export function getPublicBaseUrl(requestUrl?: string) {
 }
 
 export function encodeUpdateCursor(cursor: UpdateCursor) {
-  return Buffer.from(JSON.stringify({ v: 2, ...cursor }), "utf8").toString("base64url");
+  return Buffer.from(JSON.stringify({ v: 2, ...cursor }), "utf8").toString(
+    "base64url",
+  );
 }
 
 export function decodeUpdateCursor(cursor: string) {
   try {
-    const parsed = JSON.parse(Buffer.from(cursor, "base64url").toString("utf8"));
+    const parsed = JSON.parse(
+      Buffer.from(cursor, "base64url").toString("utf8"),
+    );
     if (
       typeof parsed === "object" &&
       parsed !== null &&
@@ -284,7 +343,10 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
     if (!Number.isFinite(parsed)) {
       return {
         ok: false,
-        error: publicApiError("invalid_filter", "Invalid since timestamp. Use an ISO 8601 timestamp."),
+        error: publicApiError(
+          "invalid_filter",
+          "Invalid since timestamp. Use an ISO 8601 timestamp.",
+        ),
       };
     }
 
@@ -296,15 +358,23 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
   if (severity && !severityBands.has(severity as ImportanceBand)) {
     return {
       ok: false,
-      error: publicApiError("invalid_filter", "Invalid severity. Use critical, high, medium, or low."),
+      error: publicApiError(
+        "invalid_filter",
+        "Invalid severity. Use critical, high, medium, or low.",
+      ),
     };
   }
 
-  const releaseClass = normalize(searchParams.get("release_class") ?? searchParams.get("releaseClass"));
+  const releaseClass = normalize(
+    searchParams.get("release_class") ?? searchParams.get("releaseClass"),
+  );
   if (releaseClass && !releaseClassValues.has(releaseClass as ReleaseClass)) {
     return {
       ok: false,
-      error: publicApiError("invalid_filter", "Invalid release_class. Use a value returned by /api/v1/taxonomy."),
+      error: publicApiError(
+        "invalid_filter",
+        "Invalid release_class. Use a value returned by /api/v1/taxonomy.",
+      ),
     };
   }
 
@@ -314,7 +384,13 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
   if (limitRaw) {
     const parsed = Number(limitRaw);
     if (!Number.isFinite(parsed) || !Number.isInteger(parsed) || parsed <= 0) {
-      return { ok: false, error: publicApiError("invalid_filter", "Invalid limit. Use a positive integer.") };
+      return {
+        ok: false,
+        error: publicApiError(
+          "invalid_filter",
+          "Invalid limit. Use a positive integer.",
+        ),
+      };
     }
 
     limit = parsed;
@@ -326,7 +402,13 @@ export function parseUpdateFilters(searchParams: URLSearchParams): ParseResult {
   if (cursor) {
     const decoded = decodeUpdateCursor(cursor);
     if (decoded === null) {
-      return { ok: false, error: publicApiError("invalid_cursor", "Invalid cursor. Use a cursor returned by next_cursor.") };
+      return {
+        ok: false,
+        error: publicApiError(
+          "invalid_cursor",
+          "Invalid cursor. Use a cursor returned by next_cursor.",
+        ),
+      };
     }
     cursorPosition = decoded;
   }
@@ -353,43 +435,80 @@ export function filterEventsForPublicUpdateMatches<T extends MockEvent>(
   filters: UpdateFilters,
   now = Date.now(),
 ) {
-  return events
-    .filter((event) => {
-      if (Date.parse(event.publishedAt) - now > MAX_FUTURE_SKEW_MS) {
-        return false;
-      }
+  return events.filter((event) => {
+    if (Date.parse(event.publishedAt) - now > MAX_FUTURE_SKEW_MS) {
+      return false;
+    }
 
-      if (filters.sinceTimestamp !== undefined && Date.parse(event.publishedAt) < filters.sinceTimestamp) {
-        return false;
-      }
+    if (
+      filters.sinceTimestamp !== undefined &&
+      Date.parse(event.publishedAt) < filters.sinceTimestamp
+    ) {
+      return false;
+    }
 
-      if (filters.vendor && normalize(event.vendorSlug) !== filters.vendor) {
-        return false;
-      }
+    if (filters.vendor && normalize(event.vendorSlug) !== filters.vendor) {
+      return false;
+    }
 
-      if (filters.severity && getEventSignalMetadata(event).importanceBand !== filters.severity) {
-        return false;
-      }
+    if (filters.sourceType && event.sourceType !== filters.sourceType) {
+      return false;
+    }
 
-      if (filters.releaseClass && getEventSignalMetadata(event).releaseClass !== filters.releaseClass) {
-        return false;
-      }
+    if (
+      filters.query &&
+      ![
+        event.vendorName,
+        event.title,
+        event.summary,
+        event.whatChanged,
+        event.whyItMatters,
+        ...event.whoShouldCare,
+        ...event.categories,
+        ...(event.topicTags ?? getEventSignalMetadata(event).topicTags),
+        ...event.affectedStack,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(filters.query)
+    ) {
+      return false;
+    }
 
-      if (filters.audience && !event.whoShouldCare.some((item) => normalize(item) === filters.audience)) {
-        return false;
-      }
+    if (
+      filters.severity &&
+      getEventSignalMetadata(event).importanceBand !== filters.severity
+    ) {
+      return false;
+    }
 
-      if (
-        filters.tag &&
-        ![...event.categories, ...(event.topicTags ?? getEventSignalMetadata(event).topicTags), ...event.affectedStack].some(
-          (item) => normalize(item) === filters.tag,
-        )
-      ) {
-        return false;
-      }
+    if (
+      filters.releaseClass &&
+      getEventSignalMetadata(event).releaseClass !== filters.releaseClass
+    ) {
+      return false;
+    }
 
-      return true;
-    });
+    if (
+      filters.audience &&
+      !event.whoShouldCare.some((item) => normalize(item) === filters.audience)
+    ) {
+      return false;
+    }
+
+    if (
+      filters.tag &&
+      ![
+        ...event.categories,
+        ...(event.topicTags ?? getEventSignalMetadata(event).topicTags),
+        ...event.affectedStack,
+      ].some((item) => normalize(item) === filters.tag)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
 }
 
 function compareEventsForPublicPagination(a: MockEvent, b: MockEvent) {
@@ -399,7 +518,8 @@ function compareEventsForPublicPagination(a: MockEvent, b: MockEvent) {
 }
 
 function isEventAfterCursor(event: MockEvent, cursor: UpdateCursor) {
-  const publishedDiff = Date.parse(cursor.publishedAt) - Date.parse(event.publishedAt);
+  const publishedDiff =
+    Date.parse(cursor.publishedAt) - Date.parse(event.publishedAt);
   if (publishedDiff !== 0) return publishedDiff > 0;
   return event.slug.localeCompare(cursor.id) > 0;
 }
@@ -424,7 +544,9 @@ export function paginateEventsForPublicUpdates<T extends MockEvent>(
     .slice()
     .sort(compareEventsForPublicPagination);
   const eligible = filters.cursorPosition
-    ? matches.filter((event) => isEventAfterCursor(event, filters.cursorPosition!))
+    ? matches.filter((event) =>
+        isEventAfterCursor(event, filters.cursorPosition!),
+      )
     : matches;
   const page = eligible.slice(0, filters.limit);
   const lastEvent = page[page.length - 1];
@@ -432,7 +554,10 @@ export function paginateEventsForPublicUpdates<T extends MockEvent>(
   return {
     events: page,
     total_count: matches.length,
-    next_cursor: lastEvent && eligible.length > page.length ? nextCursorForPublicUpdate(lastEvent) : null,
+    next_cursor:
+      lastEvent && eligible.length > page.length
+        ? nextCursorForPublicUpdate(lastEvent)
+        : null,
   };
 }
 
@@ -451,19 +576,26 @@ function hasCategory(event: MockEvent, category: string) {
 function getEventSignalMetadata(event: MockEvent & { computedScore?: number }) {
   const derived = deriveSignalMetadata(event);
 
-  if (event.scoreVersion === SCORE_VERSION && event.releaseClass && event.impactConfidence) {
+  if (
+    event.scoreVersion === SCORE_VERSION &&
+    event.releaseClass &&
+    event.impactConfidence
+  ) {
     return {
       ...derived,
       releaseClass: event.releaseClass,
       impactConfidence: event.impactConfidence,
-      signalReasons: event.signalReasons?.length ? event.signalReasons : derived.signalReasons,
+      signalReasons: event.signalReasons?.length
+        ? event.signalReasons
+        : derived.signalReasons,
       topicTags: event.topicTags?.length ? event.topicTags : derived.topicTags,
       signalScore: event.computedScore ?? derived.signalScore,
       importanceBand: event.importanceBand ?? derived.importanceBand,
       displayTitle: event.title || derived.displayTitle,
-      whyItMatters: event.whyItMatters && !isGenericWhyItMatters(event.whyItMatters)
-        ? event.whyItMatters
-        : derived.whyItMatters,
+      whyItMatters:
+        event.whyItMatters && !isGenericWhyItMatters(event.whyItMatters)
+          ? event.whyItMatters
+          : derived.whyItMatters,
     };
   }
 
@@ -476,7 +608,10 @@ function stackLabel(event: MockEvent) {
 }
 
 function isGenericWhyItMatters(value: string) {
-  return /updated .+ semantics/i.test(value) || /review the official entry/i.test(value);
+  return (
+    /updated .+ semantics/i.test(value) ||
+    /review the official entry/i.test(value)
+  );
 }
 
 export function buildActionableWhyItMatters(event: MockEvent) {
@@ -604,12 +739,20 @@ export function buildRecommendedAction(event: MockEvent) {
   return "Review the official source when this vendor or stack area is relevant to active work.";
 }
 
-export function serializePublicUpdate(event: MockEvent & { computedScore?: number }, baseUrl = DEFAULT_PUBLIC_BASE_URL): PublicUpdate {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+export function serializePublicUpdate(
+  event: MockEvent & { computedScore?: number },
+  baseUrl = DEFAULT_PUBLIC_BASE_URL,
+): PublicUpdate {
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
   const signal = getEventSignalMetadata(event);
   const sourceSurfaceUrl = event.sourceSurfaceUrl ?? event.sourceUrl;
-  const sourceSurfaceName = event.sourceSurfaceName ?? event.sourceName ?? "Official source";
-  const sourceSurfaceType = normalizePublicSourceType(sourceSurfaceUrl, event.sourceSurfaceType ?? event.sourceType);
+  const sourceSurfaceName =
+    event.sourceSurfaceName ?? event.sourceName ?? "Official source";
+  const sourceSurfaceType = normalizePublicSourceType(
+    sourceSurfaceUrl,
+    event.sourceSurfaceType ?? event.sourceType,
+  );
 
   return {
     id: event.slug,
@@ -624,7 +767,11 @@ export function serializePublicUpdate(event: MockEvent & { computedScore?: numbe
     signal_reasons: signal.signalReasons,
     score_version: signal.scoreVersion,
     audience: event.whoShouldCare,
-    tags: unique([...event.categories, ...(event.topicTags ?? signal.topicTags), ...event.affectedStack]),
+    tags: unique([
+      ...event.categories,
+      ...(event.topicTags ?? signal.topicTags),
+      ...event.affectedStack,
+    ]),
     summary: event.summary,
     why_it_matters: buildActionableWhyItMatters(event),
     recommended_action: buildRecommendedAction(event),
@@ -635,11 +782,17 @@ export function serializePublicUpdate(event: MockEvent & { computedScore?: numbe
     // Backward-compatible alias for the exact official entry/detail URL.
     source_url: event.sourceUrl,
     github_url: event.githubUrl ?? null,
-    version_watch_url: new URL(`/events/${event.slug}`, normalizedBaseUrl).toString(),
+    version_watch_url: new URL(
+      `/events/${event.slug}`,
+      normalizedBaseUrl,
+    ).toString(),
   };
 }
 
-export function serializePublicUpdates(events: Array<MockEvent & { computedScore?: number }>, baseUrl = DEFAULT_PUBLIC_BASE_URL) {
+export function serializePublicUpdates(
+  events: Array<MockEvent & { computedScore?: number }>,
+  baseUrl = DEFAULT_PUBLIC_BASE_URL,
+) {
   return events.map((event) => serializePublicUpdate(event, baseUrl));
 }
 
@@ -657,7 +810,10 @@ export function serializePublicVendor(vendor: VendorRecord): PublicVendor {
   };
 }
 
-export function buildPublicTaxonomy(events: MockEvent[], vendors: VendorRecord[]): PublicTaxonomy {
+export function buildPublicTaxonomy(
+  events: MockEvent[],
+  vendors: VendorRecord[],
+): PublicTaxonomy {
   return {
     severities: [...PUBLIC_SEVERITIES],
     release_classes: [...RELEASE_CLASSES],
@@ -666,10 +822,20 @@ export function buildPublicTaxonomy(events: MockEvent[], vendors: VendorRecord[]
     tags: sortedUnique(
       events.flatMap((event) => {
         const signal = getEventSignalMetadata(event);
-        return [...event.categories, ...(event.topicTags ?? signal.topicTags), ...event.affectedStack];
+        return [
+          ...event.categories,
+          ...(event.topicTags ?? signal.topicTags),
+          ...event.affectedStack,
+        ];
       }),
     ),
-    source_types: Array.from(new Set(vendors.flatMap((vendor) => vendor.sources.map((source) => source.type)))).sort(),
+    source_types: Array.from(
+      new Set(
+        vendors.flatMap((vendor) =>
+          vendor.sources.map((source) => source.type),
+        ),
+      ),
+    ).sort(),
     vendors: vendors
       .map((vendor) => ({
         slug: vendor.slug,
@@ -687,10 +853,14 @@ function markdownLine(value: string) {
   return value.replace(/\s+/g, " ").trim();
 }
 
-export function normalizePublicSourceType(sourceUrl: string, fallback: SourceType): SourceType {
+export function normalizePublicSourceType(
+  sourceUrl: string,
+  fallback: SourceType,
+): SourceType {
   try {
     const url = new URL(sourceUrl);
-    const isGithub = url.hostname === "github.com" || url.hostname.endsWith(".github.com");
+    const isGithub =
+      url.hostname === "github.com" || url.hostname.endsWith(".github.com");
     if (isGithub && /\/releases(?:\/|$)/i.test(url.pathname)) {
       return "github_release";
     }
@@ -707,9 +877,13 @@ export function renderUpdatesMarkdown(
   baseUrl = DEFAULT_PUBLIC_BASE_URL,
   nextCursor: string | null = null,
 ) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
   const nextPageUrl = nextCursor
-    ? new URL(`/feed.md?cursor=${encodeURIComponent(nextCursor)}`, normalizedBaseUrl).toString()
+    ? new URL(
+        `/feed.md?cursor=${encodeURIComponent(nextCursor)}`,
+        normalizedBaseUrl,
+      ).toString()
     : null;
   const lines = [
     "# Version Watch Feed",
@@ -752,7 +926,8 @@ export function renderUpdatesMarkdown(
 }
 
 export function renderAgentsMarkdown(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
 
   return `# Version Watch Agent Access
 
@@ -947,7 +1122,8 @@ Developers can use Version Watch as a public changelog data layer for their own 
 }
 
 export function renderLlmsTxt(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
 
   return `# Version Watch
 
@@ -1012,14 +1188,18 @@ Only submit /api/v1/relevance when a human explicitly confirms whether an update
 `;
 }
 
-export function buildAgentResources(baseUrl = DEFAULT_PUBLIC_BASE_URL): AgentResource[] {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+export function buildAgentResources(
+  baseUrl = DEFAULT_PUBLIC_BASE_URL,
+): AgentResource[] {
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
   const url = (path: string) => new URL(path, normalizedBaseUrl).toString();
 
   return [
     {
       name: "API documentation",
-      description: "Human-readable developer docs for using Version Watch as a public changelog intelligence API.",
+      description:
+        "Human-readable developer docs for using Version Watch as a public changelog intelligence API.",
       type: "docs",
       method: "GET",
       url: url("/agent-access"),
@@ -1033,7 +1213,8 @@ export function buildAgentResources(baseUrl = DEFAULT_PUBLIC_BASE_URL): AgentRes
     },
     {
       name: "Full LLM context",
-      description: "Long-form operating contract, endpoint map, freshness guidance, examples, and guardrails.",
+      description:
+        "Long-form operating contract, endpoint map, freshness guidance, examples, and guardrails.",
       type: "docs",
       method: "GET",
       url: url("/llms-full.txt"),
@@ -1047,42 +1228,48 @@ export function buildAgentResources(baseUrl = DEFAULT_PUBLIC_BASE_URL): AgentRes
     },
     {
       name: "API catalog",
-      description: "RFC 9727 API catalog with links to the OpenAPI contract, docs, status endpoint, and API members.",
+      description:
+        "RFC 9727 API catalog with links to the OpenAPI contract, docs, status endpoint, and API members.",
       type: "api",
       method: "GET",
       url: url("/.well-known/api-catalog"),
     },
     {
       name: "Agent skills index",
-      description: "Agent Skills Discovery index with the portable Version Watch skill and SHA-256 digest.",
+      description:
+        "Agent Skills Discovery index with the portable Version Watch skill and SHA-256 digest.",
       type: "skill",
       method: "GET",
       url: url("/.well-known/agent-skills/index.json"),
     },
     {
       name: "Version Watch skill",
-      description: "Portable skill that teaches agents when and how to use the public API safely.",
+      description:
+        "Portable skill that teaches agents when and how to use the public API safely.",
       type: "skill",
       method: "GET",
       url: url("/skills/version-watch/SKILL.md"),
     },
     {
       name: "OpenAPI contract",
-      description: "Machine-readable public API contract for OpenAPI-aware agents, SDK generators, and tests.",
+      description:
+        "Machine-readable public API contract for OpenAPI-aware agents, SDK generators, and tests.",
       type: "api",
       method: "GET",
       url: url("/api/v1/openapi.json"),
     },
     {
       name: "Latest updates",
-      description: "Raw paginated update records with filters for vendor, severity, audience, tag, release class, and time.",
+      description:
+        "Raw paginated update records with filters for vendor, severity, audience, tag, release class, and time.",
       type: "api",
       method: "GET",
       url: url("/api/v1/updates"),
     },
     {
       name: "Clustered updates",
-      description: "Digest-friendly grouped update records for notifications and alert workers.",
+      description:
+        "Digest-friendly grouped update records for notifications and alert workers.",
       type: "api",
       method: "GET",
       url: url("/api/v1/clusters"),
@@ -1096,21 +1283,24 @@ export function buildAgentResources(baseUrl = DEFAULT_PUBLIC_BASE_URL): AgentRes
     },
     {
       name: "Freshness status",
-      description: "Global API freshness contract for the Convex-backed snapshot.",
+      description:
+        "Global API freshness contract for the Convex-backed snapshot.",
       type: "status",
       method: "GET",
       url: url("/api/v1/status"),
     },
     {
       name: "Vendor freshness",
-      description: "Per-vendor lifecycle, freshness tier, source health, backoff, and queued refresh state.",
+      description:
+        "Per-vendor lifecycle, freshness tier, source health, backoff, and queued refresh state.",
       type: "status",
       method: "GET",
       url: url("/api/v1/status/vendors"),
     },
     {
       name: "Taxonomy",
-      description: "Valid severities, release classes, audiences, tags, source types, and vendor slugs.",
+      description:
+        "Valid severities, release classes, audiences, tags, source types, and vendor slugs.",
       type: "api",
       method: "GET",
       url: url("/api/v1/taxonomy"),
@@ -1124,14 +1314,16 @@ export function buildAgentResources(baseUrl = DEFAULT_PUBLIC_BASE_URL): AgentRes
     },
     {
       name: "Markdown feed",
-      description: "Readable Markdown update feed for LLM context windows and plain-text digests.",
+      description:
+        "Readable Markdown update feed for LLM context windows and plain-text digests.",
       type: "feed",
       method: "GET",
       url: url("/feed.md"),
     },
     {
       name: "Structured relevance signal",
-      description: "Public endpoint for human-confirmed impact, review-needed, or no-impact feedback.",
+      description:
+        "Public endpoint for human-confirmed impact, review-needed, or no-impact feedback.",
       type: "api",
       method: "POST",
       url: url("/api/v1/relevance"),
@@ -1140,7 +1332,8 @@ export function buildAgentResources(baseUrl = DEFAULT_PUBLIC_BASE_URL): AgentRes
 }
 
 export function buildAgentSkillsManifest(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
 
   return {
     schema_version: PUBLIC_API_SCHEMA_VERSION,
@@ -1152,7 +1345,10 @@ export function buildAgentSkillsManifest(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
     llms_txt_url: new URL("/llms.txt", normalizedBaseUrl).toString(),
     llms_full_txt_url: new URL("/llms-full.txt", normalizedBaseUrl).toString(),
     agents_md_url: new URL("/agents.md", normalizedBaseUrl).toString(),
-    skill_url: new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString(),
+    skill_url: new URL(
+      "/skills/version-watch/SKILL.md",
+      normalizedBaseUrl,
+    ).toString(),
     openapi_url: new URL("/api/v1/openapi.json", normalizedBaseUrl).toString(),
     status_url: new URL("/api/v1/status", normalizedBaseUrl).toString(),
     resources: buildAgentResources(normalizedBaseUrl),
@@ -1160,7 +1356,8 @@ export function buildAgentSkillsManifest(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
 }
 
 export function buildApiCatalog(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
   const apiRoot = new URL("/api/v1", normalizedBaseUrl).toString();
 
   return {
@@ -1194,13 +1391,37 @@ export function buildApiCatalog(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
           },
         ],
         item: [
-          { href: new URL("/api/v1/updates", normalizedBaseUrl).toString(), title: "Public updates" },
-          { href: new URL("/api/v1/clusters", normalizedBaseUrl).toString(), title: "Clustered updates" },
-          { href: new URL("/api/v1/vendors", normalizedBaseUrl).toString(), title: "Vendors" },
-          { href: new URL("/api/v1/taxonomy", normalizedBaseUrl).toString(), title: "Filter taxonomy" },
-          { href: new URL("/api/v1/status/vendors", normalizedBaseUrl).toString(), title: "Vendor freshness" },
-          { href: new URL("/api/v1/feed.json", normalizedBaseUrl).toString(), title: "JSON feed" },
-          { href: new URL("/feed.md", normalizedBaseUrl).toString(), title: "Markdown feed" },
+          {
+            href: new URL("/api/v1/updates", normalizedBaseUrl).toString(),
+            title: "Public updates",
+          },
+          {
+            href: new URL("/api/v1/clusters", normalizedBaseUrl).toString(),
+            title: "Clustered updates",
+          },
+          {
+            href: new URL("/api/v1/vendors", normalizedBaseUrl).toString(),
+            title: "Vendors",
+          },
+          {
+            href: new URL("/api/v1/taxonomy", normalizedBaseUrl).toString(),
+            title: "Filter taxonomy",
+          },
+          {
+            href: new URL(
+              "/api/v1/status/vendors",
+              normalizedBaseUrl,
+            ).toString(),
+            title: "Vendor freshness",
+          },
+          {
+            href: new URL("/api/v1/feed.json", normalizedBaseUrl).toString(),
+            title: "JSON feed",
+          },
+          {
+            href: new URL("/feed.md", normalizedBaseUrl).toString(),
+            title: "Markdown feed",
+          },
         ],
       },
     ],
@@ -1208,7 +1429,8 @@ export function buildApiCatalog(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
 }
 
 export function buildAgentSkillsIndex(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
   const skillMarkdown = renderVersionWatchSkillMarkdown(normalizedBaseUrl);
 
   return {
@@ -1221,7 +1443,10 @@ export function buildAgentSkillsIndex(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
         type: "skill-md",
         description:
           "Use Version Watch to retrieve current developer-platform changelog intelligence, filter it to a project stack, cite official sources, and produce actionable release-risk summaries.",
-        url: new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString(),
+        url: new URL(
+          "/skills/version-watch/SKILL.md",
+          normalizedBaseUrl,
+        ).toString(),
         digest: `sha256:${sha256Hex(skillMarkdown)}`,
       },
     ],
@@ -1229,7 +1454,8 @@ export function buildAgentSkillsIndex(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
 }
 
 export function buildLlmsStatus(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
 
   return {
     schema_version: PUBLIC_API_SCHEMA_VERSION,
@@ -1247,13 +1473,28 @@ export function buildLlmsStatus(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
       llms_txt: new URL("/llms.txt", normalizedBaseUrl).toString(),
       llms_full_txt: new URL("/llms-full.txt", normalizedBaseUrl).toString(),
       agents_md: new URL("/agents.md", normalizedBaseUrl).toString(),
-      agent_skills: new URL("/.well-known/agent-skills", normalizedBaseUrl).toString(),
-      agent_skills_index: new URL("/.well-known/agent-skills/index.json", normalizedBaseUrl).toString(),
-      api_catalog: new URL("/.well-known/api-catalog", normalizedBaseUrl).toString(),
-      skill: new URL("/skills/version-watch/SKILL.md", normalizedBaseUrl).toString(),
+      agent_skills: new URL(
+        "/.well-known/agent-skills",
+        normalizedBaseUrl,
+      ).toString(),
+      agent_skills_index: new URL(
+        "/.well-known/agent-skills/index.json",
+        normalizedBaseUrl,
+      ).toString(),
+      api_catalog: new URL(
+        "/.well-known/api-catalog",
+        normalizedBaseUrl,
+      ).toString(),
+      skill: new URL(
+        "/skills/version-watch/SKILL.md",
+        normalizedBaseUrl,
+      ).toString(),
       openapi: new URL("/api/v1/openapi.json", normalizedBaseUrl).toString(),
       api_status: new URL("/api/v1/status", normalizedBaseUrl).toString(),
-      vendor_freshness: new URL("/api/v1/status/vendors", normalizedBaseUrl).toString(),
+      vendor_freshness: new URL(
+        "/api/v1/status/vendors",
+        normalizedBaseUrl,
+      ).toString(),
       taxonomy: new URL("/api/v1/taxonomy", normalizedBaseUrl).toString(),
       updates: new URL("/api/v1/updates", normalizedBaseUrl).toString(),
       clusters: new URL("/api/v1/clusters", normalizedBaseUrl).toString(),
@@ -1264,7 +1505,8 @@ export function buildLlmsStatus(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
 }
 
 export function buildLlmsReadiness(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
   const checks: AgentReadinessCheck[] = [
     {
       id: "llms_txt_present",
@@ -1370,7 +1612,8 @@ export function buildLlmsReadiness(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
       status: "pass",
       points: 5,
       max_points: 5,
-      detail: "Requests for text/markdown at / are routed to the LLM resource map.",
+      detail:
+        "Requests for text/markdown at / are routed to the LLM resource map.",
     },
   ];
   const score = checks.reduce((sum, check) => sum + check.points, 0);
@@ -1389,9 +1632,18 @@ export function buildLlmsReadiness(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
       llms_txt: new URL("/llms.txt", normalizedBaseUrl).toString(),
       llms_full_txt: new URL("/llms-full.txt", normalizedBaseUrl).toString(),
       agents_md: new URL("/agents.md", normalizedBaseUrl).toString(),
-      agent_skills: new URL("/.well-known/agent-skills", normalizedBaseUrl).toString(),
-      agent_skills_index: new URL("/.well-known/agent-skills/index.json", normalizedBaseUrl).toString(),
-      api_catalog: new URL("/.well-known/api-catalog", normalizedBaseUrl).toString(),
+      agent_skills: new URL(
+        "/.well-known/agent-skills",
+        normalizedBaseUrl,
+      ).toString(),
+      agent_skills_index: new URL(
+        "/.well-known/agent-skills/index.json",
+        normalizedBaseUrl,
+      ).toString(),
+      api_catalog: new URL(
+        "/.well-known/api-catalog",
+        normalizedBaseUrl,
+      ).toString(),
       openapi: new URL("/api/v1/openapi.json", normalizedBaseUrl).toString(),
       status: new URL("/api/v1/status", normalizedBaseUrl).toString(),
     },
@@ -1399,7 +1651,8 @@ export function buildLlmsReadiness(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
 }
 
 export function renderLlmsFullTxt(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
 
   return `# Version Watch Full Agent Context
 
@@ -1521,8 +1774,11 @@ ${renderAgentsMarkdown(normalizedBaseUrl)}
 `;
 }
 
-export function renderVersionWatchSkillMarkdown(baseUrl = DEFAULT_PUBLIC_BASE_URL) {
-  const normalizedBaseUrl = normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
+export function renderVersionWatchSkillMarkdown(
+  baseUrl = DEFAULT_PUBLIC_BASE_URL,
+) {
+  const normalizedBaseUrl =
+    normalizeBaseUrl(baseUrl) ?? DEFAULT_PUBLIC_BASE_URL;
 
   return `---
 name: version-watch

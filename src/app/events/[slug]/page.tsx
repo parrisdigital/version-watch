@@ -11,7 +11,7 @@ import { SiteHeader } from "@/components/marketing/site-header";
 import { RelevanceSignalForm } from "@/components/relevance-signal-form";
 import { VendorMark } from "@/components/vendor-mark";
 import { deriveSignalMetadata, releaseClassLabel } from "@/lib/classification/signal";
-import { getEventBySlug, getEventsForVendor } from "@/lib/site-data";
+import { getAdjacentPublicEvents, getEventBySlug } from "@/lib/site-data";
 import type { MockEvent } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
@@ -159,13 +159,7 @@ export default async function EventPage({
         : "Back to home";
   const feedbackHref = `/feedback?type=incorrect_summary&url=${encodeURIComponent(`/events/${event.slug}`)}`;
 
-  const vendorEvents = await getEventsForVendor(event.vendorSlug);
-  const currentIndex = vendorEvents.findIndex((entry) => entry.slug === event.slug);
-  const newer = currentIndex > 0 ? vendorEvents[currentIndex - 1] : null;
-  const older =
-    currentIndex >= 0 && currentIndex < vendorEvents.length - 1
-      ? vendorEvents[currentIndex + 1]
-      : null;
+  const { newer, older } = await getAdjacentPublicEvents(event.slug);
 
   const baseUrl = buildBaseUrl();
   const versionWatchUrl = `${baseUrl}/events/${event.slug}`;

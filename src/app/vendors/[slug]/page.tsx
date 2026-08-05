@@ -7,7 +7,8 @@ import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { VendorMark } from "@/components/vendor-mark";
 import { getSourceSurfaceUrl } from "@/lib/mock-data";
-import { getEventsForVendor, getVendorBySlug } from "@/lib/site-data";
+import { decodeUpdateCursor } from "@/lib/agent-feed";
+import { getPublicEventStats, getPublicUpdatesPage, getVendorBySlug } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
@@ -26,31 +27,44 @@ function countWithinWindow<T extends { publishedAt: string }>(events: T[], windo
   return events.filter((event) => new Date(event.publishedAt).getTime() >= cutoff).length;
 }
 
-export default async function VendorPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function VendorPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ cursor?: string }>;
+}) {
   const { slug } = await params;
+  const { cursor } = await searchParams;
   const vendor = await getVendorBySlug(slug);
 
   if (!vendor) {
     notFound();
   }
 
-  const vendorEvents = await getEventsForVendor(slug);
+  const cursorPosition = cursor ? decodeUpdateCursor(cursor) ?? undefined : undefined;
+  const [eventPage, stats] = await Promise.all([
+    getPublicUpdatesPage({ vendor: slug, limit: 50, cursorPosition }),
+    getPublicEventStats(slug),
+  ]);
+  const vendorEvents = eventPage.events;
   const sortedEvents = vendorEvents
     .slice()
     .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime());
   const latestEvent = sortedEvents[0];
-  const recentSevenDayCount = countWithinWindow(sortedEvents, SEVEN_DAYS_MS);
+  const recentSevenDayCount = cursor ? 0 : countWithinWindow(sortedEvents, SEVEN_DAYS_MS);
+  const totalEventCount = stats.ready ? stats.eventCount : (eventPage.total_count ?? sortedEvents.length);
 
   const isEmpty = sortedEvents.length === 0;
 
   // Honest summary line in the hero. No four-stat dashboard.
   const summaryParts: string[] = [
-    `${sortedEvents.length} ${sortedEvents.length === 1 ? "tracked event" : "tracked events"}`,
+    `${totalEventCount} ${totalEventCount === 1 ? "tracked event" : "tracked events"}`,
   ];
-  if (latestEvent) {
+  if (latestEvent && !cursor) {
     summaryParts.push(`last update ${format(new Date(latestEvent.publishedAt), "MMM d, yyyy")}`);
   }
-  if (recentSevenDayCount > 0 && sortedEvents.length > recentSevenDayCount) {
+  if (recentSevenDayCount > 0 && totalEventCount > recentSevenDayCount) {
     summaryParts.push(`${recentSevenDayCount} in the last 7 days`);
   }
   summaryParts.push(`${vendor.sources.length} ${vendor.sources.length === 1 ? "source" : "sources"}`);
@@ -134,7 +148,7 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
               <div>
                 <p className="vw-kicker">Recent changes</p>
                 <h2 className="vw-title mt-2 text-2xl">
-                  {isEmpty ? "Nothing tracked yet" : "Latest first"}
+                  {isEmpty ? "Nothing tracked yet" : cursor ? "Older changes" : "Latest first"}
                 </h2>
               </div>
               {!isEmpty ? (
@@ -183,6 +197,16 @@ export default async function VendorPage({ params }: { params: Promise<{ slug: s
                 ))}
               </ul>
             )}
+            {eventPage.next_cursor ? (
+              <div className="mt-8 flex justify-center">
+                <Link
+                  href={`/vendors/${vendor.slug}?cursor=${encodeURIComponent(eventPage.next_cursor)}`}
+                  className="vw-button vw-button-secondary"
+                >
+                  Older updates
+                </Link>
+              </div>
+            ) : null}
           </div>
         </div>
       </section>

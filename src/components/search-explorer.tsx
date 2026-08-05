@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 type SearchExplorerProps = {
   events: SiteEvent[];
   vendors: VendorRecord[];
+  corpusEventCount: number;
   initialFilters: SearchFilters;
 };
 
@@ -425,7 +426,7 @@ function ResultRow({ event, href }: { event: SiteEvent; href: string }) {
   );
 }
 
-export function SearchExplorer({ events, vendors, initialFilters }: SearchExplorerProps) {
+export function SearchExplorer({ events, vendors, corpusEventCount, initialFilters }: SearchExplorerProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [query, setQuery] = useState(initialFilters.query ?? "");
@@ -440,21 +441,20 @@ export function SearchExplorer({ events, vendors, initialFilters }: SearchExplor
 
   const deferredQuery = useDeferredValue(query);
   const facets = useMemo(() => getSearchFacets(events), [events]);
-  const vendorNameBySlug = useMemo(
-    () => new Map(vendors.map((item) => [item.slug, item.name])),
-    [vendors],
-  );
   const vendorOptions = useMemo(
-    () =>
-      facets.vendors
-        .map((facet) => ({
-          ...facet,
-          label: vendorNameBySlug.get(facet.value) ?? facet.label,
+    () => {
+      const countBySlug = new Map(facets.vendors.map((facet) => [facet.value, facet.count]));
+      return vendors
+        .map((item) => ({
+          value: item.slug,
+          label: item.name,
+          count: countBySlug.get(item.slug) ?? 0,
         }))
         .sort(
           (a, b) => filterLabelCollator.compare(a.label, b.label) || a.value.localeCompare(b.value),
-        ),
-    [facets.vendors, vendorNameBySlug],
+        );
+    },
+    [facets.vendors, vendors],
   );
   const importanceOptions = useMemo(
     () =>
@@ -693,6 +693,9 @@ export function SearchExplorer({ events, vendors, initialFilters }: SearchExplor
             <p className="font-mono text-[0.6875rem] uppercase tracking-wider tabular-nums text-[var(--muted-foreground)]">
               {filteredEvents.length} {filteredEvents.length === 1 ? "result" : "results"}
               {activeFilterCount > 0 ? ` · ${activeFilterCount} active filter${activeFilterCount === 1 ? "" : "s"}` : ""}
+              {corpusEventCount > events.length
+                ? ` · latest ${events.length.toLocaleString()} of ${corpusEventCount.toLocaleString()}`
+                : ""}
             </p>
             <ActiveFilterChips filters={activeFilters} onClearAll={clearAll} />
           </div>

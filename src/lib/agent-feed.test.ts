@@ -173,6 +173,38 @@ describe("agent update filters", () => {
     expect(result.every((event) => event.vendorSlug === "stripe")).toBe(true);
   });
 
+  it("filters bounded search pages by free text and source type", () => {
+    const target = {
+      ...events[0]!,
+      slug: "target-pricing-update",
+      title: "Pricing update for managed deployments",
+      sourceType: "blog" as const,
+    };
+    const wrongSource = {
+      ...target,
+      slug: "wrong-source-pricing-update",
+      sourceType: "docs_page" as const,
+    };
+    const wrongText = {
+      ...target,
+      slug: "unrelated-blog-update",
+      title: "New regional availability",
+      summary: "Additional regions are now available.",
+      whatChanged: "Additional regions are now available.",
+      whyItMatters: "Teams can deploy closer to their users.",
+      categories: ["infrastructure"],
+      topicTags: ["regions"],
+      affectedStack: ["deployments"],
+    };
+
+    const result = filterEventsForPublicUpdates(
+      [target, wrongSource, wrongText],
+      { limit: 10, query: "pricing", sourceType: "blog" },
+    );
+
+    expect(result.map((event) => event.slug)).toEqual([target.slug]);
+  });
+
   it("drops future-dated events beyond the public skew guard", () => {
     const parsed = parseUpdateFilters(new URLSearchParams({ limit: "10" }));
 

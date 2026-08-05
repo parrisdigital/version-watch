@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { buildPublicTaxonomy, PUBLIC_API_SCHEMA_VERSION, PUBLIC_AGENT_HEADERS } from "@/lib/agent-feed";
-import { getAllPublicEvents, getVendors } from "@/lib/site-data";
+import { PUBLIC_API_SCHEMA_VERSION, PUBLIC_AGENT_HEADERS, PUBLIC_SEVERITIES } from "@/lib/agent-feed";
+import { IMPACT_CONFIDENCES, RELEASE_CLASSES } from "@/lib/classification/signal";
+import { getPublicTaxonomyStats, getVendors } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
@@ -10,13 +11,21 @@ export function OPTIONS() {
 }
 
 export async function GET() {
-  const [events, vendors] = await Promise.all([getAllPublicEvents(), getVendors()]);
+  const [stats, vendors] = await Promise.all([getPublicTaxonomyStats(), getVendors()]);
 
   return NextResponse.json(
     {
       schema_version: PUBLIC_API_SCHEMA_VERSION,
       generated_at: new Date().toISOString(),
-      taxonomy: buildPublicTaxonomy(events, vendors),
+      taxonomy: {
+        severities: [...PUBLIC_SEVERITIES],
+        release_classes: [...RELEASE_CLASSES],
+        impact_confidences: [...IMPACT_CONFIDENCES],
+        audiences: stats.audiences,
+        tags: stats.tags,
+        source_types: stats.sourceTypes,
+        vendors: vendors.map((vendor) => ({ slug: vendor.slug, name: vendor.name })),
+      },
     },
     { headers: PUBLIC_AGENT_HEADERS },
   );

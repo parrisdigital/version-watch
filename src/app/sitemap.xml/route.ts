@@ -1,5 +1,5 @@
 import { buildAgentTextHeaders, getPublicBaseUrl } from "@/lib/agent-feed";
-import { getAllPublicEvents, getVendors } from "@/lib/site-data";
+import { getPublicSitemapEntries, getVendors } from "@/lib/site-data";
 
 export const dynamic = "force-dynamic";
 
@@ -19,14 +19,7 @@ function urlEntry(location: string, lastModified?: string) {
 
 export async function GET(request: Request) {
   const baseUrl = getPublicBaseUrl(request.url);
-  let vendors: Awaited<ReturnType<typeof getVendors>> = [];
-  let events: Awaited<ReturnType<typeof getAllPublicEvents>> = [];
-
-  try {
-    [vendors, events] = await Promise.all([getVendors(), getAllPublicEvents()]);
-  } catch (error) {
-    console.warn("Could not load dynamic sitemap records.", error);
-  }
+  const [vendors, events] = await Promise.all([getVendors(), getPublicSitemapEntries()]);
 
   const staticPaths = [
     "/",

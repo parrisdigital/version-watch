@@ -2,12 +2,22 @@ import { SearchExplorer } from "@/components/search-explorer";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { SiteHeader } from "@/components/marketing/site-header";
 import type { SinceWindow } from "@/lib/search/filter-events";
-import { getAllPublicEvents, getVendors } from "@/lib/site-data";
+import {
+  getPublicEventStats,
+  getPublicSearchPage,
+  getRelativeTimestamp,
+  getVendors,
+} from "@/lib/site-data";
 import type { ImportanceBand, SourceType } from "@/lib/mock-data";
 
 export const dynamic = "force-dynamic";
 
-const SINCE_VALUES: ReadonlySet<SinceWindow> = new Set(["", "7d", "30d", "90d"]);
+const SINCE_VALUES: ReadonlySet<SinceWindow> = new Set([
+  "",
+  "7d",
+  "30d",
+  "90d",
+]);
 const SOURCE_TYPES: ReadonlySet<SourceType> = new Set([
   "github_release",
   "changelog_page",
@@ -15,7 +25,12 @@ const SOURCE_TYPES: ReadonlySet<SourceType> = new Set([
   "blog",
   "rss",
 ]);
-const IMPORTANCE_BANDS: ReadonlySet<ImportanceBand> = new Set(["critical", "high", "medium", "low"]);
+const IMPORTANCE_BANDS: ReadonlySet<ImportanceBand> = new Set([
+  "critical",
+  "high",
+  "medium",
+  "low",
+]);
 
 type SearchParams = {
   query?: string;
@@ -41,7 +56,9 @@ function asSourceType(value: string | undefined): SourceType | "" {
 
 function asImportance(value: string | undefined): ImportanceBand | "" {
   if (!value) return "";
-  return IMPORTANCE_BANDS.has(value as ImportanceBand) ? (value as ImportanceBand) : "";
+  return IMPORTANCE_BANDS.has(value as ImportanceBand)
+    ? (value as ImportanceBand)
+    : "";
 }
 
 export default async function SearchPage({
@@ -50,9 +67,26 @@ export default async function SearchPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const [events, vendors] = await Promise.all([getAllPublicEvents(), getVendors()]);
-
   const topic = params.topic ?? params.category ?? params.stack ?? "";
+  const since = asSince(params.since);
+  const sinceTimestamp = since
+    ? getRelativeTimestamp(Number.parseInt(since, 10))
+    : undefined;
+  const importance = asImportance(params.importance);
+  const sourceType = asSourceType(params.sourceType);
+  const [eventPage, vendors, stats] = await Promise.all([
+    getPublicSearchPage({
+      limit: 100,
+      vendor: params.vendor?.trim().toLowerCase() || undefined,
+      query: params.query?.trim().toLowerCase() || undefined,
+      sourceType: sourceType || undefined,
+      tag: topic.trim().toLowerCase() || undefined,
+      severity: importance || undefined,
+      sinceTimestamp,
+    }),
+    getVendors(),
+    getPublicEventStats(),
+  ]);
 
   return (
     <main className="vw-page">
@@ -65,15 +99,16 @@ export default async function SearchPage({
       </section>
 
       <SearchExplorer
-        events={events}
+        events={eventPage.events}
         vendors={vendors}
+        corpusEventCount={stats.eventCount}
         initialFilters={{
           query: params.query ?? "",
           vendor: params.vendor ?? "",
           topic,
-          since: asSince(params.since),
-          sourceType: asSourceType(params.sourceType),
-          importance: asImportance(params.importance),
+          since,
+          sourceType,
+          importance,
         }}
       />
 
