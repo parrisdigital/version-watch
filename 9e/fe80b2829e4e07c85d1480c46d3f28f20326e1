@@ -1,0 +1,21 @@
+scripts/check-vendor-coverage.mjs
+  s_12a1aa838c8e5c::t_f6607641024903 78-97,152
+.github/workflows/convex-production.yml
+  s_12a1aa838c8e5c::t_f6607641024903 24
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.21",
+  "base_commit_sha": "9efe80b2829e4e07c85d1480c46d3f28f20326e1",
+  "prompts": {},
+  "sessions": {
+    "s_12a1aa838c8e5c": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019fd2a2-5ca5-72f1-a822-8e46daf5c6f6",
+        "model": "gpt-5.6-sol"
+      },
+      "human_author": "Parris Digital <parrisdigital@gmail.com>"
+    }
+  }
+}
