@@ -263,7 +263,7 @@ export const vendors: VendorRecord[] = [
     slug: "vercel",
     name: "Vercel",
     description: "Hosting, runtime, AI SDK, and deployment changes.",
-    sources: [{ name: "Vercel Changelog", url: "https://vercel.com/changelog", type: "changelog_page" }],
+    sources: [{ name: "Vercel Changelog", url: "https://vercel.com/atom", surfaceUrl: "https://vercel.com/changelog", type: "rss" }],
   },
   {
     slug: "stripe",
@@ -335,7 +335,7 @@ export const vendors: VendorRecord[] = [
     slug: "windsurf",
     name: "Devin Desktop",
     description: "Agent-first IDE formerly known as Windsurf, now part of Devin and Cognition.",
-    sources: [{ name: "Devin Desktop Changelog", url: "https://docs.devin.ai/desktop/changelog", type: "changelog_page" }],
+    sources: [{ name: "Devin Desktop Changelog", url: "https://docs.devin.ai/desktop/changelog/rss.xml", surfaceUrl: "https://docs.devin.ai/desktop/changelog", type: "changelog_page" }],
   },
   {
     slug: "google-antigravity",
@@ -344,8 +344,8 @@ export const vendors: VendorRecord[] = [
     sources: [
       {
         name: "Antigravity Changelog",
-        url: "https://www.antigravity.google/changelog",
-        surfaceUrl: "https://www.antigravity.google/changelog",
+        url: "https://antigravity.google/docs/changelog",
+        surfaceUrl: "https://antigravity.google/docs/changelog",
         type: "changelog_page",
       },
     ],
@@ -537,7 +537,7 @@ export const vendors: VendorRecord[] = [
     slug: "firecrawl",
     name: "Firecrawl",
     description: "Scraping and agent tooling changes.",
-    sources: [{ name: "Firecrawl Changelog", url: "https://www.firecrawl.dev/changelog", type: "changelog_page" }],
+    sources: [{ name: "Firecrawl Changelog", url: "https://www.firecrawl.dev/changelog/rss.xml", surfaceUrl: "https://www.firecrawl.dev/changelog", type: "changelog_page" }],
   },
   {
     slug: "exa",
@@ -546,7 +546,7 @@ export const vendors: VendorRecord[] = [
     sources: [
       {
         name: "Exa Changelog",
-        url: "https://exa.ai/docs/changelog",
+        url: "https://exa.ai/docs/changelog/rss.xml",
         surfaceUrl: "https://exa.ai/docs/changelog",
         type: "docs_page",
       },
@@ -568,7 +568,7 @@ export const vendors: VendorRecord[] = [
     slug: "linear",
     name: "Linear",
     description: "Product and developer workflow platform changes.",
-    sources: [{ name: "Linear Changelog", url: "https://linear.app/changelog", type: "changelog_page" }],
+    sources: [{ name: "Linear Changelog", url: "https://linear.app/rss/changelog.xml", surfaceUrl: "https://linear.app/changelog", type: "changelog_page" }],
   },
   {
     slug: "docker",
@@ -845,7 +845,7 @@ export const vendors: VendorRecord[] = [
     sources: [
       {
         name: "LangSmith Changelog",
-        url: "https://docs.langchain.com/langsmith/changelog",
+        url: "https://docs.langchain.com/langsmith/changelog/rss.xml",
         surfaceUrl: "https://docs.langchain.com/langsmith/changelog",
         type: "changelog_page",
       },

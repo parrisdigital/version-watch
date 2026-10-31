@@ -31,6 +31,8 @@ export type SourceLinkAuditSource = {
   name: string;
   url: string;
   type: SourceType | string;
+  surface_url?: string;
+  surfaceUrl?: string;
 };
 
 export type SourceLinkAuditVendor = {
@@ -152,6 +154,17 @@ export function sourceCoversUpdate(source: SourceLinkAuditSource, update: Source
   }
 
   if (updateUrl === sourceUrl || hasPathPrefix(updateUrl, sourceUrl) || markdownIndexCoversPath(detailUrl, source.url)) {
+    return true;
+  }
+
+  // A feed can retain its changelog/docs source type. Its registered readable
+  // surface covers the entry links, but never expands coverage to another host
+  // or to an entire site through a generic homepage surface.
+  const surface = parseUrl(source.surface_url ?? source.surfaceUrl);
+  const feed = parseUrl(source.url);
+  if (surface && feed && /^https?:$/.test(surface.protocol) &&
+    normalizeHost(surface.hostname) === normalizeHost(feed.hostname) && surface.pathname !== "/" &&
+    (hasPathPrefix(detailUrl, surface.toString()) || markdownIndexCoversPath(detailUrl, surface.toString()))) {
     return true;
   }
 

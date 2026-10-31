@@ -103,6 +103,16 @@ function sourceCoversUpdate(source, update) {
     return true;
   }
 
+  // Match the registered readable changelog surface without granting coverage
+  // to unrelated hosts or an entire site through a homepage surface.
+  const surface = parseUrl(source.surface_url ?? source.surfaceUrl);
+  const feed = parseUrl(source.url);
+  if (surface && feed && /^https?:$/.test(surface.protocol) &&
+    normalizeHost(surface.hostname) === normalizeHost(feed.hostname) && surface.pathname !== "/" &&
+    (hasPathPrefix(update.source_url, surface.toString()) || markdownIndexCoversPath(update.source_url, surface.toString()))) {
+    return true;
+  }
+
   if (sourceType === "rss") {
     const candidate = parseUrl(update.source_url);
     const sourceParsed = parseUrl(source.url);

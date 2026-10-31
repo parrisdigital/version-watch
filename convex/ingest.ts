@@ -60,8 +60,12 @@ function sourceLooksLikeDirectFeed(source: SourceFetchTarget) {
   }
 
   try {
-    const path = new URL(source.url).pathname.toLowerCase();
-    return path.endsWith(".xml") || path.endsWith(".rss") || path.endsWith(".atom") || /\/feed\/?$/.test(path);
+    const url = new URL(source.url);
+    const path = url.pathname.toLowerCase();
+    return (
+      path.endsWith(".xml") || path.endsWith(".rss") || path.endsWith(".atom") || /\/feed\/?$/.test(path) ||
+      (url.hostname.replace(/^www\./, "") === "vercel.com" && path.replace(/\/$/, "") === "/atom")
+    );
   } catch {
     return /\.(?:xml|rss|atom)(?:$|[?#])|\/feed\/?$/i.test(source.url);
   }
@@ -88,7 +92,7 @@ function sourceNeedsHtmlFirstAccept(source?: SourceFetchTarget) {
     return false;
   }
 
-  if (source.parserKey === "xai:docs_page") {
+  if (source.parserKey === "xai:docs_page" || source.parserKey === "dp-code:changelog_page") {
     return true;
   }
 
@@ -283,7 +287,7 @@ function extractRichFeedHeading(content: string) {
   return headings.find(isRichFeedHeadingCandidate) ?? headings[0] ?? "";
 }
 
-export async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
+export async function parseFeedEntries(feedXml: string, fallbackUrl: string, scopeUrl?: string) {
   const parser = new Parser({
     customFields: {
       item: [["content:encoded", "contentEncoded"]],
@@ -294,7 +298,7 @@ export async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
     const feed = await parser.parseString(feedXml);
     const includeRichContent = shouldIncludeRichFeedContentInExcerpt(fallbackUrl);
 
-    return (feed.items ?? [])
+    const entries = (feed.items ?? [])
       .map((item) => {
         const publishedAt = Date.parse(item.isoDate ?? item.pubDate ?? "");
         const title = cleanText(item.title);
@@ -324,8 +328,16 @@ export async function parseFeedEntries(feedXml: string, fallbackUrl: string) {
           parseConfidence: "high" as const,
         } satisfies ParsedSourceEntry;
       })
-      .filter(Boolean)
-      .slice(0, 12) as ParsedSourceEntry[];
+      .filter((entry) => entry !== null);
+
+    // Vercel's official Atom feed mixes blog posts and changelog entries. Scope
+    // before limiting so unrelated posts cannot consume the ingestion window.
+    const effectiveScope = scopeUrl ?? (
+      getUrlHost(fallbackUrl) === "vercel.com" && getUrlPath(fallbackUrl) === "/atom"
+        ? "https://vercel.com/changelog"
+        : undefined
+    );
+    return (effectiveScope ? filterDiscoveredFeedEntries(entries, effectiveScope) : entries).slice(0, 12);
   } catch (error) {
     throw new SourceIngestionError("parse_error", getIngestionErrorMessage(error));
   }
@@ -427,10 +439,7 @@ async function ingestSource(ctx: any, source: any, runType: RunType, force: bool
         try {
           const feedResponse = await fetchText(discoveredFeedUrl);
           if (feedResponse.ok) {
-            parsedEntries = filterDiscoveredFeedEntries(
-              await parseFeedEntries(feedResponse.body, source.url),
-              source.url,
-            );
+            parsedEntries = await parseFeedEntries(feedResponse.body, source.url, source.url);
           }
         } catch {
           parsedEntries = [];
