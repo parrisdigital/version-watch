@@ -1036,12 +1036,24 @@ function parseAntigravityEntries(sourceUrl: string, html: string) {
     const href = link.attr("href");
     if (!version || !publishedAt || !href) continue;
 
-    const product = cleanText(release.closest(".rn-panel").find(".rn-panel-heading").first().text());
+    const panelName = cleanText(release.closest(".rn-panel").find(".rn-panel-heading").first().text());
+    const rowId = release.attr("id");
+    const rowProduct = rowId?.match(/^rel-(.+)-\d+\.\d+\.\d+/)?.[1];
+    const productKey = release.find("[data-product]").first().attr("data-product") || rowProduct;
+    const productNames: Record<string, string> = {
+      hub: "Antigravity App", cli: "Antigravity CLI", sdk: "Antigravity SDK", ide: "Antigravity IDE",
+      vscode: "Antigravity Visual Studio Code", jetbrains: "Antigravity JetBrains",
+      zed: "Antigravity Zed", xcode: "Antigravity Xcode", eclipse: "Antigravity Eclipse",
+      "visual-studio": "Antigravity Visual Studio",
+    };
+    // IDE Extensions is a shared panel: same-version extension releases must
+    // remain distinct because candidate matching also indexes by raw title.
+    if (!productKey && panelName === "IDE Extensions") continue;
+    const product = productKey ? productNames[productKey] || `Antigravity ${productKey}` : panelName;
     const title = `${product || "Google Antigravity"} ${version}`;
     const excerpt = truncateSentence(cleanText(release.find(".rn-summary").first().text()) ||
       cleanText(release.find(".rn-headline").first().text()) || title);
     const releaseUrl = toAbsoluteUrl(href, sourceUrl);
-    const rowId = release.attr("id");
     // Some products link to general installation docs rather than a release.
     const url = new URL(releaseUrl).pathname === "/releases" || !rowId
       ? releaseUrl

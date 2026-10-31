@@ -11,11 +11,21 @@ describe("Antigravity docs changelog recovery", () => {
   it("extracts real dated releases from all product tabs, newest first", () => {
     const html = readFileSync(new URL("./fixtures/antigravity-docs-changelog.html", import.meta.url), "utf8");
     const entries = parse(html);
-    expect(entries).toHaveLength(5);
+    expect(entries).toHaveLength(7);
+    expect(entries.filter((entry) => entry.title.endsWith("v1.4.0")).map((entry) => entry.title).sort()).toEqual(["Antigravity JetBrains v1.4.0", "Antigravity Visual Studio Code v1.4.0"]);
     expect(entries.every((entry) => entry.parseConfidence === "high")).toBe(true);
     expect(entries.every((entry) => /^https:\/\/antigravity\.google\/(?:releases\?tab=|docs\/changelog#rel-)/.test(entry.url))).toBe(true);
     expect(entries.some((entry) => entry.title === "Antigravity App v2.28.2" && entry.publishedAt === Date.UTC(2026, 9, 29))).toBe(true);
     expect(entries.map((entry) => entry.publishedAt)).toEqual(entries.map((entry) => entry.publishedAt).sort((a, b) => b - a));
+  });
+
+  it("keeps same-version extensions distinct within the shared IDE Extensions panel", () => {
+    const rows = ["vscode", "jetbrains"].map((product) => `<article class="release-entry" id="rel-${product}-1.4.0"><a class="rn-version-tag" href="/docs/ide/extensions/${product}">v1.4.0</a><time class="rn-date-text">October 12, 2026</time><details data-product="${product}"><p>A product-specific release.</p></details></article>`).join("");
+    const entries = parse(`<div class="rn-panel"><h2 class="rn-panel-heading">IDE Extensions</h2>${rows}</div>`);
+    expect(entries.map((entry) => entry.title)).toEqual(["Antigravity Visual Studio Code v1.4.0", "Antigravity JetBrains v1.4.0"]);
+    expect(new Set(entries.map((entry) => entry.url)).size).toBe(2);
+    const withoutDataProduct = rows.replace(/ data-product="[^"]+"/g, "");
+    expect(parse(`<div class="rn-panel"><h2 class="rn-panel-heading">IDE Extensions</h2>${withoutDataProduct}</div>`).map((entry) => entry.title)).toEqual(entries.map((entry) => entry.title));
   });
 
   it("does not invent an index event when release rows are malformed or absent", () => {

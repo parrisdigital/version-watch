@@ -21,6 +21,17 @@ import {
 } from "./sourceFreshness";
 
 const MAX_SOURCES_PER_VENDOR = 50;
+// Explicit one-time URL transitions. Reuse the existing source identity so its
+// candidates, moderation decisions and ingestion history remain attached.
+const SOURCE_URL_MIGRATIONS: Record<string, { from: string; to: string }> = {
+  windsurf: { from: "https://docs.devin.ai/desktop/changelog", to: "https://docs.devin.ai/desktop/changelog/rss.xml" },
+  exa: { from: "https://exa.ai/docs/changelog", to: "https://exa.ai/docs/changelog/rss.xml" },
+  langchain: { from: "https://docs.langchain.com/langsmith/changelog", to: "https://docs.langchain.com/langsmith/changelog/rss.xml" },
+  firecrawl: { from: "https://www.firecrawl.dev/changelog", to: "https://www.firecrawl.dev/changelog/rss.xml" },
+  linear: { from: "https://linear.app/changelog", to: "https://linear.app/rss/changelog.xml" },
+  vercel: { from: "https://vercel.com/changelog", to: "https://vercel.com/atom" },
+  "google-antigravity": { from: "https://www.antigravity.google/changelog", to: "https://antigravity.google/docs/changelog" },
+};
 const CLEAR_CONTENT_BATCH_SIZE = 500;
 const MAX_CLEAR_BATCHES_PER_TABLE = 1_000;
 const clearContentTableValidator = v.union(
@@ -122,6 +133,14 @@ export function buildSourceRegistryPayload(args: {
     payload.consecutiveFailures = 0;
   }
 
+  if (args.existingSource && args.existingSource.url !== args.source.url) {
+    // Validators belong to the old response representation, not the new URL.
+    // Convex patch removes optional fields when their value is undefined.
+    payload.etag = undefined;
+    payload.lastModified = undefined;
+    payload.contentHash = undefined;
+  }
+
   if (!args.existingSource?.nextDueAt) {
     payload.nextDueAt = latestAttemptAt ? getNextDueAt(latestAttemptAt, freshnessTier) : args.now;
   }
@@ -129,7 +148,23 @@ export function buildSourceRegistryPayload(args: {
   return payload;
 }
 
-async function syncVendorRegistryRecords(ctx: any) {
+export async function resolveRegistrySource(ctx: any, vendorId: any, vendorSlug: string, targetUrl: string) {
+  const find = (url: string) => ctx.db
+    .query("sources")
+    .withIndex("by_vendor_and_url", (q: any) => q.eq("vendorId", vendorId).eq("url", url))
+    .unique();
+  const target = await find(targetUrl);
+  const migration = SOURCE_URL_MIGRATIONS[vendorSlug];
+  if (!migration || migration.to !== targetUrl) return target;
+
+  const previous = await find(migration.from);
+  if (previous && target && previous._id !== target._id) {
+    throw new Error(`Source URL migration collision for ${vendorSlug}: both ${migration.from} and ${targetUrl} exist. Resolve source identities explicitly before syncing.`);
+  }
+  return target ?? previous;
+}
+
+export async function syncVendorRegistryRecords(ctx: any) {
   let vendorCount = 0;
   let sourceCount = 0;
   const now = Date.now();
@@ -171,10 +206,7 @@ async function syncVendorRegistryRecords(ctx: any) {
     const allowedSourceUrls = new Set(vendor.sources.map((source) => source.url));
 
     for (const source of vendor.sources) {
-      const existingSource = await ctx.db
-        .query("sources")
-        .withIndex("by_vendor_and_url", (q: any) => q.eq("vendorId", vendorId).eq("url", source.url))
-        .unique();
+      const existingSource = await resolveRegistrySource(ctx, vendorId, vendor.slug, source.url);
 
       const sourcePayload = buildSourceRegistryPayload({
         existingSource,
