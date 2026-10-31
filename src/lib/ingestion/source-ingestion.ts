@@ -1025,6 +1025,33 @@ function parseAntigravityEntries(sourceUrl: string, html: string) {
   const $ = load(html);
   const entries: ParsedSourceEntry[] = [];
 
+  // The current docs site renders separate product timelines server-side.
+  // Keep the product and release link: version numbers can overlap across tabs.
+  for (const row of $("article.release-entry").toArray()) {
+    const release = $(row);
+    const link = release.find("a.rn-version-tag[href]").first();
+    const version = cleanText(link.text()).match(/\bv?\d+\.\d+\.\d+(?:[-+.][\w.-]+)?\b/)?.[0];
+    const date = release.find("time.rn-date-text").first();
+    const publishedAt = parseDateFromText(date.attr("datetime") || cleanText(date.text()));
+    const href = link.attr("href");
+    if (!version || !publishedAt || !href) continue;
+
+    const product = cleanText(release.closest(".rn-panel").find(".rn-panel-heading").first().text());
+    const title = `${product || "Google Antigravity"} ${version}`;
+    const excerpt = truncateSentence(cleanText(release.find(".rn-summary").first().text()) ||
+      cleanText(release.find(".rn-headline").first().text()) || title);
+    const releaseUrl = toAbsoluteUrl(href, sourceUrl);
+    const rowId = release.attr("id");
+    // Some products link to general installation docs rather than a release.
+    const url = new URL(releaseUrl).pathname === "/releases" || !rowId
+      ? releaseUrl
+      : `${sourceUrl.split("#")[0]}#${encodeURIComponent(rowId)}`;
+    entries.push({ title, url, excerpt, publishedAt, parseConfidence: "high" });
+  }
+  if (entries.length > 0) {
+    return dedupeEntries(entries).sort((a, b) => b.publishedAt - a.publishedAt);
+  }
+
   for (const row of $("[data-section-row]").toArray()) {
     const versionRoot = $(row).find(".version").first();
     const versionLink = versionRoot.find("a.version-link[href]").first();
@@ -3255,10 +3282,8 @@ export function parseHtmlEntries({ parserKey, sourceUrl, html }: HtmlParseInput)
   }
 
   if (parserKey === "google-antigravity:changelog_page") {
-    const entries = parseAntigravityEntries(sourceUrl, html);
-    if (entries.length > 0) {
-      return entries.slice(0, 12);
-    }
+    // An index heading is not a release. Fail visibly if the source changes again.
+    return parseAntigravityEntries(sourceUrl, html).slice(0, 12);
   }
 
   if (parserKey === "dia:changelog_page") {
@@ -3391,6 +3416,10 @@ function slugify(value: string) {
 }
 
 function normalizeVendorSpecificTitle(vendorSlug: string, title: string, excerpt: string) {
+  if (vendorSlug === "windsurf" && /^v?\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/i.test(title.trim())) {
+    return `Devin Desktop ${title.trim()}`;
+  }
+
   if (vendorSlug === "factory-droid" && /^cli updates$/i.test(title)) {
     const version = excerpt.match(/\bv\d+\.\d+(?:\.\d+)?(?:[-+.\w]*)?\b/i)?.[0];
     if (version) {
