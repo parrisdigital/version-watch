@@ -92,7 +92,13 @@ function sourceNeedsHtmlFirstAccept(source?: SourceFetchTarget) {
     return false;
   }
 
-  if (source.parserKey === "xai:docs_page" || source.parserKey === "dp-code:changelog_page") {
+  // Android's release dates live in tables, which its HTML parser understands.
+  // Google's Markdown representation cannot be parsed by the generic heading parser.
+  if (
+    source.parserKey === "xai:docs_page" ||
+    source.parserKey === "dp-code:changelog_page" ||
+    source.parserKey === "android-developers:docs_page"
+  ) {
     return true;
   }
 
